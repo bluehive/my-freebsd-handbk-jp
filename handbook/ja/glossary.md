@@ -36,5 +36,10 @@
 | Makejail | Makejail | AppJail の定義ファイル |
 | volume（AppJail） | ボリューム | 永続データ用 |
 | nullfs | nullfs | ホスト→jail マウント |
+| Service Jails | Service Jails | rc 連携の軽量 jail（FS 共有） |
+| rc.conf | rc.conf | 起動設定の中心 |
+| rc.d | rc.d | サービス起動スクリプト群 |
+| sysrc | sysrc | rc.conf を安全に編集する公式 CLI |
+| svcj | svcj | Service Jail 関連の rc 変数接尾辞 |
 
 更新ルール: 章翻訳で迷ったらここに追記し、既存と衝突したら issue で決める。

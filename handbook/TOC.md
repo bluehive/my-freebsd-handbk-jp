@@ -52,5 +52,6 @@
 | ID | 文書 | 日本語 MD | 状態 | 備考 |
 |----|------|-----------|------|------|
 | X1 | appjail-ephemeral(7) | [extra-appjail-ephemeral.md](ja/extra-appjail-ephemeral.md) | **ドラフト** | 2026-08-21 / cattle·pets·短命 jail。Issue #1 関連 |
+| X2 | Service Jails + rc / sysrc | [extra-service-jails-rc.md](ja/extra-service-jails-rc.md) | **ドラフト** | 2026-08-22 / ユーザーまとめ整理 |
 
 英語スナップショット: `en/`（翻訳者向け原文テキスト）。

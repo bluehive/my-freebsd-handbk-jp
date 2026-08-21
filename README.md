@@ -34,6 +34,15 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-08-22 — おまけ: Service Jails と rc / sysrc まとめ
+
+| ファイル | 内容 |
+|----------|------|
+| [`handbook/ja/extra-service-jails-rc.md`](handbook/ja/extra-service-jails-rc.md) | Service Jails 概要、rc.d 記事の見取り図、`rc.conf`、`sysrc` 使い方 |
+| TOC | おまけ表に **X2** を追加 |
+
+ユーザー提供の解説メモを MD 化（文字化け箇所は文脈で整備）。Handbook 本編外。
+
 ### 2026-08-21 — おまけ: appjail-ephemeral(7) 日本語訳
 
 | ファイル | 内容 |
