@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/license-BSD--2--Clause-blue.svg)](./LICENSE)
 
 FreeBSD 公式 **Handbook** の日本語翻訳を、**Markdown** で進める公開リポジトリです。  
-GitHub: https://github.com/bluehive/freebsd-handbook-ja
+GitHub: https://github.com/bluehive/my-freebsd-handbk-jp
 
 - 原文: [FreeBSD Handbook (English)](https://docs.freebsd.org/en/books/handbook/)
 - ライセンス: **BSD-2-Clause**（`LICENSE`）。原文は FreeBSD Documentation Project の著作物です（`SOURCE.md`）。
@@ -34,12 +34,19 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-08-21 — リポジトリ名変更
+
+- `bluehive/freebsd-handbook-ja` → **`bluehive/my-freebsd-handbk-jp`**
+- ローカル: `~/my-project/my-freebsd-handbk-jp`
+- URL: https://github.com/bluehive/my-freebsd-handbk-jp
+
+
 ### 2026-08-17 — セッション1（制限時間 20 分）
 
 | 時刻目安 | 内容 |
 |----------|------|
 | 開始 | 20 分タイマー起動。要件: 公開リポ・BSD・MD 翻訳・README 進捗・20 分で中断報告 |
-| +1–3 分 | `bluehive/freebsd-handbook-ja` を **public** 作成（GitHub）。ローカル `~/my-project/freebsd-handbook-ja` |
+| +1–3 分 | `bluehive/my-freebsd-handbk-jp` を **public** 作成（GitHub）。ローカル `~/my-project/my-freebsd-handbk-jp` |
 | +3–8 分 | `freebsd/freebsd-doc` を sparse clone。Handbook 章構成確認。introduction / basics / zfs 等の語数ざっくり計測 |
 | +8–18 分 | リポジトリ骨組み: LICENSE (BSD-2-Clause), SOURCE, TOC, 工数見積 MD, 用語集種, en スナップショット |
 | +8–18 分 | **第1章 Introduction の日本語初訳** → `handbook/ja/01-introduction.md`（Synopsis〜追加ドキュメントまで一通り） |
@@ -81,4 +88,4 @@ handbook/
 ## リンク
 
 - 英語 Handbook: https://docs.freebsd.org/en/books/handbook/  
-- 本リポジトリ: https://github.com/bluehive/freebsd-handbook-ja  
+- 本リポジトリ: https://github.com/bluehive/my-freebsd-handbk-jp  
