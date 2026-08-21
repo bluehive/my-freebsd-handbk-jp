@@ -20,5 +20,15 @@
 | encumbered | 権利付き（encumbered） | 歴史節 |
 | snapshot | スナップショット | |
 | man page | man ページ | |
+| thick jail | シック jail | 完全なユーザランド |
+| thin jail | シン jail | テンプレ共有／NullFS 等 |
+| VNET jail | VNET jail | 仮想ネットワークスタック |
+| Podman | Podman | OCI ランタイム |
+| OCI | OCI | Open Container Initiative |
+| securelevel | securelevel | セキュアレベル |
+| IDS | IDS | 侵入検知 |
+| OpenSSH | OpenSSH | |
+| ACL | ACL | アクセス制御リスト |
+| sudo / doas | sudo / doas | 権限委譲 |
 
 更新ルール: 章翻訳で迷ったらここに追記し、既存と衝突したら issue で決める。

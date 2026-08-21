@@ -34,6 +34,20 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-08-21 — 優先4章の初訳（機械支援）
+
+対象: **03 Basics / 15 Security / 16 Jails / 17 Containers**
+
+| ファイル | 状態 |
+|----------|------|
+| `handbook/ja/03-basics.md` | ドラフト |
+| `handbook/ja/15-security.md` | ドラフト |
+| `handbook/ja/16-jails.md` | ドラフト |
+| `handbook/ja/17-containers.md` | ドラフト |
+| `handbook/en/03,15,16,17-*.adoc.txt` | 原文抜粋 |
+
+DeepSeek (`deepseek-v4-flash`) 分割翻訳。**要校正**。関連: [Issue #1](https://github.com/bluehive/my-freebsd-handbk-jp/issues/1)
+
 ### 2026-08-21 — リポジトリ名変更
 
 - `bluehive/freebsd-handbook-ja` → **`bluehive/my-freebsd-handbk-jp`**

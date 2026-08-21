@@ -9,7 +9,7 @@
 | 00 | Preface | — | 未着手 | |
 | 01 | Introduction | [01-introduction.md](ja/01-introduction.md) | **ドラフト** | 2026-08-17 初訳 |
 | 02 | Installing FreeBSD (bsdinstall) | — | 未着手 | 高工数 |
-| 03 | FreeBSD Basics | — | 未着手 | |
+| 03 | FreeBSD Basics | [03-basics.md](ja/03-basics.md) | **ドラフト** | 2026-08-21 |
 | 04 | Packages and Ports | — | 未着手 | |
 | 05 | X Window System | — | 未着手 | |
 | 06 | Wayland | — | 未着手 | |
@@ -21,9 +21,9 @@
 | 12 | WINE | — | 未着手 | |
 | 13 | Configuration and Tuning | — | 未着手 | |
 | 14 | Booting Process | — | 未着手 | |
-| 15 | Security | — | 未着手 | 高工数 |
-| 16 | Jails | — | 未着手 | 高工数 |
-| 17 | Containers | — | 未着手 | |
+| 15 | Security | [15-security.md](ja/15-security.md) | **ドラフト** | 2026-08-21 高工数 |
+| 16 | Jails | [16-jails.md](ja/16-jails.md) | **ドラフト** | 2026-08-21 Issue #1 関連 |
+| 17 | Containers | [17-containers.md](ja/17-containers.md) | **ドラフト** | 2026-08-21 Podman/OCI |
 | 18 | MAC | — | 未着手 | |
 | 19 | Security Event Auditing | — | 未着手 | |
 | 20 | Storage / Disks | — | 未着手 | |
