@@ -43,7 +43,7 @@ handbook/
 | +3–8 分 | `freebsd/freebsd-doc` を sparse clone。Handbook 章構成確認。introduction / basics / zfs 等の語数ざっくり計測 |
 | +8–18 分 | リポジトリ骨組み: LICENSE (BSD-2-Clause), SOURCE, TOC, 工数見積 MD, 用語集種, en スナップショット |
 | +8–18 分 | **第1章 Introduction の日本語初訳** → `handbook/ja/01-introduction.md`（Synopsis〜追加ドキュメントまで一通り） |
-| 20 分 | **作業中断・本 README に記録・push・状況報告**（予定） |
+| ~5 分時点 | push 完了・**中断報告**（制限20分より早期に区切り。追加翻訳は次回） |
 
 **成果物**
 
