@@ -1,0 +1,382 @@
+APPJAIL-EPHEMERAL(7)	 Miscellaneous Information Manual   APPJAIL-EPHEMERAL(7)
+
+NAME
+     appjail-ephemeral -- cattle, pets and jails
+
+DESCRIPTION
+     AppJail has a notion of treating jails like cattle, so many of the features
+     are  designed with that in mind. Although this is a priority, FreeBSD users
+     are commonly tied to the notion of treating jails like pets, so the  result
+     is that AppJail supports both approaches for different users.
+
+     The  "cattle  vs. pets" approach is not a formal standard, it's just a con-
+     vention for how you should treat your servers, which in this case,  servers
+     means jails. The article that clearly explains this approach is the follow-
+     ing:
+
+     The History of Pets vs Cattle and How to Use the Analogy Properly
+
+     In  this  document  I will not explain which approach is best for you as it
+     depends entirely on your needs and how you work, instead  I  will	describe
+     how we can use AppJail following a concept known as "The Ephemeral Concept"
+     that  I  am applying, practically since AppJail was born. You should know a
+     lot about FreeBSD, AppJail, and the application you're running, so use this
+     approach responsibly.
+
+THE EPHEMERAL CONCEPT
+     The ephemeral concept means that you should treat your jails  as  ephemeral
+     as  possible.  This doesn't mean that your jails should disappear after re-
+     booting the system or stopping the jail; What this means is that since  you
+     have  clearly separated the data that should persist after the jail is cre-
+     ated again, from the data that should not persist.
+
+     What data is ephemeral and what is not? The simplest examples of  ephemeral
+     data  are	binaries and all the elements that make up the jail that are re-
+     stored after recreating the jail. Data that should not be destroyed is  ap-
+     plication	data,  e.g. If we have a DBMS running inside the jail, we should
+     not destroy its database. Configuration files (and similar) may be  consid-
+     ered  non-ephemeral,  but in most cases the main difference compared to ap-
+     plication data is how you reinstall them;	in  the  case  of  configuration
+     files  (and  similar)  they can be copied every time the jail is recreated,
+     but it must happen before the jail, or service running inside the jail,  is
+     started,  and  the application data is probably achieved by mounting it in-
+     side the jail using a tool like mount_nullfs(8).
+
+IMPLEMENTING THE EPHEMERAL CONCEPT
+     The simplest way to explain how we can use the ephemeral concept in a  jail
+     created  by  Appjail  is  top-down instead of bottom-up, or in other words,
+     let's create a jail with a directory mounted on the data directory that  is
+     inside the jail.
+
+	   # mkdir -p .volumes/wwwdir
+	   # appjail makejail -j darkhttpd -f gh+AppJail-makejails/darkhttpd \
+	       -o virtualnet=":<random> default" \
+	       -o nat \
+	       -o fstab="$PWD/.volumes/wwwdir /usr/local/www/darkhttpd"
+	   ...
+	   # appjail fstab jail darkhttpd
+	   NRO	ENABLED  NAME  DEVICE			    MOUNTPOINT		      TYPE    OPTIONS  DUMP  PASS
+	   0	1	 -     /home/dtxdf/.volumes/wwwdir  /usr/local/www/darkhttpd  nullfs  rw       0     0
+	   # echo "<h1>Hello!</h1>" > .volumes/wwwdir/index.html
+	   # appjail jail list -j darkhttpd
+	   STATUS  NAME       TYPE  VERSION	  PORTS  NETWORK_IP4
+	   UP	   darkhttpd  thin  13.3-RELEASE  -	 10.0.0.5
+	   # curl http://10.0.0.5
+	   <h1>Hello!</h1>
+
+     The result of this session is self-explanatory: we have created a jail with
+     a	static web server installed and mounted a directory from the host to the
+     directory that the web server uses. The directory, since it is  located  on
+     the  host,  can  be  used to write files, so that's what we did: we wrote a
+     little HTML code to display Hello! to clients connecting to the web server.
+     We did what the ephemeral concept explains:  we  separated  the  data  that
+     should  persist  from  the  data that should not. Let's destroy the jail to
+     recreate it again:
+
+	   # appjail makejail -j darkhttpd -f gh+AppJail-makejails/darkhttpd \
+	       -o virtualnet=":<random> default" \
+	       -o nat \
+	       -o fstab="$PWD/.volumes/wwwdir /usr/local/www/darkhttpd"
+	   ...
+	   # appjail fstab jail darkhttpd
+	   NRO	ENABLED  NAME  DEVICE			    MOUNTPOINT		      TYPE    OPTIONS  DUMP  PASS
+	   0	1	 -     /home/dtxdf/.volumes/wwwdir  /usr/local/www/darkhttpd  nullfs  rw       0     0
+	   # appjail jail list -j darkhttpd
+	   STATUS  NAME       TYPE  VERSION	  PORTS  NETWORK_IP4
+	   UP	   darkhttpd  thin  13.3-RELEASE  -	 10.0.0.5
+	   # curl http://10.0.0.5
+	   <h1>Hello!</h1>
+
+     Amazing! We have successfully implemented the ephemeral concept.  So  easy,
+     but this doesn't show some problems that we must face in real life, specif-
+     ically  two  problems: filesystem permissions and mounting a directory from
+     the host to a directory containing data.  Those issues may or may	not  af-
+     fect  the application inside the jail. In the case of the example above, it
+     is not affected unless the files need to be written with the same	UID  and
+     GID as the running process, but this is not the case.
+
+   Filesystem Permissions
+     The  application running inside the jail assumes it can write its data just
+     fine and the process is probably running using  a	dedicated  user,  so  we
+     shouldn't mount a directory from the host to the jail without this in mind.
+     We need to know the UID, GID, file mode and mount point in advance. This is
+     very  easy  to  know: just create a jail and install the application inside
+     it, and proceed to inquire the information we need. At this point it is not
+     necessary to configure a directory and we should not do it since we do  not
+     have  the	necessary information to do it correctly. Let's create a jail to
+     clarify:
+
+	   # appjail makejail -j rustypaste -f gh+AppJail-makejails/rustypaste \
+	       -o virtualnet=":<random> default" \
+	       -o nat
+	   # appjail cmd jexec rustypaste ls -ld /var/db/rustypaste
+	   drwxr-xr-x  5 rustypaste  rustypaste  512 Apr 15 05:37 /var/db/rustypaste
+	   # appjail cmd jexec rustypaste pw usershow rustypaste
+	   rustypaste:*:498:498::0:0:Minimal file upload/pastebin service:/nonexistent:/usr/sbin/nologin
+	   # appjail cmd jexec rustypaste pw groupshow rustypaste
+	   rustypaste:*:498:
+
+     Of course, I'm cheating since I know in advance which directory  the  above
+     application uses, but for applications you don't know very well I recommend
+     that  you read their documentation and the rc(8) script, if the application
+     comes with one.
+
+     As a last note: most services start with an empty directory and  put  files
+     and more directories into it; What you need to know is if that directory is
+     empty  or	has  some  files. This is very important because the service may
+     need such files and if you simply mount a directory from the  host  to  the
+     jail,  it	will  overlap  and  the  service  will	not see those files. See
+     "Mounting a Directory from the Host to a Directory Containing Data" to  see
+     how to fix this problem.
+
+     Now  that	we  have enough information, let's create the directory but with
+     the properties that the application needs:
+
+	   # mkdir -p .volumes/db
+	   # chmod 755 .volumes/db
+	   # chown -f 498:498 .volumes/db
+
+     The jail can be created again using the same command  above  but  with  the
+     fstab option pointing to the directory we have recently created.
+
+	   # appjail makejail -j rustypaste -f gh+AppJail-makejails/rustypaste \
+	       -o virtualnet=":<random> default" \
+	       -o nat \
+	       -o fstab="$PWD/.volumes/db /var/db/rustypaste"
+	   # appjail jail list -j rustypaste
+	   STATUS  NAME        TYPE  VERSION	   PORTS  NETWORK_IP4
+	   UP	   rustypaste  thin  13.3-RELEASE  -	  10.0.0.7
+	   # appjail cmd jexec rustypaste cat /var/log/rustypaste.log
+	   2024-04-15T10:06:16.650846Z	INFO rustypaste: Server is running at 0.0.0.0:8000
+	   2024-04-15T10:06:16.650864Z	INFO actix_server::builder: starting 4 workers
+	   2024-04-15T10:06:16.650870Z	INFO actix_server::server: Actix runtime found; starting in Actix runtime
+	   # echo "Hello!" | rpaste -s http://10.0.0.7:8000 -
+	   http://10.0.0.7:8000/able-locust.txt
+	   # curl http://10.0.0.7:8000/able-locust.txt
+	   Hello!
+
+     If  we  create  the jail again using exactly the same command above, we can
+     use the application as if the jail destruction had not occurred.
+
+	   # appjail makejail -j rustypaste -f gh+AppJail-makejails/rustypaste \
+	       -o virtualnet=":<random> default" \
+	       -o nat \
+	       -o fstab="$PWD/.volumes/db /var/db/rustypaste"
+	   # curl http://10.0.0.7:8000/able-locust.txt
+	   Hello!
+
+   Mounting a Directory from the Host to a Directory Containing Data
+     mount_nullfs(8), the preferred tool for mounting files or directories  from
+     the  host	to the jail, is very useful, but it gives us a problem if we use
+     it incorrectly: suppose we have two directories, A/ and  B/,  that  have  a
+     file  in  each one, A/foo.txt and B/bar.txt, and we want to mount B/ to A/,
+     so we run "mount_nullfs B/ A/" and run "ls A/" to see that we now have only
+     A/bar.txt.  There is nothing wrong with mount_nullfs(8), but we  must  keep
+     this in mind to use it correctly.
+
+     This problem means that we need to move the files from the jail to the host
+     and  mount the directory from the host to the jail as we normally do. This,
+     of course, must be achieved before the service is started,  which	in  real
+     life means that it must be achieved before the jail is started, since it is
+     common for the service to start just a few seconds after starting the jail.
+
+     Fortunately  for  you,  the user, AppJail can easily do the above using the
+     <pseudofs> pseudo-filesystem. See appjail-fstab(1) for more details.
+
+	   # appjail makejail -j mariadb -f gh+AppJail-makejails/mariadb \
+	       -o virtualnet=":<random> address:10.0.0.70 default" \
+	       -o nat -- \
+		   --mariadb_user "wpuser" \
+		   --mariadb_password "123" \
+		   --mariadb_database "wordpress" \
+		   --mariadb_root_password "321"
+	   # appjail jail list -j mariadb
+	   STATUS  NAME     TYPE  VERSION	PORTS  NETWORK_IP4
+	   UP	   mariadb  thin  13.3-RELEASE	-      10.0.0.70
+	   # appjail makejail -j wordpress -f gh+AppJail-makejails/wordpress \
+	       -o virtualnet=":<random> default" \
+	       -o nat -- \
+		   --wp_db_name "wordpress" \
+		   --wp_db_user "wpuser" \
+		   --wp_db_password "123" \
+		   --wp_db_host "10.0.0.70"
+	   # appjail cmd jexec wordpress ls /usr/local/www/apache24/data/wp-content
+	   index.php	   plugins	   themes
+	   # mkdir -p .volumes/wp-content
+	   # chown www:www .volumes/wp-content
+	   # appjail makejail -j mariadb -f gh+AppJail-makejails/mariadb \
+	       -o virtualnet=":<random> address:10.0.0.70 default" \
+	       -o nat \
+	       -o fstab="$PWD/.volumes/wp-content /usr/local/www/apache24/data/wp-content <pseudofs>" -- \
+		   --mariadb_user "wpuser" \
+		   --mariadb_password "123" \
+		   --mariadb_database "wordpress" \
+		   --mariadb_root_password "321"
+	   ...
+	   [00:00:50] [ debug ] [wordpress] Compiling fstab file ...
+	   [00:00:51] [ debug ] [wordpress] Compiling fstab #0: /home/dtxdf/.volumes/wp-content /usr/local/www/apache24/data/wp-content <pseudofs> rw 0 0
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/hello.php -> /home/dtxdf/.volumes/wp-content/plugins/hello.php ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/index.php -> /home/dtxdf/.volumes/wp-content/plugins/index.php ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/readme.txt -> /home/dtxdf/.volumes/wp-content/plugins/akismet/readme.txt ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/class.akismet-rest-api.php -> /home/dtxdf/.volumes/wp-content/plugins/akismet/class.akismet-rest-api.php ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/LICENSE.txt -> /home/dtxdf/.volumes/wp-content/plugins/akismet/LICENSE.txt ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/index.php -> /home/dtxdf/.volumes/wp-content/plugins/akismet/index.php ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/wrapper.php -> /home/dtxdf/.volumes/wp-content/plugins/akismet/wrapper.php ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/changelog.txt -> /home/dtxdf/.volumes/wp-content/plugins/akismet/changelog.txt ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/_inc/akismet.js -> /home/dtxdf/.volumes/wp-content/plugins/akismet/_inc/akismet.js ...
+	   [00:00:51] [ debug ] [wordpress] Moving /usr/local/appjail/jails/wordpress/jail//usr/local/www/apache24/data/wp-content/plugins/akismet/_inc/akismet-admin.js -> /home/dtxdf/.volumes/wp-content/plugins/akismet/_inc/akismet-admin.js ..
+	   --snip--
+	   # appjail fstab jail wordpress
+	   NRO	ENABLED  NAME  DEVICE				MOUNTPOINT				 TYPE	     OPTIONS  DUMP  PASS
+	   0	1	 -     /home/dtxdf/.volumes/wp-content	/usr/local/www/apache24/data/wp-content  <pseudofs>  rw       0     0
+	   # appjail fstab jail wordpress mounted
+	   /usr/local/appjail/releases/amd64/13.3-RELEASE/default/release -> /usr/local/appjail/jails/wordpress/jail/.appjail
+	   /home/dtxdf/.volumes/wp-content -> /usr/local/appjail/jails/wordpress/jail/usr/local/www/apache24/data/wp-content
+	   devfs -> /usr/local/appjail/jails/wordpress/jail/dev
+
+     Fortunately, most programs are flexible enough to use a  custom  directory,
+     which in most cases is initially empty or otherwise only has a few files.
+
+VOLUMES
+     A volume, at least in AppJail, is a mechanism for keeping data generated by
+     applications inside the jail. A volume is not linked to a specific filesys-
+     tem,  but the preferred one is nullfs(5).	However, changing the file mode,
+     UID and GID, and remembering the mount point every time we need  to  imple-
+     ment  the	ephemeral concept is repetitive. A script can be created, but if
+     you plan to deploy your application, it is probably best to have  a  formal
+     way to accomplish such a task.
+
+     The formal way is known as appjail-volume(1), the utility for creating vol-
+     umes,  although  it works in conjunction with appjail-fstab(1).  Typically,
+     these specifications are not created by the end user, but by the  developer
+     who  wrote  the  Makejail.  It is common to use images to distribute volume
+     specifications since they are preserved in this format.
+
+	   # mkdir -p .volumes/db
+	   # appjail makejail -j rustypaste -f gh+AppJail-makejails/rustypaste \
+	       -o virtualnet=":<random> default" \
+	       -o nat \
+	       -o fstab="$PWD/.volumes/db rustypaste-db <volumefs>"
+	   # appjail fstab jail rustypaste
+	   NRO	ENABLED  NAME  DEVICE		 MOUNTPOINT	TYPE	    OPTIONS  DUMP  PASS
+	   0	1	 -     /tmp/.volumes/db  rustypaste-db	<volumefs>  rw	     0	   0
+	   # appjail fstab jail rustypaste mounted
+	   /usr/local/appjail/releases/amd64/13.3-RELEASE/default/release -> /usr/local/appjail/jails/rustypaste/jail/.appjail
+	   /tmp/.volumes/db -> /usr/local/appjail/jails/rustypaste/jail/var/db/rustypaste
+	   devfs -> /usr/local/appjail/jails/rustypaste/jail/dev
+	   # appjail volume list rustypaste
+	   NAME 	  MOUNTPOINT	      TYPE	  UID  GID  PERM
+	   rustypaste-db  /var/db/rustypaste  <pseudofs>  498  498  -
+	   # ls -ld .volumes/db
+	   drwxr-xr-x  5 498 498 512 Apr 16 03:09 .volumes/db
+
+     The <volumefs> pseudo-filesystem does all the work for the  end  user.  The
+     user  only needs to create a directory, but the file mode, UID, and GID are
+     completely set by appjail-fstab(1) depending on the  entries  specified  by
+     appjail-volume(1).  The best part is that it is irrelevant to know where to
+     mount the directory, the user only needs to know the volume name.
+
+UPDATE / UPGRADE
+     This  is  the part where we see a strong difference between the "cattle vs.
+     pets" debate. FreeBSD users, as mentioned, treat their jails  like  a  cute
+     pet,  or  in  other  words, they expect to run freebsd-update(8) on a jail,
+     which is not possible for thin jails, but is possible for thick jails.  For
+     thin jails, freebsd-update(8) runs on the release (or the base directory as
+     known on some websites or books); Everything is fine, if you only	need  to
+     update, the problem is when you want to upgrade.
+
+     The  upgrade process is a bit more complicated than a simple update because
+     you are effectively applying changes to a modified system	that  can  cause
+     conflicts.  Thin  jails further complicate this process as they are tied to
+     the release directory (or base directory), so it is necessary to  create  a
+     new  jail	with  the  installed application and the data it uses. The newly
+     created thin jail should of course use a release with the new FreeBSD  ver-
+     sion.  Even  if you use a thick jail, you have to worry about other things,
+     such as storage (in the modern era, it may not be a problem) and  time  and
+     resources	(bandwidth, storage, CPU consumption, etc.), since that you need
+     to do the upgrade process for each jail. Clearly, treating jails like a pet
+     is not feasible in these cases.
+
+     How can we use the ephemeral concept to upgrade jails? Suppose  we  have  a
+     jail using a release with FreeBSD 13.3-RELEASE and we want to upgrade it to
+     14.0-RELEASE,  since we follow the ephemeral concept, our data will persist
+     even if we destroy and create the jail again, so let's do	it,  create  the
+     jail again but using a release with 14.0-RELEASE.
+
+	   # cat << EOF > Makejail
+	   OPTION start
+	   OPTION overwrite=force
+	   OPTION virtualnet=:<random> default
+	   OPTION nat
+	   OPTION pkg=darkhttpd
+	   OPTION fstab=$PWD/.volumes/wwwdir /usr/local/www/darkhttpd
+
+	   SERVICE darkhttpd oneenable
+	   SERVICE darkhttpd start
+	   EOF
+	   # appjail fetch list | grep -Ee '^ARCH' -e '[0-9]+.[0-9]+-RELEASE'
+	   ARCH   VERSION	NAME
+	   amd64  14.0-RELEASE	default
+	   amd64  13.3-RELEASE	default
+	   # appjail makejail -j darkhttpd -o osversion=13.3-RELEASE
+	   ...
+	   # appjail jail list -j darkhttpd
+	   STATUS  NAME       TYPE  VERSION	  PORTS  NETWORK_IP4
+	   UP	   darkhttpd  thin  13.3-RELEASE  -	 10.0.0.2
+	   # appjail fstab jail darkhttpd
+	   NRO	ENABLED  NAME  DEVICE		     MOUNTPOINT 	       TYPE    OPTIONS	DUMP  PASS
+	   0	1	 -     /tmp/.volumes/wwwdir  /usr/local/www/darkhttpd  nullfs  rw	0     0
+	   # echo "<h1>Hello!</h1>" > .volumes/wwwdir/index.html
+	   # appjail update release -v 14.0-RELEASE
+	   ...
+	   # appjail makejail -j darkhttpd -o osversion=14.0-RELEASE
+	   ...
+	   # appjail jail list -j darkhttpd
+	   STATUS  NAME       TYPE  VERSION	  PORTS  NETWORK_IP4
+	   UP	   darkhttpd  thin  14.0-RELEASE  -	 10.0.0.2
+	   # curl http://10.0.0.2
+	   <h1>Hello!</h1>
+
+     The  best	part  is that we don't need to worry about merging files or any-
+     thing similar, but we do need to take into account the files that	need  to
+     persist  after  the  jail	is  created again, especially the files in /etc,
+     /usr/local/etc and the configuration files used by the application  running
+     inside  the  jail, but those files should only be installed at the creation
+     time and if you need to modify one of them, modify it on the host and  cre-
+     ate  the  jail  again  with the modified files.  Fortunately, in most cases
+     users do not modify absolutely all configuration files.
+
+     As a last note, we should keep in mind that old configuration files may  or
+     may not make sense for new FreeBSD versions or new versions of the applica-
+     tion  you	want to run inside the jail. Fortunately, backward compatibility
+     in many projects is a priority, but it's worth keeping this  note	in  mind
+     anyway.
+
+BACKUP / RESTORE
+     There  is nothing magical about backing up a volume. You only have to worry
+     about a few details:
+
+     -	 Stop the jail if necessary: Almost in most of the situations it is nec-
+	 essary to stop the jail or the service running inside	the  jail.  Data
+	 integrity  is	important,  and  if  you  back up data that changes con-
+	 stantly, it may be difficult or impossible to restore it correctly.
+     -	 Restore the backup as it was: It is very important  to  note  that  you
+	 need  to  restore  the  backup not only with the data but also with the
+	 metadata: file mode, UID, GID and any other metadata  required  by  the
+	 application  running  inside the jail.  Tools like tar(1) are your best
+	 friends.
+     -	 Use the appropriate backup tool: If the service running inside the jail
+	 has a backup tool, perhaps in your situation it is preferable to simply
+	 backing up the volume.
+     -	 Don't leave the backup on the same system: Needless to say, leaving the
+	 backup on the system, even if you have RAID, is a bad practice.
+
+SEE ALSO
+     appjail(1) appjail-fstab(1) appjail-image(1) appjail-jail(1)  appjail-make-
+     jail(1)  appjail-update(1)  appjail-upgrade(1)  appjail-volume(1)	appjail-
+     makejail(5) mount_nullfs(8)
+
+AUTHORS
+     JesAos Daniel Colmenares Oviedo <DtxdF@disroot.org>
+
+FreeBSD 14.2			 April 15, 2024 	    APPJAIL-EPHEMERAL(7)

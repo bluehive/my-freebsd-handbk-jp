@@ -34,6 +34,16 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-08-21 — おまけ: appjail-ephemeral(7) 日本語訳
+
+| ファイル | 内容 |
+|----------|------|
+| [`handbook/ja/extra-appjail-ephemeral.md`](handbook/ja/extra-appjail-ephemeral.md) | man `appjail-ephemeral(7)` の日本語 MD（cattle / pets / 短命 jail） |
+| `handbook/en/extra-appjail-ephemeral.man.txt` | 出典メモ |
+| 上流 | https://man.freebsd.org/cgi/man.cgi?query=appjail-ephemeral&manpath=FreeBSD+14.2-RELEASE+and+Ports |
+
+Handbook 本編外。jail データ分離・量産（[Issue #1](https://github.com/bluehive/my-freebsd-handbk-jp/issues/1)）の参考。`handbook/TOC.md` おまけ表に追記。
+
 ### 2026-08-21 — 優先4章の初訳（機械支援）
 
 対象: **03 Basics / 15 Security / 16 Jails / 17 Containers**

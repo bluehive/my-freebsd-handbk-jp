@@ -30,5 +30,11 @@
 | OpenSSH | OpenSSH | |
 | ACL | ACL | アクセス制御リスト |
 | sudo / doas | sudo / doas | 権限委譲 |
+| AppJail | AppJail | jail 管理フレームワーク（ports） |
+| ephemeral | 短命／作り直し可能（ephemeral） | appjail-ephemeral(7) |
+| cattle vs. pets | cattle（取替可能）vs pets（手厚く育成） | 運用比喩 |
+| Makejail | Makejail | AppJail の定義ファイル |
+| volume（AppJail） | ボリューム | 永続データ用 |
+| nullfs | nullfs | ホスト→jail マウント |
 
 更新ルール: 章翻訳で迷ったらここに追記し、既存と衝突したら issue で決める。

@@ -47,4 +47,10 @@
 | D | OpenPGP Keys | — | 未着手 | |
 | G | Glossary | [glossary.md](ja/glossary.md) | ドラフト（種） | |
 
+### おまけ（Handbook 本編外）
+
+| ID | 文書 | 日本語 MD | 状態 | 備考 |
+|----|------|-----------|------|------|
+| X1 | appjail-ephemeral(7) | [extra-appjail-ephemeral.md](ja/extra-appjail-ephemeral.md) | **ドラフト** | 2026-08-21 / cattle·pets·短命 jail。Issue #1 関連 |
+
 英語スナップショット: `en/`（翻訳者向け原文テキスト）。
