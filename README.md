@@ -7,7 +7,7 @@ GitHub: https://github.com/bluehive/my-freebsd-handbk-jp
 
 - 原文: [FreeBSD Handbook (English)](https://docs.freebsd.org/en/books/handbook/)
 - ライセンス: **BSD-2-Clause**（`LICENSE`）。原文は FreeBSD Documentation Project の著作物です（`SOURCE.md`）。
-- メンテナ起票: bluehive（Hiroki Kato）
+- メンテナ起票: bluehive
 - 作業エージェント: Hermes（進捗は本 README に追記）
 
 ## 目的
