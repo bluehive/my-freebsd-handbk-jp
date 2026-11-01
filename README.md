@@ -34,6 +34,14 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-01 — 第16章のホスト設定を部分校正（Codex）
+
+- `handbook/en/16-jails.adoc.txt` と照合し、ホスト準備・jail の起動制御・ネットワーク方式・IP アドレス管理の欠落訳を復元。
+- 壊れていた `ysrc` を `sysrc` に復元し、ループバック・ホストサービス節まで Markdown の見出し、コードフェンス、アンカー、リンクを整備。
+- 対象は `host-configuration` から `host-configuration-directories` の直前まで。第16章全体は引き続きドラフト。
+- 関連: [Issue #1](https://github.com/bluehive/my-freebsd-handbk-jp/issues/1)、[PR #2（進捗・検証・引き継ぎメモ）](https://github.com/bluehive/my-freebsd-handbk-jp/pull/2)。FreeBSD 実機での動作確認は未実施。
+
+
 ### 2026-08-22 — おまけ: Service Jails と rc / sysrc まとめ
 
 | ファイル | 内容 |
