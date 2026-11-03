@@ -174,9 +174,17 @@
       "source_path": "handbook/en/through-ch14/11-linuxemu.adoc.txt",
       "translation_path": "handbook/ja/11-linuxemu.md",
       "source_sha256": "c8e142d41c9b7f0c91d5d3699ed8d7b063a7f721643108d5349d3237094d8402",
-      "status": "pending",
+      "status": "translated",
       "existing_translation": false,
-      "upstream_chapter_number": 12
+      "upstream_chapter_number": 12,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against every source heading, ABI and userland procedure, filesystem setting, and legacy example; Linux binaries not run",
+      "counts": {
+        "headings": 13,
+        "anchors": 13,
+        "code_blocks": 35,
+        "images": 0
+      }
     },
     {
       "id": 12,

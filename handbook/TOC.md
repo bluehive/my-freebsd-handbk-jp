@@ -8,16 +8,16 @@
 |----|-----|-----------|------|------|
 | 00 | Preface | — | 未着手 | |
 | 01 | Introduction | [01-introduction.md](ja/01-introduction.md) | **ドラフト** | 2026-08-17 初訳 |
-| 02 | Installing FreeBSD (bsdinstall) | [02-bsdinstall.md](ja/02-bsdinstall.md) | **自己校正済（意訳）** | 2026-11-04 原文31見出し・95アンカー・60画像・5コード例を照合。実機導入は未検証 |
+| 02 | Installing FreeBSD (bsdinstall) | [02-bsdinstall.md](ja/02-bsdinstall.md) | **自己校正済（意訳）** | 2026-11-04 原文31見出し・5コード例を照合。実機検証は未実施 |
 | 03 | FreeBSD Basics | [03-basics.md](ja/03-basics.md) | **ドラフト** | 2026-08-21 |
-| 04 | Packages and Ports | [04-ports.md](ja/04-ports.md) | **自己校正済（意訳）** | 2026-11-04 原文34見出し・73コード例を照合。実機導入は未検証 |
-| 05 | X Window System | [05-x11.md](ja/05-x11.md) | **自己校正済（意訳）** | 2026-11-04 原文21見出し・47コード例を照合。GPU実機検証は未実施 |
-| 06 | Wayland | [06-wayland.md](ja/06-wayland.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・47コード例を照合。コンポジター実機検証は未実施 |
-| 07 | Desktop Applications | [07-desktop.md](ja/07-desktop.md) | **自己校正済（意訳）** | 2026-11-04 原文62見出し・70コード例・6表を照合。上流の第8章に対応 |
-| 08 | Multimedia | [08-multimedia.md](ja/08-multimedia.md) | **自己校正済（意訳）** | 2026-11-04 原文25見出し・49コード例・1画像を照合。機器実機検証は未実施 |
-| 09 | Kernel Configuration | [09-kernelconfig.md](ja/09-kernelconfig.md) | **自己校正済（意訳）** | 2026-11-04 原文7見出し・17コード例を照合。ビルド・起動の実機検証は未実施 |
-| 10 | Printing | [10-printing.md](ja/10-printing.md) | **自己校正済（意訳）** | 2026-11-04 原文29見出し・47コード例を照合。印刷実機検証は未実施 |
-| 11 | Linux Binary Compatibility | — | 未着手 | |
+| 04 | Packages and Ports | [04-ports.md](ja/04-ports.md) | **自己校正済（意訳）** | 2026-11-04 原文34見出し・73コード例を照合。実機検証は未実施 |
+| 05 | X Window System | [05-x11.md](ja/05-x11.md) | **自己校正済（意訳）** | 2026-11-04 原文21見出し・47コード例を照合。実機検証は未実施 |
+| 06 | Wayland | [06-wayland.md](ja/06-wayland.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・47コード例を照合。実機検証は未実施 |
+| 07 | Desktop Applications | [07-desktop.md](ja/07-desktop.md) | **自己校正済（意訳）** | 2026-11-04 原文62見出し・70コード例を照合。実機検証は未実施 |
+| 08 | Multimedia | [08-multimedia.md](ja/08-multimedia.md) | **自己校正済（意訳）** | 2026-11-04 原文25見出し・49コード例を照合。実機検証は未実施 |
+| 09 | Kernel Configuration | [09-kernelconfig.md](ja/09-kernelconfig.md) | **自己校正済（意訳）** | 2026-11-04 原文7見出し・17コード例を照合。実機検証は未実施 |
+| 10 | Printing | [10-printing.md](ja/10-printing.md) | **自己校正済（意訳）** | 2026-11-04 原文29見出し・47コード例を照合。実機検証は未実施 |
+| 11 | Linux Binary Compatibility | [11-linuxemu.md](ja/11-linuxemu.md) | **自己校正済（意訳）** | 2026-11-04 原文13見出し・35コード例を照合。実機検証は未実施 |
 | 12 | WINE | — | 未着手 | |
 | 13 | Configuration and Tuning | — | 未着手 | |
 | 14 | Booting Process | — | 未着手 | |
