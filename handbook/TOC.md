@@ -19,7 +19,7 @@
 | 10 | Printing | [10-printing.md](ja/10-printing.md) | **自己校正済（意訳）** | 2026-11-04 原文29見出し・47コード例を照合。実機検証は未実施 |
 | 11 | Linux Binary Compatibility | [11-linuxemu.md](ja/11-linuxemu.md) | **自己校正済（意訳）** | 2026-11-04 原文13見出し・35コード例を照合。実機検証は未実施 |
 | 12 | WINE | [12-wine.md](ja/12-wine.md) | **自己校正済（意訳）** | 2026-11-04 原文54見出し・23コード例を照合。実機検証は未実施 |
-| 13 | Configuration and Tuning | — | 未着手 | |
+| 13 | Configuration and Tuning | [13-config.md](ja/13-config.md) | **自己校正済（意訳）** | 2026-11-04 原文42見出し・79コード例を照合。実機検証は未実施 |
 | 14 | Booting Process | — | 未着手 | |
 | 15 | Security | [15-security.md](ja/15-security.md) | **ドラフト** | 2026-08-21 高工数 |
 | 16 | Jails | [16-jails.md](ja/16-jails.md) | **自己校正済** | 2026-11-04 保存済み原文の全66見出し・139コード例を照合。[検証記録](../docs/jails-proofreading.md)。実機検証・最新上流同期は未実施 |

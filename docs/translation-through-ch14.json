@@ -210,9 +210,17 @@
       "source_path": "handbook/en/through-ch14/13-config.adoc.txt",
       "translation_path": "handbook/ja/13-config.md",
       "source_sha256": "71aff08668838d3a2cca318e920465f8effa5e3631888f4d9679dd2276d72554",
-      "status": "pending",
+      "status": "translated",
       "existing_translation": false,
-      "upstream_chapter_number": 14
+      "upstream_chapter_number": 14,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, code, tables, service and cron semantics, logging and power-management caveats; hardware-specific values distinguished; runtime not tested",
+      "counts": {
+        "headings": 42,
+        "anchors": 43,
+        "code_blocks": 79,
+        "images": 0
+      }
     },
     {
       "id": 14,
