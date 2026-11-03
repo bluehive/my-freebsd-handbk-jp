@@ -79,8 +79,16 @@
       "source_path": "handbook/en/through-ch14/06-wayland.adoc.txt",
       "translation_path": "handbook/ja/06-wayland.md",
       "source_sha256": "8845bcaf59a6b1a05fd10207f973ef316882d030c494e1a9296d49127ac5888f",
-      "status": "pending",
-      "existing_translation": false
+      "status": "translated",
+      "existing_translation": false,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, code and output listings, keybindings and warnings; compositor runtime not tested",
+      "counts": {
+        "headings": 10,
+        "anchors": 10,
+        "code_blocks": 47,
+        "images": 0
+      }
     },
     {
       "id": 7,

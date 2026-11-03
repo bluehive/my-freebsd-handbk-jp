@@ -13,7 +13,7 @@ from pathlib import Path
 from check_jails_translation import markdown_blocks
 
 ROOT = Path(__file__).resolve().parents[1]
-BLOCK = re.compile(r'^(?P<delimiter>\.{4}|-{4})\n(?P<code>[\s\S]*?)^(?P=delimiter)[ \t]*$', re.M)
+BLOCK = re.compile(r'^(?P<delimiter>\.{4,}|-{4,})\n(?P<code>[\s\S]*?)^(?P=delimiter)[ \t]*$', re.M)
 
 
 def source_sections(source, chapter):
