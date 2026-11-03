@@ -1835,4 +1835,3 @@ zfs.mount_snapshot = 1;
 | ezjail | [Beer Ware](https://erdgeist.org/beerware.html) | `sysutils/ezjail` | [Documentation](https://erdgeist.org/arts/software/ezjail/) |
 
 FreeBSD は 14.3-RELEASE から公式の OCI ベースシステムイメージを公開しています。同じ jail 技術を基盤に Podman で管理する OCI（Docker 形式）コンテナは、[Containers 章](17-containers.md)で説明します。ネイティブ jail を扱う本章とあわせて参照してください。
-

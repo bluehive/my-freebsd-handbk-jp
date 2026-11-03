@@ -142,8 +142,8 @@ DeepSeek (`deepseek-v4-flash`) 分割翻訳。**要校正**。関連: [Issue #1]
 2. 必要なら `freebsd-doc` から該当 `_index.adoc` を `handbook/en/` に抜粋  
 3. `handbook/ja/NN-name.md` に翻訳  
 4. 用語は `handbook/ja/glossary.md` を更新  
-5. 第16章を変更した場合は `python3 scripts/check_jails_translation.py` を実行（[検証範囲](docs/jails-proofreading.md)）  
-6. TOC の状態列を更新し、**本 README の進捗ログに1エントリ追加**  
+5. 第16章を変更した場合は `python3 scripts/check_jails_translation.py` を実行（[検証範囲](docs/jails-proofreading.md)）
+6. TOC の状態列を更新し、**本 README の進捗ログに1エントリ追加**
 
 ## リンク
 

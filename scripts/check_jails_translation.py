@@ -93,7 +93,7 @@ def verify(source, translation, expected_sha=None):
     expected_total = sum(len(items) for _, items in sections.values())
     if len(blocks) != expected_total:
         errors.append(f"Expected {expected_total} code/output blocks, found {len(blocks)}")
-    if re.search(r"^\[\[|^\[source[,]]|^\[\.|^\|===|^\.{4}$|^={2,}(?: |$)|crossref:|man:\w+\[\d+\]|package:\S+\[\]", prose, re.M):
+    if re.search(r"^\[\[|^\[source(?:,|\])|^\[\.|^\|===|^\.{4}$|^={2,}(?: |$)|crossref:|man:\w+\[\d+\]|package:\S+\[\]", prose, re.M):
         errors.append("AsciiDoc syntax remains outside code")
     for target in re.findall(r"\]\(#([^)]+)\)", prose):
         if target not in ids:
@@ -103,6 +103,8 @@ def verify(source, translation, expected_sha=None):
         errors.append("Unresolved translation/release placeholder outside code")
     if any(re.search(r"[ \t]+$", line) for line in translation.splitlines()):
         errors.append("Trailing whitespace")
+    if not translation.endswith("\n") or translation.endswith("\n\n"):
+        errors.append("Translation must end with exactly one newline")
     return errors, {"headings": len(sections), "code_blocks": expected_total}
 
 
