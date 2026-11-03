@@ -1,0 +1,38 @@
+name: Handbook official chapters 26-27
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/ch26-ch27/**'
+      - 'handbook/ja/26-l10n.md'
+      - 'handbook/ja/27-cutting-edge.md'
+      - 'docs/translation-ch26-ch27.json'
+      - 'scripts/check_ch26_ch27_translations.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch26-ch27-translations.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/ch26-ch27/**'
+      - 'handbook/ja/26-l10n.md'
+      - 'handbook/ja/27-cutting-edge.md'
+      - 'docs/translation-ch26-ch27.json'
+      - 'scripts/check_ch26_ch27_translations.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch26-ch27-translations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-official-ch26-ch27:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check both complete translations and pinned sources
+        run: python3 scripts/check_ch26_ch27_translations.py --require-complete

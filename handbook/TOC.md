@@ -31,8 +31,8 @@
 | 22 | OpenZFS（公式Chapter 23） | [23-zfs.md](ja/23-zfs.md) | **自己校正済（意訳）** | 2026-11-04 原文81見出し・192コード例を照合。実機検証は未実施 |
 | 23 | Other File Systems（公式Chapter 24） | [24-filesystems.md](ja/24-filesystems.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・14コード例を照合。実機検証は未実施 |
 | 24 | Virtualization | — | 未着手 | |
-| 25 | Localization | — | 未着手 | |
-| 26 | Updating and Upgrading | — | 未着手 | |
+| 25 | Localization（公式Chapter 26） | [26-l10n.md](ja/26-l10n.md) | **自己校正済（意訳）** | 2026-11-04 原文13見出し・27コード例を照合。実機検証は未実施 |
+| 26 | Updating and Upgrading（公式Chapter 27） | [27-cutting-edge.md](ja/27-cutting-edge.md) | **自己校正済（意訳）** | 2026-11-04 原文45見出し・78コード例を照合。実機検証は未実施 |
 | 27 | DTrace | — | 未着手 | |
 | 28 | USB Device Mode | — | 未着手 | |
 | 29 | Serial Communications | — | 未着手 | |
