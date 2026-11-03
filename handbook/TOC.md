@@ -16,7 +16,7 @@
 | 07 | Desktop Applications | [07-desktop.md](ja/07-desktop.md) | **自己校正済（意訳）** | 2026-11-04 原文62見出し・70コード例・6表を照合。上流の第8章に対応 |
 | 08 | Multimedia | [08-multimedia.md](ja/08-multimedia.md) | **自己校正済（意訳）** | 2026-11-04 原文25見出し・49コード例・1画像を照合。機器実機検証は未実施 |
 | 09 | Kernel Configuration | [09-kernelconfig.md](ja/09-kernelconfig.md) | **自己校正済（意訳）** | 2026-11-04 原文7見出し・17コード例を照合。ビルド・起動の実機検証は未実施 |
-| 10 | Printing | — | 未着手 | |
+| 10 | Printing | [10-printing.md](ja/10-printing.md) | **自己校正済（意訳）** | 2026-11-04 原文29見出し・47コード例を照合。印刷実機検証は未実施 |
 | 11 | Linux Binary Compatibility | — | 未着手 | |
 | 12 | WINE | — | 未着手 | |
 | 13 | Configuration and Tuning | — | 未着手 | |
