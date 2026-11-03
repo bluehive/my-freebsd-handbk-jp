@@ -14,7 +14,7 @@
 | 05 | X Window System | [05-x11.md](ja/05-x11.md) | **自己校正済（意訳）** | 2026-11-04 原文21見出し・47コード例を照合。GPU実機検証は未実施 |
 | 06 | Wayland | [06-wayland.md](ja/06-wayland.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・47コード例を照合。コンポジター実機検証は未実施 |
 | 07 | Desktop Applications | [07-desktop.md](ja/07-desktop.md) | **自己校正済（意訳）** | 2026-11-04 原文62見出し・70コード例・6表を照合。上流の第8章に対応 |
-| 08 | Multimedia | — | 未着手 | |
+| 08 | Multimedia | [08-multimedia.md](ja/08-multimedia.md) | **自己校正済（意訳）** | 2026-11-04 原文25見出し・49コード例・1画像を照合。機器実機検証は未実施 |
 | 09 | Kernel Configuration | — | 未着手 | |
 | 10 | Printing | — | 未着手 | |
 | 11 | Linux Binary Compatibility | — | 未着手 | |

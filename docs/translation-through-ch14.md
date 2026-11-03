@@ -29,7 +29,7 @@
 | 05 | X Window System | 意訳・原文照合済み。21見出し・29アンカー・47コード例 |
 | 06 | Wayland | 意訳・原文照合済み。10見出し・10アンカー・47コード例 |
 | 07 | Desktop Applications | 意訳・原文照合済み。62見出し・62アンカー・70コード例・6表 |
-| 08 | Multimedia | 未着手 |
+| 08 | Multimedia | 意訳・原文照合済み。25見出し・28アンカー・49コード例・1画像・5表 |
 | 09 | Kernel Configuration | 未着手 |
 | 10 | Printing | 未着手 |
 | 11 | Linux Binary Compatibility | 未着手 |

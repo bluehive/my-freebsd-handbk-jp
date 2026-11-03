@@ -73,7 +73,7 @@ def verify(source, translation, entry, upstream_commit):
         text = re.sub(r'!\[[^\]]*\]\([^)]*\)', '', text)
         if not re.search(r'[\u3040-\u30ff\u3400-\u9fff]', text):
             errors.append(anchor + ': Japanese explanation missing')
-        expected_blocks = [re.sub(r' <\.>', '', m['code'].rstrip()) for m in BLOCK.finditer(body)]
+        expected_blocks = [re.sub(r'[ \t]*<\.>', '', m['code'].rstrip()) for m in BLOCK.finditer(body)]
         if blocks != expected_blocks:
             errors.append(anchor + ': code/output blocks differ from source')
         images = re.findall(r'^image::([^\[]+)\[', body, re.M)
