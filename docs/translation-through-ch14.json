@@ -45,8 +45,16 @@
       "source_path": "handbook/en/through-ch14/04-ports.adoc.txt",
       "translation_path": "handbook/ja/04-ports.md",
       "source_sha256": "c006f30f601bcb1b848bec81e73c2e4af60545c92857e6f96611b37e2c198939",
-      "status": "pending",
-      "existing_translation": false
+      "status": "translated",
+      "existing_translation": false,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, listings, original tables, cautions, and links; runtime not tested",
+      "counts": {
+        "headings": 34,
+        "anchors": 35,
+        "code_blocks": 73,
+        "images": 0
+      }
     },
     {
       "id": 5,
