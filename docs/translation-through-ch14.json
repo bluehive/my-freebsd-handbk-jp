@@ -138,9 +138,17 @@
       "source_path": "handbook/en/through-ch14/09-kernelconfig.adoc.txt",
       "translation_path": "handbook/ja/09-kernelconfig.md",
       "source_sha256": "b3ac9efa02ce82bf5ae50414b290de99ee36b5eabd86973223b1c4553927145b",
-      "status": "pending",
+      "status": "translated",
       "existing_translation": false,
-      "upstream_chapter_number": 10
+      "upstream_chapter_number": 10,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, build/configuration listings and recovery prerequisites; FreeBSD kernel build and boot not tested",
+      "counts": {
+        "headings": 7,
+        "anchors": 8,
+        "code_blocks": 17,
+        "images": 0
+      }
     },
     {
       "id": 10,
