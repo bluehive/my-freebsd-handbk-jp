@@ -27,7 +27,20 @@
 - 第19章：`mac_portacl` の「カーネル設定行」だけ `options` が付いていない。
 - 第19章：LOMACの例で `getfmac` にもラベルを渡している。
 - 第19章：Nagios例が古い `www/apache22` を前提にしている。
-- 第20章：`expire-after:10M` が期間ではなくサイズ指定であることを補足（`audit_control(5)`）。
+- 第20章：`expire-after:10M` が合計サイズによる期限指定であることを補足。
+
+補足の根拠は、FreeBSD 15.1のマニュアル [mac_portacl(4)](https://man.freebsd.org/cgi/man.cgi?query=mac_portacl&sektion=4)、[getfmac(8)](https://man.freebsd.org/cgi/man.cgi?query=getfmac&sektion=8)、[audit_control(5)](https://man.freebsd.org/cgi/man.cgi?query=audit_control&sektion=5)で確認しました（2026-11-04）。固定原文の時点の仕様との差は未確認です。継続記号の漏れとapache22は、固定原文の内容と手元の記述から判断した補足で、一次資料での確認対象ではありません。
+
+## 再校正（2026-11-04）
+
+PR #7で追加された[引き継ぎ文書](translation-handoff.md)の方針に沿って、再度全節を見直しました。
+
+- 訳注は原文と区別し、技術的な補足はFreeBSD 15.1のマニュアルで確認してリンクを残した（上記）。
+- 最新のmain（PR #7の取り込み後）へリベースし、新しい共通検査器と他範囲の検査がすべて成功することを確認。
+- マニフェストのcounts（見出し・アンカー・コード・表）を、実ファイルおよびPandocのAST集計と照合。
+- `expire-after` の訳注を、期間・合計サイズ・両者の組み合わせという一次資料の説明に合わせて修正。
+- 監査パイプの説明は、「複製型」を「クローン型（cloning）」に直した。
+- 原文の `.txt` に末尾空白があるため、固定原文を改変せずに `git diff --check` を通せるよう、`handbook/en/` を対象外とする `.gitattributes` を追加。
 
 ## 検証
 

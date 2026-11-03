@@ -1,0 +1,2 @@
+# Pinned upstream snapshots must stay byte-identical (SHA-256 in manifests).
+handbook/en/** -whitespace
