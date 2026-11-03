@@ -1,0 +1,146 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-04",
+  "scope": "Chapters 1 through 14, inclusive; interpretive Japanese translation preserving procedures and caveats",
+  "chapters": [
+    {
+      "id": 1,
+      "slug": "introduction",
+      "source_path": "handbook/en/through-ch14/01-introduction.adoc.txt",
+      "translation_path": "handbook/ja/01-introduction.md",
+      "source_sha256": "b4d5413730388b3215d88f4e7dbc3486bf583d5701dc592737fe33a944320a8f",
+      "status": "pending",
+      "existing_translation": true
+    },
+    {
+      "id": 2,
+      "slug": "bsdinstall",
+      "source_path": "handbook/en/through-ch14/02-bsdinstall.adoc.txt",
+      "translation_path": "handbook/ja/02-bsdinstall.md",
+      "source_sha256": "5eb43a23dcea2b09c588cf8aad7835b87879d2432ac9ec25ac7d7c9d5c05fcba",
+      "status": "translated",
+      "existing_translation": false,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, code listings, screenshots, warnings, and tables; runtime not tested",
+      "counts": {
+        "headings": 31,
+        "anchors": 95,
+        "code_blocks": 5,
+        "images": 60
+      }
+    },
+    {
+      "id": 3,
+      "slug": "basics",
+      "source_path": "handbook/en/through-ch14/03-basics.adoc.txt",
+      "translation_path": "handbook/ja/03-basics.md",
+      "source_sha256": "c54855a71b61fa23800907f8e261ac1766b1f50546afb99c4183b31677b14319",
+      "status": "pending",
+      "existing_translation": true
+    },
+    {
+      "id": 4,
+      "slug": "ports",
+      "source_path": "handbook/en/through-ch14/04-ports.adoc.txt",
+      "translation_path": "handbook/ja/04-ports.md",
+      "source_sha256": "c006f30f601bcb1b848bec81e73c2e4af60545c92857e6f96611b37e2c198939",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 5,
+      "slug": "x11",
+      "source_path": "handbook/en/through-ch14/05-x11.adoc.txt",
+      "translation_path": "handbook/ja/05-x11.md",
+      "source_sha256": "f874156638d26d54b84b9cce42878c865bd3a8a9b50b7ea9d96249a6c5de3872",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 6,
+      "slug": "wayland",
+      "source_path": "handbook/en/through-ch14/06-wayland.adoc.txt",
+      "translation_path": "handbook/ja/06-wayland.md",
+      "source_sha256": "8845bcaf59a6b1a05fd10207f973ef316882d030c494e1a9296d49127ac5888f",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 7,
+      "slug": "desktop",
+      "source_path": "handbook/en/through-ch14/07-desktop.adoc.txt",
+      "translation_path": "handbook/ja/07-desktop.md",
+      "source_sha256": "96b5898419d10231d53a67688f45c8fef1aa953427490b13a17c394706edeb81",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 8,
+      "slug": "multimedia",
+      "source_path": "handbook/en/through-ch14/08-multimedia.adoc.txt",
+      "translation_path": "handbook/ja/08-multimedia.md",
+      "source_sha256": "06ece7366da166ced6cc1858236a6a43388e8601556261f8454e10da5b785aa9",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 9,
+      "slug": "kernelconfig",
+      "source_path": "handbook/en/through-ch14/09-kernelconfig.adoc.txt",
+      "translation_path": "handbook/ja/09-kernelconfig.md",
+      "source_sha256": "b3ac9efa02ce82bf5ae50414b290de99ee36b5eabd86973223b1c4553927145b",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 10,
+      "slug": "printing",
+      "source_path": "handbook/en/through-ch14/10-printing.adoc.txt",
+      "translation_path": "handbook/ja/10-printing.md",
+      "source_sha256": "c0d7263ff86f7158f402a2e65b43c478624cced263aebe460c02b1395d82e4da",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 11,
+      "slug": "linuxemu",
+      "source_path": "handbook/en/through-ch14/11-linuxemu.adoc.txt",
+      "translation_path": "handbook/ja/11-linuxemu.md",
+      "source_sha256": "c8e142d41c9b7f0c91d5d3699ed8d7b063a7f721643108d5349d3237094d8402",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 12,
+      "slug": "wine",
+      "source_path": "handbook/en/through-ch14/12-wine.adoc.txt",
+      "translation_path": "handbook/ja/12-wine.md",
+      "source_sha256": "3428089da8edbca730eadf2de8df3fca2f1c50a831fb829d271e5fb5af074b0c",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 13,
+      "slug": "config",
+      "source_path": "handbook/en/through-ch14/13-config.adoc.txt",
+      "translation_path": "handbook/ja/13-config.md",
+      "source_sha256": "71aff08668838d3a2cca318e920465f8effa5e3631888f4d9679dd2276d72554",
+      "status": "pending",
+      "existing_translation": false
+    },
+    {
+      "id": 14,
+      "slug": "boot",
+      "source_path": "handbook/en/through-ch14/14-boot.adoc.txt",
+      "translation_path": "handbook/ja/14-boot.md",
+      "source_sha256": "56b82db28113033d1dbf19bdf3a1ea7b6a4ae8b832b4555304b0d0008d0cec13",
+      "status": "pending",
+      "existing_translation": false
+    }
+  ],
+  "release_attributes": {
+    "path": "handbook/en/through-ch14/releases.adoc.txt",
+    "sha256": "ff36bcd96c5457282eb61e3a3ea0282d00dad8226da512dd4d4c72910f474ea5"
+  }
+}
