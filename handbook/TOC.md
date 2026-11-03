@@ -18,7 +18,7 @@
 | 09 | Kernel Configuration | [09-kernelconfig.md](ja/09-kernelconfig.md) | **自己校正済（意訳）** | 2026-11-04 原文7見出し・17コード例を照合。実機検証は未実施 |
 | 10 | Printing | [10-printing.md](ja/10-printing.md) | **自己校正済（意訳）** | 2026-11-04 原文29見出し・47コード例を照合。実機検証は未実施 |
 | 11 | Linux Binary Compatibility | [11-linuxemu.md](ja/11-linuxemu.md) | **自己校正済（意訳）** | 2026-11-04 原文13見出し・35コード例を照合。実機検証は未実施 |
-| 12 | WINE | — | 未着手 | |
+| 12 | WINE | [12-wine.md](ja/12-wine.md) | **自己校正済（意訳）** | 2026-11-04 原文54見出し・23コード例を照合。実機検証は未実施 |
 | 13 | Configuration and Tuning | — | 未着手 | |
 | 14 | Booting Process | — | 未着手 | |
 | 15 | Security | [15-security.md](ja/15-security.md) | **ドラフト** | 2026-08-21 高工数 |
