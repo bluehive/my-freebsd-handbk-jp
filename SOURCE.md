@@ -57,3 +57,7 @@
 第14章のUEFIの訳注は、[FreeBSD 12.4 loader.efi(8)](https://man.freebsd.org/cgi/man.cgi?manpath=FreeBSD+12.4-RELEASE&query=loader.efi&sektion=8)を参照しています。固定原文に残る「UEFI起動を開発中」という古い説明と、実装済みのUEFI起動を区別するための参照です。
 
 第3章の訳注は、FreeBSD 15.0の [chflags(1)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/bin/chflags/chflags.1)、[execve(2)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/lib/libsys/execve.2)、[sticky(7)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/share/man/man7/sticky.7)を参照し、ディレクトリのフラグ、スクリプトとnosuidでのset-IDの扱い、stickyディレクトリで削除・改名できる条件を補足しています。
+
+## 公式Chapter 23・24の意訳用スナップショット
+
+2026-11-04に、公式Chapter 23 ZFSとChapter 24 Other File Systemsを、`freebsd/freebsd-doc` のコミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch23-ch24/`、出典・SHA-256・進捗は [マニフェスト](docs/translation-ch23-ch24.json)と[作業記録](docs/translation-ch23-ch24.md)に保存します。公式章番号と既存TOCのIDには1の差があります。今回の対象にVirtualizationは含みません。

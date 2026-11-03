@@ -1,0 +1,36 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-04",
+  "scope": "Official Chapter 23 The Z File System (ZFS) and Chapter 24 Other File Systems; user clarified official numbering",
+  "chapters": [
+    {
+      "id": 23,
+      "slug": "zfs",
+      "upstream_chapter_number": 23,
+      "legacy_toc_id": 22,
+      "source_path": "handbook/en/ch23-ch24/23-zfs.adoc.txt",
+      "translation_path": "handbook/ja/23-zfs.md",
+      "source_sha256": "804244b0a4ab8ac42346926cebf3c81c22d14ebb9d033b01bdd7c1d65dbda5d3",
+      "status": "pending"
+    },
+    {
+      "id": 24,
+      "slug": "filesystems",
+      "upstream_chapter_number": 24,
+      "legacy_toc_id": 23,
+      "source_path": "handbook/en/ch23-ch24/24-filesystems.adoc.txt",
+      "translation_path": "handbook/ja/24-filesystems.md",
+      "source_sha256": "0718ab993f0b20dc3005fb3af1b79a3b5e5cb43454c5c6e7456742df9f2dd248",
+      "status": "translated",
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against every fixed source section, code block and support caveat; runtime not tested",
+      "counts": {
+        "headings": 10,
+        "anchors": 10,
+        "code_blocks": 14,
+        "images": 0
+      }
+    }
+  ]
+}
