@@ -12,7 +12,16 @@
       "source_path": "handbook/en/ch23-ch24/23-zfs.adoc.txt",
       "translation_path": "handbook/ja/23-zfs.md",
       "source_sha256": "804244b0a4ab8ac42346926cebf3c81c22d14ebb9d033b01bdd7c1d65dbda5d3",
-      "status": "pending"
+      "status": "translated",
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all pinned source sections, listings, support requirements, tables and terminology; source inconsistencies and destructive examples distinguished; runtime not tested",
+      "counts": {
+        "headings": 81,
+        "anchors": 137,
+        "code_blocks": 192,
+        "images": 0,
+        "tables": 3
+      }
     },
     {
       "id": 24,
