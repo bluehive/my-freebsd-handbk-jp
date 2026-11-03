@@ -46,9 +46,17 @@
       "source_path": "handbook/en/through-ch14/03-basics.adoc.txt",
       "translation_path": "handbook/ja/03-basics.md",
       "source_sha256": "c54855a71b61fa23800907f8e261ac1766b1f50546afb99c4183b31677b14319",
-      "status": "pending",
+      "status": "translated",
       "existing_translation": true,
-      "upstream_chapter_number": 3
+      "upstream_chapter_number": 3,
+      "reviewed_at": "2026-11-04",
+      "review": "Rebuilt damaged draft and checked all pinned source sections, code, tables, and diagrams; accounts, permissions, filesystems, processes, shells and reference usage reconciled; source inaccuracies distinguished with primary references; runtime not tested",
+      "counts": {
+        "headings": 40,
+        "anchors": 48,
+        "code_blocks": 69,
+        "images": 6
+      }
     },
     {
       "id": 4,
