@@ -49,3 +49,5 @@
 第6章のXDG関連の訳注は、[XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/latest/)の設定用ディレクトリと実行時ディレクトリの区別、および実行時ディレクトリの所有者・権限・寿命を参照しています。
 
 第1〜14章の番号は本リポジトリの既存TOCに準拠します。固定上流ではネットワーク章が新設され、デスクトップ以降は番号が1つ後ろへずれています。各章の内容対応と上流番号はマニフェストの `id`・`slug`・`upstream_chapter_number` で区別します。
+
+第10章のlpqの訳注は、[FreeBSD 15.0 lpq(1)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.sbin/lpr/lpq/lpq.1)の、引数がない場合はキュー内の全ジョブを報告する説明を参照しています。

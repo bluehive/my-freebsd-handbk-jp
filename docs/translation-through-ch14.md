@@ -31,7 +31,7 @@
 | 07 | Desktop Applications | 意訳・原文照合済み。62見出し・62アンカー・70コード例・6表 |
 | 08 | Multimedia | 意訳・原文照合済み。25見出し・28アンカー・49コード例・1画像・5表 |
 | 09 | Kernel Configuration | 意訳・原文照合済み。7見出し・8アンカー・17コード例 |
-| 10 | Printing | 未着手 |
+| 10 | Printing | 意訳・原文照合済み。29見出し・38アンカー・47コード例・1表 |
 | 11 | Linux Binary Compatibility | 未着手 |
 | 12 | WINE | 未着手 |
 | 13 | Configuration and Tuning | 未着手 |
