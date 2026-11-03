@@ -120,9 +120,17 @@
       "source_path": "handbook/en/through-ch14/08-multimedia.adoc.txt",
       "translation_path": "handbook/ja/08-multimedia.md",
       "source_sha256": "06ece7366da166ced6cc1858236a6a43388e8601556261f8454e10da5b785aa9",
-      "status": "pending",
+      "status": "translated",
       "existing_translation": false,
-      "upstream_chapter_number": 9
+      "upstream_chapter_number": 9,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, code, screenshot, original tables, device-specific values, and cautions; physical multimedia hardware not tested",
+      "counts": {
+        "headings": 25,
+        "anchors": 28,
+        "code_blocks": 49,
+        "images": 1
+      }
     },
     {
       "id": 9,
