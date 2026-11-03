@@ -22,7 +22,7 @@
 | 13 | Configuration and Tuning | — | 未着手 | |
 | 14 | Booting Process | — | 未着手 | |
 | 15 | Security | [15-security.md](ja/15-security.md) | **ドラフト** | 2026-08-21 高工数 |
-| 16 | Jails | [16-jails.md](ja/16-jails.md) | **ドラフト** | 2026-08-21 初訳 / 2026-11-01 ホスト設定節を部分校正（PR #2）。残りは要校正 |
+| 16 | Jails | [16-jails.md](ja/16-jails.md) | **ドラフト** | 2026-08-21 初訳 / 2026-11-01 ホスト設定節を部分校正（PR #2）。2026-11-04 ディレクトリ構成・設定ファイル節を部分校正。残りは要校正 |
 | 17 | Containers | [17-containers.md](ja/17-containers.md) | **ドラフト** | 2026-08-21 Podman/OCI |
 | 18 | MAC | — | 未着手 | |
 | 19 | Security Event Auditing | — | 未着手 | |
