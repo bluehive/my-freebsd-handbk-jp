@@ -28,8 +28,8 @@
 | 19 | Security Event Auditing | — | 未着手 | |
 | 20 | Storage / Disks | — | 未着手 | |
 | 21 | GEOM | — | 未着手 | |
-| 22 | OpenZFS | — | 未着手 | 最重量級 |
-| 23 | Other File Systems | — | 未着手 | |
+| 22 | OpenZFS（公式Chapter 23） | [23-zfs.md](ja/23-zfs.md) | **作業中** | 公式章番号に合わせた新ファイル。導入・クイックスタートのみ、章全体は未完了 |
+| 23 | Other File Systems（公式Chapter 24） | [24-filesystems.md](ja/24-filesystems.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・14コード例を照合。実機検証は未実施 |
 | 24 | Virtualization | — | 未着手 | |
 | 25 | Localization | — | 未着手 | |
 | 26 | Updating and Upgrading | — | 未着手 | |
