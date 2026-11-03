@@ -10,9 +10,17 @@
       "source_path": "handbook/en/through-ch14/01-introduction.adoc.txt",
       "translation_path": "handbook/ja/01-introduction.md",
       "source_sha256": "b4d5413730388b3215d88f4e7dbc3486bf583d5701dc592737fe33a944320a8f",
-      "status": "pending",
+      "status": "translated",
       "existing_translation": true,
-      "upstream_chapter_number": 1
+      "upstream_chapter_number": 1,
+      "reviewed_at": "2026-11-04",
+      "review": "Existing translation reconciled with every pinned source section, history, goals, development roles, numeric release attributes, links, and code; dated governance statement labeled; runtime not tested",
+      "counts": {
+        "headings": 11,
+        "anchors": 15,
+        "code_blocks": 1,
+        "images": 0
+      }
     },
     {
       "id": 2,
