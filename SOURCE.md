@@ -31,3 +31,15 @@
 - 機械可読の照合情報: [docs/jails-source.json](docs/jails-source.json)。原文を更新する際は先に差分を確認し、翻訳を照合してからハッシュを更新します。
 
 原文の説明に食い違いがある箇所は本文の訳注として区別しています。追加で参照した一次資料は [FreeBSD 15.0 jail(8)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.sbin/jail/jail.8)、[rctl(8)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.bin/rctl/rctl.8)、[OpenZFS zfs-promote(8)](https://openzfs.github.io/openzfs-docs/man/master/8/zfs-promote.8.html) です。全章を最新上流へ同期した記録ではありません。
+
+## 第1〜14章の意訳用スナップショット
+
+- 取得日: 2026-11-04（日本時間）。
+- 上流: [freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc)。
+- 固定コミット: `a39743a3b0535f4498735119317889ea2bdfeb28`。
+- 章のパス: `documentation/content/en/books/handbook/<章名>/_index.adoc`。
+- 原文保存先: `handbook/en/through-ch14/`。各章のSHA-256と訳文の照合状態は [マニフェスト](docs/translation-through-ch14.json)に記録。
+- リリース属性は同じコミットの `shared/releases.adoc` を `releases.adoc.txt` として保存。コード内の属性は原文どおり残し、章頭で置換方法を説明する。
+- 画像は同じ上流コミットの `documentation/static/images/books/handbook/<章名>/` を参照し、原文と画面の版を揃える。
+
+このスナップショットの保存だけでは各章の翻訳完了を意味しません。マニフェストの `translated` は原文全節との意訳照合を終えた章、`pending` は未照合です。以前からある `handbook/en/01-introduction.adoc.txt` 等は過去の原文であり、この作業の固定版と混同しません。
