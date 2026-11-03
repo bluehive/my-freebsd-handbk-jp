@@ -299,7 +299,7 @@ FreeBSDには、ほとんどのセキュリティ要件をカバーするポリ�
 
 起動オプション: `mac_portacl_load="YES"`
 
-> **訳注**: ほかのモジュールの説明では「カーネル設定行」が `options MAC_...` の形ですが、固定原文のこのモジュールだけ `options` が付いていません。カーネル設定ファイルに書くときは、ほかのモジュールと同じ `options MAC_PORTACL` の形式が自然ですが、原文の記述はそのまま残しています。
+> **訳注**: ほかのモジュールの説明では「カーネル設定行」が `options MAC_...` の形ですが、固定原文のこのモジュールだけ `options` が付いていません。FreeBSD 15.1の [mac_portacl(4)](https://man.freebsd.org/cgi/man.cgi?query=mac_portacl&sektion=4) では、カーネル設定ファイルの記述は `options MAC_PORTACL` です。原文の記述はそのまま残しています。
 
 `mac_portacl(4)` モジュールは、ローカルのTCPおよびUDPポートへのバインドを制限するために使います。これにより、`root` 以外の利用者にも、1024未満の特権ポートのうち指定したものへのバインドを許せます。
 
@@ -490,7 +490,7 @@ BibaやMLSのポリシーと同様に、システムの客体にラベルを付�
 # getfmac /usr/home/trhodes lomac/high[low]
 ```
 
-> **訳注**: 固定原文のこの例では、`getfmac` にもラベル（`lomac/high[low]`）を渡しています。`getfmac` は、ファイルに設定されているラベルを表示するコマンドです。実際に試すときは、`getfmac /usr/home/trhodes` のようにファイル名だけを指定するのが自然です。
+> **訳注**: 固定原文のこの例では、`getfmac` にもラベル（`lomac/high[low]`）を渡しています。`getfmac` は、指定したファイルに設定されているラベルを表示するコマンドです（FreeBSD 15.1の [getfmac(8)](https://man.freebsd.org/cgi/man.cgi?query=getfmac&sektion=8) を確認）。実際に試すときは、`getfmac /usr/home/trhodes` のようにファイル名を指定します。
 
 補助グレード `low` は、MAC LOMACポリシーだけが提供する機能です。
 

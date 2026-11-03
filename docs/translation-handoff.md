@@ -78,6 +78,7 @@ AsciiDocのコード区切りは四つ以上のドットやハイフンが使わ
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py --require-complete
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_jails_translation.py
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch23_ch24_translations.py --require-complete
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch19_ch20_translations.py --require-complete
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch26_ch27_translations.py --require-complete
 git diff --check
 ```
