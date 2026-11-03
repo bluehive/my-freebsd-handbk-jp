@@ -47,3 +47,5 @@
 第5章の追加訳注は、[X.orgのフォント文書](https://xorg.freedesktop.org/releases/current/doc/xorg-docs/fonts/fonts.html)のcore fontとXftの区別・索引作成・組み込みフォント機能、および[X.orgのxorg.confマニュアル](https://www.x.org/archive/X11R7.0/doc/html/xorg.conf.5.html)のBusID書式も参照しています。これらは原文の旧来手順を説明するための一次資料で、現在の各FreeBSDパッケージを実機で検証したという意味ではありません。
 
 第6章のXDG関連の訳注は、[XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/latest/)の設定用ディレクトリと実行時ディレクトリの区別、および実行時ディレクトリの所有者・権限・寿命を参照しています。
+
+第1〜14章の番号は本リポジトリの既存TOCに準拠します。固定上流ではネットワーク章が新設され、デスクトップ以降は番号が1つ後ろへずれています。各章の内容対応と上流番号はマニフェストの `id`・`slug`・`upstream_chapter_number` で区別します。

@@ -11,7 +11,8 @@
       "translation_path": "handbook/ja/01-introduction.md",
       "source_sha256": "b4d5413730388b3215d88f4e7dbc3486bf583d5701dc592737fe33a944320a8f",
       "status": "pending",
-      "existing_translation": true
+      "existing_translation": true,
+      "upstream_chapter_number": 1
     },
     {
       "id": 2,
@@ -28,7 +29,8 @@
         "anchors": 95,
         "code_blocks": 5,
         "images": 60
-      }
+      },
+      "upstream_chapter_number": 2
     },
     {
       "id": 3,
@@ -37,7 +39,8 @@
       "translation_path": "handbook/ja/03-basics.md",
       "source_sha256": "c54855a71b61fa23800907f8e261ac1766b1f50546afb99c4183b31677b14319",
       "status": "pending",
-      "existing_translation": true
+      "existing_translation": true,
+      "upstream_chapter_number": 3
     },
     {
       "id": 4,
@@ -54,7 +57,8 @@
         "anchors": 35,
         "code_blocks": 73,
         "images": 0
-      }
+      },
+      "upstream_chapter_number": 4
     },
     {
       "id": 5,
@@ -71,7 +75,8 @@
         "anchors": 29,
         "code_blocks": 47,
         "images": 0
-      }
+      },
+      "upstream_chapter_number": 5
     },
     {
       "id": 6,
@@ -88,7 +93,8 @@
         "anchors": 10,
         "code_blocks": 47,
         "images": 0
-      }
+      },
+      "upstream_chapter_number": 6
     },
     {
       "id": 7,
@@ -96,8 +102,17 @@
       "source_path": "handbook/en/through-ch14/07-desktop.adoc.txt",
       "translation_path": "handbook/ja/07-desktop.md",
       "source_sha256": "96b5898419d10231d53a67688f45c8fef1aa953427490b13a17c394706edeb81",
-      "status": "pending",
-      "existing_translation": false
+      "status": "translated",
+      "existing_translation": false,
+      "upstream_chapter_number": 8,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, commands, original application/license/resource tables, and prerequisites; desktop and application runtime not tested",
+      "counts": {
+        "headings": 62,
+        "anchors": 62,
+        "code_blocks": 70,
+        "images": 0
+      }
     },
     {
       "id": 8,
@@ -106,7 +121,8 @@
       "translation_path": "handbook/ja/08-multimedia.md",
       "source_sha256": "06ece7366da166ced6cc1858236a6a43388e8601556261f8454e10da5b785aa9",
       "status": "pending",
-      "existing_translation": false
+      "existing_translation": false,
+      "upstream_chapter_number": 9
     },
     {
       "id": 9,
@@ -115,7 +131,8 @@
       "translation_path": "handbook/ja/09-kernelconfig.md",
       "source_sha256": "b3ac9efa02ce82bf5ae50414b290de99ee36b5eabd86973223b1c4553927145b",
       "status": "pending",
-      "existing_translation": false
+      "existing_translation": false,
+      "upstream_chapter_number": 10
     },
     {
       "id": 10,
@@ -124,7 +141,8 @@
       "translation_path": "handbook/ja/10-printing.md",
       "source_sha256": "c0d7263ff86f7158f402a2e65b43c478624cced263aebe460c02b1395d82e4da",
       "status": "pending",
-      "existing_translation": false
+      "existing_translation": false,
+      "upstream_chapter_number": 11
     },
     {
       "id": 11,
@@ -133,7 +151,8 @@
       "translation_path": "handbook/ja/11-linuxemu.md",
       "source_sha256": "c8e142d41c9b7f0c91d5d3699ed8d7b063a7f721643108d5349d3237094d8402",
       "status": "pending",
-      "existing_translation": false
+      "existing_translation": false,
+      "upstream_chapter_number": 12
     },
     {
       "id": 12,
@@ -142,7 +161,8 @@
       "translation_path": "handbook/ja/12-wine.md",
       "source_sha256": "3428089da8edbca730eadf2de8df3fca2f1c50a831fb829d271e5fb5af074b0c",
       "status": "pending",
-      "existing_translation": false
+      "existing_translation": false,
+      "upstream_chapter_number": 13
     },
     {
       "id": 13,
@@ -151,7 +171,8 @@
       "translation_path": "handbook/ja/13-config.md",
       "source_sha256": "71aff08668838d3a2cca318e920465f8effa5e3631888f4d9679dd2276d72554",
       "status": "pending",
-      "existing_translation": false
+      "existing_translation": false,
+      "upstream_chapter_number": 14
     },
     {
       "id": 14,
@@ -160,11 +181,13 @@
       "translation_path": "handbook/ja/14-boot.md",
       "source_sha256": "56b82db28113033d1dbf19bdf3a1ea7b6a4ae8b832b4555304b0d0008d0cec13",
       "status": "pending",
-      "existing_translation": false
+      "existing_translation": false,
+      "upstream_chapter_number": 15
     }
   ],
   "release_attributes": {
     "path": "handbook/en/through-ch14/releases.adoc.txt",
     "sha256": "ff36bcd96c5457282eb61e3a3ea0282d00dad8226da512dd4d4c72910f474ea5"
-  }
+  },
+  "numbering": "Chapter IDs follow this repository TOC: 07 desktop through 14 boot. Upstream added a network chapter, so its desktop is Chapter 8 and its boot is Chapter 15. The newly added upstream network chapter is outside the original repository chapter mapping."
 }
