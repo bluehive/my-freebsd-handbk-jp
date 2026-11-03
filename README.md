@@ -18,6 +18,8 @@ GitHub: https://github.com/bluehive/my-freebsd-handbk-jp
 
 **公式の代替ではありません。** 最新・正確な情報は docs.freebsd.org を確認してください。
 
+意訳作業を引き継ぐエージェントは、[手順・方針・注意点](docs/translation-handoff.md)を参照してください。
+
 ## ディレクトリ
 
 ```
