@@ -1,123 +1,107 @@
+<a id="jails"></a>
 # 第16章 Jail（Jails）
 
-> **翻訳状態**: 初訳ドラフト（機械支援・要校正）  
-> **上流**: https://docs.freebsd.org/en/books/handbook/jails/  
-> **ソース参照**: `handbook/en/16-jails.adoc.txt`  
-> **著作権**: 原文 © The FreeBSD Documentation Project。本日本語訳は BSD-2-Clause（リポジトリ LICENSE）。
+> **翻訳状態:** 保存済み英語原文との全章照合・自己校正済み（FreeBSD 実機検証は未実施）。
+> **上流:** https://docs.freebsd.org/en/books/handbook/jails/
+> **ソース参照:** `handbook/en/16-jails.adoc.txt`。取得元リビジョンの記録状況と照合基点は [SOURCE.md](../../SOURCE.md) を参照してください。
+> **著作権:** 原文 © The FreeBSD Documentation Project。本日本語訳は BSD-2-Clause（リポジトリ LICENSE）。
 
-**Part III. System Administration**
+本章は保存済みスナップショットの翻訳です。コード内の `{rel-latest}` は原文のリリース属性を表すプレースホルダーであり、そのままシェルへ入力せず、利用する配布物のリリース番号に置き換えてください。インターフェース名・IP アドレス・プール名も環境に合わせて変更します。`#` は root のプロンプトです。コードブロック中の英語コメントと出力例は照合のため原文を保持しています。
 
----
-
+<a id="jails-synopsis"></a>
 ## 概要
 
-システム管理は困難な作業であるため、管理者の作業を容易にするための多くのツールが開発されてきました。これらのツールは、システムのインストール、設定、保守の方法を向上させることがよくあります。FreeBSD システムのセキュリティを強化するために使用できるツールの 1 つが *jails*（jail）です。jail は FreeBSD 4.X から利用可能であり、その有用性、パフォーマンス、信頼性、セキュリティが現在も向上し続けています。
+システム管理は難しい作業であるため、インストール・設定・保守を容易にするさまざまなツールが開発されてきました。FreeBSD のセキュリティを強化するツールの 1 つが jail です。FreeBSD 4.X から利用でき、有用性・性能・信頼性・セキュリティの改善が続いています。
 
-jail は、一連のプロセスのルートディレクトリを変更するために使用される `man chroot(2)` の概念に基づいています。これにより、システムの他の部分から分離された安全な環境が作成されます。chroot 環境内で作成されたプロセスは、その外部のファイルやリソースにアクセスできません。そのため、chroot 環境で実行されているサービスが侵害されたとしても、攻撃者がシステム全体を侵害することはできないはずです。
+jail は、プロセス群のルートディレクトリを変更する `chroot(2)` の概念を発展させたものです。chroot は、システムの他の部分から切り離した環境を作り、その外のファイルや資源へのアクセスを制限します。これはサービスの侵害がシステム全体に及ぶことを防ぐための仕組みですが、chroot から脱出する方法も見つかっており、柔軟性や高度な機能を要するサービスの保護には制約があります。
 
-しかし、chroot にはいくつかの制限があります。chroot は、柔軟性や複雑で高度な機能をあまり必要としない簡単なタスクに適しています。時が経つにつれて、chroot 環境から脱出する多くの方法が見つかり、サービスを保護するための解決策としては理想とは言えなくなっています。
+従来の chroot が制限するのはアクセスできるファイルシステムの範囲だけで、他のシステム資源、ユーザー、実行中のプロセス、ネットワークはホストと共有します。jail はファイルシステム・ユーザー集合・ネットワークへのアクセスを仮想化し、さらに細かな制御を加えます。OS レベルの仮想化の一種と考えられます。
 
-jail は、従来の chroot 環境の概念をいくつかの点で改良したものです。
+本章では次を説明します。
 
-従来の chroot 環境では、プロセスがアクセスできるファイルシステムの部分だけが制限されます。システムリソースの残り、システムユーザー、実行中のプロセス、ネットワークサブシステムは、chroot されたプロセスとホストシステムのプロセスとで共有されます。jail は、ファイルシステム、ユーザーセット、ネットワークサブシステムへのアクセスを仮想化することで、このモデルを拡張します。jail 環境へのアクセスを調整するための、より細かい制御が利用できます。jail は、オペレーティングシステムレベルの仮想化の一種と考えることができます。
-
-この章では、以下について説明します。
-
-* jail とは何か、FreeBSD のインストールにおいてどのような目的で使用されるか。
-* さまざまなタイプの jail。
-* jail のネットワークを設定するさまざまな方法。
-* jail 設定ファイル。
-* さまざまなタイプの jail の作成方法。
-* jail のネットワークアドレス変換（NAT）の設定方法。
-* jail の起動、停止、再起動の方法。
-* jail の内部と外部の両方からの、jail 管理の基本。
-* さまざまなタイプの jail のアップグレード方法。
-* jail が使用できるリソースを制限する方法。
-* jail ごとの追加のセキュリティおよび機能オプション。
-* ZFS データセットを jail に委任する方法。
-* さまざまな FreeBSD jail マネージャーの不完全なリスト。
+- jail の概要と FreeBSD での用途。
+- jail の種類とネットワークの設定方式。
+- jail 設定ファイルと各種 jail の作成。
+- NAT の設定。
+- jail の起動・停止・再起動。
+- ホスト側と jail 内からの管理。
+- jail のアップグレード。
+- リソース制限。
+- jail ごとのセキュリティ・機能オプション。
+- ZFS データセットの委任。
+- FreeBSD の jail マネージャーの紹介（一部）。
 
 <a id="jail-types"></a>
-
 ## Jail の種類
 
-管理者によっては、jail をさまざまなタイプに分類することもありますが、基盤となる技術は同じです。各管理者は、解決すべき問題に応じて、それぞれのケースでどのタイプの jail を作成するかを判断する必要があります。
+基盤となる技術は共通ですが、管理者は構成によって jail をいくつかの種類に分類します。解決したい問題に応じて、適した種類を選びます。以下では特徴と利用上の考慮点を説明します。
 
-以下に、さまざまなタイプ、その特徴、および使用にあたっての考慮事項を示します。
+<a id="thick-jails"></a>
+### Thick Jail
 
-### Thick Jail（シックジャイル）
+Thick Jail は伝統的な FreeBSD jail です。ライブラリ、実行ファイル、設定ファイルを含むベースシステム全体を jail 内に複製します。ホストの制約内で動く、ほぼ独立した FreeBSD インストールと考えられ、プロセスはホストや他の jail から分離されます。
 
-Thick Jail は、FreeBSD Jail の伝統的な形態です。Thick Jail では、ベースシステムの完全なコピーが jail の環境内に複製されます。つまり、jail は FreeBSD ベースシステムの独立したインスタンスを保持し、ライブラリ、実行可能ファイル、設定ファイルを含みます。jail は、ほぼ完全なスタンドアロンの FreeBSD インストールと考えることができますが、ホストシステムの制約内で動作します。この分離により、jail 内のプロセスはホストや他の jail のプロセスから分離されます。
+利点は次のとおりです。
 
-**Thick Jail の利点:**
+- **分離:** ホストや他の jail とプロセスを分離します。
+- **独立性:** ホストや他の jail と異なるライブラリ、設定、ソフトウェアを持てます。
+- **セキュリティ:** jail 内に独自のベースシステムを持つため、その環境の問題がホストや他の jail のベースシステムへ直接反映されません。
 
-* **高度な分離:** jail 内のプロセスは、ホストシステムや他の jail から分離されています。
-* **独立性:** Thick Jail は、ホストシステムや他の jail とは異なるバージョンのライブラリ、設定、ソフトウェアを持つことができます。
-* **セキュリティ:** jail は独自のベースシステムを含むため、jail 環境に影響を与える脆弱性や問題は、ホストや他の jail に直接影響しません。
+欠点は、個別のベースシステムの分だけ Thin Jail より資源を消費し、各 jail を個別に保守・更新する必要があることです。
 
-**Thick Jail の欠点:**
+> **訳注:** どの jail もホストのカーネルを共有します。ベースシステムの独立性は、カーネルを分離することを意味しません。
 
-* **リソースのオーバーヘッド:** 各 jail が独自のベースシステムを維持するため、Thick Jail は Thin Jail と比較してより多くのリソースを消費します。
-* **メンテナンス:** 各 jail は、ベースシステムコンポーネントの独自のメンテナンスと更新が必要です。
+<a id="thin-jails"></a>
+### Thin Jail
 
-### Thin Jail（シンジャイル）
+Thin Jail は、OpenZFS スナップショットまたは NullFS マウントを使ってテンプレートのベースシステムを共有し、各 jail に複製する部分を減らします。Thick Jail と比べて資源消費を抑えられますが、作成後の動作は方式によって異なります。
 
-Thin Jail は、OpenZFS スナップショットまたは NullFS マウントのいずれかを使用して、テンプレートからベースシステムを共有します。各 Thin Jail にはベースシステムの最小限のサブセットのみが複製されるため、Thick Jail と比較してリソース消費が少なくなります。
+OpenZFS 方式では、テンプレートのスナップショットから独立したコピーオンライトのクローンを作成します。未変更ブロックは共有しますが、変更によって内容は分岐します。その後のテンプレートの変更は既存クローンへ伝播せず、Thick Jail と同様に個別の保守・更新が必要です。
 
-この2つのメカニズムは、jail が存在するようになると動作が異なります。OpenZFS 方式では、各 Thin Jail はテンプレートスナップショットのクローンとして作成されます。つまり、テンプレートと変更されていないブロックを共有する独立したコピーオンライトコピーですが、変更されるとテンプレートから分岐します。テンプレートへのその後の変更は既存のクローンには伝播せず、各クローンは Thick Jail と同様に個別に保守・更新されます。
+NullFS 方式では、実行時にテンプレートを読み取り専用でマウントし、ベースシステムを直接共有します。テンプレートを更新すると、それを利用するすべての jail に変更が反映されます。この共通部分への依存により、Thick Jail より独立性が低くなります。つまり Thin Jail は、ベースシステムの大部分を共有し、一部を個別に持つ構成です。
 
-NullFS 方式では、各 Thin Jail は実行時にテンプレートを読み取り専用でマウントするため、ベースシステムはライブで共有され、テンプレートを更新するとそれをマウントしているすべての jail が更新されます。この共有された読み取り専用のベースが、NullFS Thin Jail の分離性と独立性を Thick Jail よりも低くしている理由でもあります。共有コンポーネントの変更は、それを使用しているすべての jail に同時に影響するためです。
+利点は次のとおりです。
 
-要約すると、FreeBSD Thin Jail は、分離された環境内にベースシステムの大部分（ただしすべてではない）を複製する FreeBSD Jail の一種です。
+- **資源効率:** ベースの共有によりディスク容量やメモリの消費を抑え、同じハードウェアで多くの jail を動かせます。
+- **展開速度:** 一般に Thick Jail より作成・起動が速く、多数のインスタンスの展開に向きます。
+- **保守の集約:** NullFS 方式なら共通ライブラリやバイナリの保守をテンプレート上で一度行えます。独立した OpenZFS クローンにはこの利点はなく、各 jail の更新が必要です。
+- **共有資源:** ライブラリやバイナリの共有によりディスクキャッシュの効率や性能が向上する可能性があります。
 
-**Thin Jail の利点:**
+欠点は次のとおりです。
 
-* **リソース効率:** Thin Jail は Thick Jail と比較してリソース効率が高くなります。ベースシステムの大部分を共有するため、ディスク容量とメモリの消費が少なくなります。これにより、過剰なリソースを消費することなく、同じハードウェア上でより多くの jail を実行できます。
-* **迅速な導入:** Thin Jail の作成と起動は、一般的に Thick Jail よりも高速です。これは、複数のインスタンスを迅速に展開する場合に特に有利です。
-* **統一的メンテナンス:** NullFS 方式では、Thin Jail がベースシステムの単一の読み取り専用コピーを共有するため、共通のベースシステムコンポーネント（ライブラリやバイナリなど）の更新とメンテナンスはテンプレート上で一度だけ行うだけで済みます。これにより、各 Thick Jail に個別のベースシステムを維持する場合と比較して、メンテナンスプロセスが簡素化されます。OpenZFS クローンの Thin Jail にはこの利点はありません。各クローンは独立しているため、Thick Jail と同様に、更新は各 jail に個別に適用する必要があります。
-* **リソースの共有:** Thin Jail は、ライブラリやバイナリなどの共通リソースをホストシステムとより簡単に共有できます。これにより、ディスクキャッシュの効率が向上し、jail 内のアプリケーションのパフォーマンスが改善される可能性があります。
+- **分離性:** 特に NullFS 方式ではベースを直接共有するため、その問題が複数の jail に同時に影響し得ます。
+- **セキュリティ:** 分離の低下により、ある jail の侵害が他の jail やホストに影響するリスクを検討する必要があります。
+- **依存関係:** jail ごとに異なるバージョンのライブラリやソフトウェアが必要な場合、依存関係と互換性の管理が複雑になります。
+- **互換性:** アプリケーションが想定するベース環境とテンプレートの共通部分が異なると、問題が起きる場合があります。
 
-**Thin Jail の欠点:**
+<a id="service-jails"></a>
+### Service Jail
 
-* **分離性の低下:** Thin Jail の主な欠点は、Thick Jail と比較して分離性が低いことです。特に NullFS 方式では、jail がテンプレートのベースシステムのライブコピーを共有するため、これらの共有コンポーネントに影響を与える脆弱性や問題が、複数の jail に同時に影響を与える可能性があります。
-* **セキュリティ上の懸念:** Thin Jail の分離性の低下は、...
+Service Jail はホストのファイルシステムツリー全体を直接共有し、ルートパスは `/` です。ホストのファイルにアクセス・変更でき、ユーザーアカウントも共有します。デフォルトではネットワークなど jail が制限する資源にアクセスできませんが、ホストのネットワークを再利用したり、一部の制限を解除したりできます。必要なファイルを洗い出さずに、少ない設定でサービスやデーモンを jail に閉じ込める用途です。FreeBSD 15.0 以降で利用できます。
 
-セキュリティリスクを引き起こす可能性があります。ある jail が侵害された場合、他の jail やホストシステムに影響を及ぼす可能性が高くなるためです。
+利点は次のとおりです。
 
-* 依存関係の競合: 複数のシン jail が同じライブラリやソフトウェアの異なるバージョンを必要とする場合、依存関係の管理が複雑になることがあります。場合によっては、互換性を確保するために追加の作業が必要になることもあります。
-* 互換性の課題: シン jail 内のアプリケーションは、テンプレートが提供する共有コンポーネントとは異なるベースシステム環境を想定している場合、互換性の問題に遭遇する可能性があります。
+- **少ない管理作業:** 対応サービスなら `/etc/rc.conf` に 1 行、非対応サービスなら 2 行の設定で利用できます。
+- **資源効率:** 追加のディスク領域やネットワーク資源が不要で、Thin Jail よりも軽量です。
+- **展開速度:** 同じサービスの複数インスタンスを必要とせず、個々のサービスだけを jail 化する場合、一般に Thin Jail より作成・起動が速くなります。
+- **資源共有:** ライブラリやバイナリをすべてホストと共有し、ディスクキャッシュや性能の改善が期待できます。
+- **プロセス分離:** 同じユーザーのプロセスであっても、Service Jail の子でないプロセスは見えません。
 
-[[service-jails]]
-### Service Jails
+欠点は、Thick Jail や Thin Jail と異なりファイルシステムを分離しないことです。侵害されたサービスがホスト上の広い範囲に影響し得ます。
 
-サービス jail は、ホストとファイルシステムツリー全体を直接共有し（jail ルートパスは `/`）、そのためホスト上のあらゆるファイルにアクセスして変更でき、ホストと同じユーザーアカウントを共有します。デフォルトではネットワークや jail で制限されている他のリソースにアクセスできませんが、ホストのネットワークを再利用し、jail の制限の一部を解除するように設定できます。サービス jail のユースケースは、最小限の設定で、サービスの必要なファイルに関する知識なしに、サービス/デーモンを jail 内に自動的に隔離することです。サービス jail は FreeBSD 15.0 以降で利用可能です。
+以下で扱う設定の多くは Service Jail には不要ですが、仕組みを理解するうえで役立ちます。具体的な設定は [Service Jail の設定](#service-jails-config)を参照してください。
 
-サービス jail の利点:
+<a id="vnet-jails"></a>
+### VNET Jail
 
-* ゼロ管理: サービス jail 対応のサービスは、`/etc/rc.conf` に設定を 1 行追加するだけで済みます。サービス jail 非対応のサービスは、2 行の設定が必要です。
-* リソース効率: サービス jail はシン jail よりもリソース効率が高く、追加のディスク容量やネットワークリソースを必要としません。
-* 高速なデプロイ: 個別のサービス/デーモンだけを jail 化し、同じサービス/デーモンの並列インスタンスが必要ない場合、サービス jail の作成と起動は一般的にシン jail よりも高速です。
-* 共有リソース: サービス jail はライブラリやバイナリなどのすべてのリソースをホストシステムと共有します。これにより、ディスクキャッシュがより効率的になり、jail 内のアプリケーションのパフォーマンスが向上する可能性があります。
-* プロセス分離: サービス jail は特定のサービスを分離します。サービス jail の子プロセスではないプロセスは、同じユーザーアカウントで実行されている場合でも、サービス jail からは見えません。
+VNET Jail は、その中のプロセスに独立したネットワークスタックを提供し、ネットワーク資源を分離・制御します。ホストや他の jail とネットワークトラフィックを分離でき、高度なネットワーク分割に役立ちます。
 
-サービス jail の欠点:
+VNET はネットワークの構成方式を追加するものなので、Thick Jail と Thin Jail のどちらにも組み合わせられます。
 
-* 分離の低下: サービス jail の主な欠点は、シック jail やシン jail と比較してファイルシステムの分離が提供されないことです。
-* セキュリティ上の懸念: サービス jail の分離の低下はセキュリティリスクを引き起こす可能性があります。ある jail が侵害された場合、ホストシステム上のすべてに影響を及ぼす可能性が高くなるためです。
+<a id="linux-jails"></a>
+### Linux Jail
 
-以下で説明する jail の設定のほとんどは、サービス jail には必要ありません。jail の仕組みを理解するには、これらの設定オプションを理解しておくことをお勧めします。サービス jail の設定に必要な詳細は、[Service Jails](#service-jails-config) セクションにあります。
-
-[[vnet-jails]]
-### VNET Jails
-
-FreeBSD VNET jail は、その中で実行されるプロセスのネットワークリソースの分離と制御を可能にする仮想化環境です。jail 内のプロセスに対して別個のネットワークスタックを作成することで、高度なネットワークセグメンテーションとセキュリティを提供し、jail 内のネットワークトラフィックがホストシステムや他の jail から分離されることを保証します。
-
-本質的に、FreeBSD VNET jail はネットワーク設定メカニズムを追加します。つまり、VNET jail はシック jail またはシン jail として作成できます。
-
-[[linux-jails]]
-### Linux Jails
-
-FreeBSD Linux Jail は、FreeBSD オペレーティングシステムの機能であり、FreeBSD jail 内で Linux バイナリとアプリケーションを使用できるようにします。この機能は、特定の Linux システムコールとライブラリを FreeBSD カーネル上で変換して実行できるようにする互換レイヤーを組み込むことで実現されます。Linux Jail の目的は、別の Linux 仮想マシンや環境を必要とせずに、FreeBSD システム上で Linux ソフトウェアを実行できるようにすることです。
+Linux Jail は、FreeBSD jail 内で Linux バイナリやアプリケーションを動かす機能です。互換レイヤーが一部の Linux システムコールなどを FreeBSD カーネル上で扱えるようにします。別の Linux 仮想マシンを用意せずに Linux ソフトウェアを実行するためのものです。
 
 <a id="host-configuration"></a>
 
@@ -285,7 +269,6 @@ UFS を使用する場合は、次のコマンドでディレクトリを作成�
 # mkdir /usr/local/jails/containers
 ```
 
-
 <a id="jail-configuration-files"></a>
 ### Jail 設定ファイル
 
@@ -343,7 +326,6 @@ jailname {
 ```text
 /var/log/jail_console_*.log            640  7     100  *     J
 ```
-
 
 <a id="global-settings-wildcards-variables"></a>
 #### 共通設定、ワイルドカード、変数
@@ -439,51 +421,44 @@ devfs_ruleset = 100;
 設定変数の詳細は `jail(8)` と `jail.conf(5)` を参照してください。
 
 <a id="classic-jail"></a>
+## クラシック Jail（Thick Jail）
 
-## クラシック Jail (Thick Jail)
+これらの jail は通常の FreeBSD システムに似ており、ホストとほぼ同様に管理し、個別に更新できます。
 
-これらの jail は実際の FreeBSD システムに似ています。  
-通常のホストシステムとほぼ同様に管理でき、独立して更新できます。
-
+<a id="creating-classic-jail"></a>
 ### クラシック Jail の作成
 
-原則として、jail に必要なものはホスト名、ルートディレクトリ、IP アドレス、そしてユーザーランドだけです。
+原則として jail に必要なのは、ホスト名、ルートディレクトリ、IP アドレス、ユーザーランドです。ユーザーランドは FreeBSD の公式ダウンロードサーバーから取得できます。
 
-jail 用のユーザーランドは、公式の FreeBSD ダウンロードサーバーから取得できます。
-
-以下のコマンドを実行して、ユーザーランドをダウンロードします:
+次のコマンドでダウンロードします。
 
 ```shell
 # fetch https://download.freebsd.org/releases/amd64/amd64/{rel-latest}-RELEASE/base.txz -o /usr/local/jails/media/{rel-latest}-RELEASE-base.txz
 ```
 
-ダウンロードが完了したら、jail のディレクトリにコンテンツを展開する必要があります。
-
-以下のコマンドを実行して、ユーザーランドを jail のディレクトリに展開します:
+取得したファイルを jail のディレクトリに展開します。
 
 ```shell
 # mkdir -p /usr/local/jails/containers/classic
 # tar -xf /usr/local/jails/media/{rel-latest}-RELEASE-base.txz -C /usr/local/jails/containers/classic --unlink
 ```
 
-ユーザーランドを jail ディレクトリに展開したら、タイムゾーンと DNS サーバーのファイルをコピーする必要があります:
+タイムゾーンと DNS サーバーの設定ファイルをコピーします。
 
 ```shell
 # cp /etc/resolv.conf /usr/local/jails/containers/classic/etc/resolv.conf
 # cp /etc/localtime /usr/local/jails/containers/classic/etc/localtime
 ```
 
-ファイルをコピーしたら、次のコマンドを実行して最新のパッチレベルに更新します:
+最新のパッチレベルに更新します。
 
 ```shell
 # freebsd-update -b /usr/local/jails/containers/classic/ fetch install
 ```
 
-最後のステップは、jail を設定することです。jail のパラメータを設定ファイル `/etc/jail.conf` または `jail.conf.d` に追加する必要があります。
+最後に、`/etc/jail.conf` または `/etc/jail.conf.d/` 内のファイルに jail のパラメータを追加します。
 
-例は次のとおりです:
-
-```
+```text
 classic {
   # STARTUP/LOGGING
   exec.start = "/bin/sh /etc/rc";
@@ -505,225 +480,492 @@ classic {
 }
 ```
 
-以下のコマンドを実行して、jail を起動します:
+次のコマンドで起動します。
 
 ```shell
 # service jail start classic
 ```
 
-jail の管理方法の詳細は、「Jail の管理」のセクションを参照してください。
+操作方法の詳細は [Jail の管理](#jail-management)を参照してください。
 
+<a id="creating-jail-userland"></a>
 ### Jail ユーザーランドの取得
 
-上記の fetch と展開の手順は、jail のルートディレクトリを準備する従来の方法ですが、これだけが唯一の方法ではありません。同じユーザーランドは、`bsdinstall(8)` を使って、ベースシステムのパッケージから、またはローカルで構築したソースツリーからインストールすることもできます。
+上のダウンロードと展開は、ルートディレクトリを準備する従来の方法です。同じユーザーランドを `bsdinstall(8)`、ベースシステムのパッケージ、ローカルでビルドしたソースツリーからインストールすることもできます。
 
-`bsdinstall(8)` には、指定したディレクトリに新しいユーザーランドを設定して `jail(8)` で使用するための専用の `jail` ターゲットがあります。これは、カーネルをインストールせずに配布セットを取得・展開し、通常のインストールのディスク分割やネットワークの手順をスキップするため、手動の fetch と `tar(1)` の一連の操作に代わる、1 コマンドでスクリプト化可能な方法です:
+`bsdinstall(8)` の `jail` ターゲットは、指定ディレクトリに `jail(8)` 用ユーザーランドを構築します。カーネルをインストールせず配布セットを取得・展開し、通常のインストールにあるディスク分割やネットワーク設定を省くため、手動の fetch と `tar(1)` の代わりに、1 コマンドでスクリプト化できます。
 
 ```shell
 # bsdinstall jail /usr/local/jails/containers/classic
 ```
 
-`jail` ターゲットは、デフォルトでベース配布セット (`base.txz`) をインストールします。FreeBSD 15.0 以降では、`bsdinstall(8)` の `pkgbase` ターゲットを使って、ベースシステムのパッケージからルートディレクトリを準備することもできます。このパッケージベースの方法については、次で説明します。
+`jail` ターゲットはデフォルトで `base.txz` をインストールします。FreeBSD 15.0 以降では `pkgbase` ターゲットでベースシステムのパッケージから構築することもできます。
 
-FreeBSD 15.0 以降、ベースシステムはパッケージとしても公開されているため、jail ユーザーランドは `FreeBSD-base` リポジトリから `pkg(8)` を使って完全にインストールできます。`pkg(8)` をグローバルオプション `--rootdir` で jail のルートディレクトリに向け、ベースセットの jail バリアントをインストールします:
+FreeBSD 15.0 からはベースシステムもパッケージとして公開されているため、`FreeBSD-base` リポジトリから `pkg(8)` でユーザーランド全体をインストールできます。グローバルオプション `--rootdir` で jail のルートを指定し、ベースセットの jail 向けバリアントをインストールします。
 
 ```shell
 # pkg --rootdir /usr/local/jails/containers/classic install -r FreeBSD-base FreeBSD-set-base-jail
 ```
 
-最小限のユーザーランドにするには、`FreeBSD-set-base-jail` の代わりに `FreeBSD-set-minimal-jail` を使用します。この方法でインストールされた jail は、その後、`freebsd-update(8)` ではなく `pkg(8)` でパッチ適用・アップグレードされます。詳しくは、「pkgbase Jail のアップグレード」のセクションを参照してください。
+最小構成には `FreeBSD-set-base-jail` の代わりに `FreeBSD-set-minimal-jail` を使用します。この方法で作成した jail は、その後も `freebsd-update(8)` ではなく `pkg(8)` で更新します。[pkgbase Jail のアップグレード](#jail-upgrade-pkgbase)を参照してください。
 
-> **注:** ベースシステムパッケージは FreeBSD 15.0 におけるテクノロジープレビューです。`FreeBSD-base` リポジトリは `/etc/pkg/FreeBSD.conf` で定義されていますが、デフォルトでは無効になっているため、`install -r FreeBSD-base` で明示的に選択してください。ターゲットのルートディレクトリと、その `var/cache/pkg` および `var/db/pkg` サブディレクトリは、あらかじめ作成しておく必要がある場合があります。従来の
+> **注（保存済み原文の説明）:** FreeBSD 15.0 のベースシステムパッケージはテクノロジープレビューです。`FreeBSD-base` は `/etc/pkg/FreeBSD.conf` に定義されていますが、デフォルトでは無効のため `install -r FreeBSD-base` で明示的に選択します。対象ルートと、その下の `var/cache/pkg`、`var/db/pkg` を先に作成する必要がある場合があります。15.0 でも `base.txz` は引き続き公開され、従来のダウンロード・展開方式を利用できます。
 
+ソースからビルドしたユーザーランドは、`DESTDIR` を指定して jail のルートへインストールできます。`-STABLE` や独自ビルドを jail で使うための方法です。
 
+```shell
+# cd /usr/src
+# make buildworld
+# make installworld DESTDIR=/usr/local/jails/containers/classic
+# make distribution DESTDIR=/usr/local/jails/containers/classic
+```
 
-## Thin Jails
+`make distribution` は jail の `/etc` にデフォルト設定を入れるため、初期構築時に一度だけ実行します。更新時に繰り返すと jail 内の設定を上書きします。ソースから更新する場合はホストと同じ順序で、同じ `DESTDIR` を指定した `installworld`、jail のルートを指定した `etcupdate -D` による設定のマージ、同じ `DESTDIR` での `make delete-old delete-old-libs` による古いファイル・ライブラリの削除を行います。`freebsd-update(8)` は使いません。全手順は[ソースからの FreeBSD の更新](https://docs.freebsd.org/en/books/handbook/cutting-edge/#makeworld)を参照してください。
 
-Thin Jails は Thick Jails と同じテクノロジーを使用していますが、その作成手順は異なります。  
-Thin Jails は、OpenZFS スナップショットを使用するか、テンプレートと NullFS を使用して作成できます。  
-OpenZFS スナップショットや NullFS を使用したテンプレートには、従来の jails に比べていくつかの利点があります。たとえば、スナップショットからより速く作成できることや、NullFS を使用して複数の jails を更新できることなどです。
+<a id="classic-jail-clone"></a>
+### Jail をテンプレートとして複製する
 
-### OpenZFS スナップショットを使用した Thin Jail の作成 {#creating-thin-jail-openzfs-snapshots}
+パッケージをインストールし、サービスとローカル設定を整えた Thick Jail は、同一構成の jail を素早く展開するテンプレートイメージとして利用できます。
 
-FreeBSD と OpenZFS の統合が優れているため、OpenZFS スナップショットを使用して新しい Thin Jails を簡単に作成できます。
+OpenZFS では設定済み jail のデータセットのスナップショットからクローンを作ります。元の jail は独立したデータセット上に置く必要があるため、先ほどのクラシック jail 作成手順にある `mkdir` の代わりに `zfs create` を使って準備します。
 
-OpenZFS スナップショットを使用して Thin Jail を作成するには、まず『Jail ディレクトリツリーのセットアップ』の手順に従って jail ディレクトリツリーを作成します（jails の章を参照）。
+```shell
+# zfs create -p zroot/jails/containers/classic
+```
 
-次に、テンプレートを作成します。  
-テンプレートは新しい jails を作成するためにのみ使用されます。  
-そのため、テンプレートは「読み取り専用」モードで作成され、jails が不変のベースで作成されるようにします。
+整合性のあるイメージを作るため jail を停止し、スナップショットを作成して、新しい jail ごとにクローンを作ります。
 
-テンプレート用の dataset を作成するには、次のコマンドを実行します。
+```shell
+# service jail stop classic
+# zfs snapshot zroot/jails/containers/classic@template
+# zfs clone zroot/jails/containers/classic@template zroot/jails/containers/web1
+```
+
+UFS ホストでは設定済み jail のディレクトリツリーをコピーします。
+
+```shell
+# cp -a /usr/local/jails/containers/classic /usr/local/jails/containers/web1
+```
+
+各複製には、固有の名前・パス・IP アドレスを持つ設定を `/etc/jail.conf` または `/etc/jail.conf.d/` に用意します。上の例は `path` と `host.hostname` を `${name}` から求めるため、ブロック名とアドレスだけを変更できます。
+
+```text
+web1 {
+  # STARTUP/LOGGING
+  exec.start = "/bin/sh /etc/rc";
+  exec.stop = "/bin/sh /etc/rc.shutdown";
+  exec.consolelog = "/var/log/jail_console_${name}.log";
+
+  # PERMISSIONS
+  allow.raw_sockets;
+  exec.clean;
+  mount.devfs;
+
+  # HOSTNAME/PATH
+  host.hostname = "${name}";
+  path = "/usr/local/jails/containers/${name}";
+
+  # NETWORK
+  ip4.addr = 192.168.1.152;
+  interface = em0;
+}
+```
+
+テンプレートイメージの複製は、読み取り専用ベースを実行時に共有する NullFS の [Thin Jail](#thin-jail)とは異なり、全体が書き込み可能で、[Jail のアップグレード](#jail-upgrading)のとおり個別に保守します。OpenZFS クローンは未変更ブロックをスナップショットと共有するコピーオンライトの複製として始まり、origin スナップショットへの依存を持ちます。`zfs promote` で依存関係を変更できます。完全に独立した複製や別プール・別ホストへの複製には `zfs clone` の代わりに `zfs send` と `zfs receive` のパイプを使います。
+
+> **訳注:** 保存済み原文のこの節は Thin Jail を読み取り専用ベース共有として一括して説明していますが、[種類の説明](#thin-jails)にあるとおり、OpenZFS 方式の Thin Jail は独立したクローンです。テンプレートの更新が既存 jail に一括反映されるのは NullFS 方式です。[zfs-promote(8)](https://openzfs.github.io/openzfs-docs/man/master/8/zfs-promote.8.html) のとおり、`zfs promote` は origin との依存関係を逆転させる操作であり、データを物理的に独立コピーする操作ではありません。
+
+<a id="thin-jail"></a>
+## Thin Jail
+
+Thin Jail は Thick Jail と同じ技術を使いますが、作成方法が異なります。OpenZFS スナップショットから作成する方式と、テンプレートを NullFS で共有する方式があります。前者はスナップショットから素早く作成でき、後者は共通テンプレートの更新で複数の jail を更新できる利点があります。
+
+<a id="creating-thin-jail-openzfs-snapshots"></a>
+### OpenZFS スナップショットを使用した Thin Jail の作成
+
+FreeBSD と OpenZFS の統合により、スナップショットから Thin Jail を容易に作成できます。まず [Jail ディレクトリツリーのセットアップ](#host-configuration-directories)に従って保存先を準備します。
+
+続いて新しい jail の作成元となるテンプレートを作ります。テンプレートは新規作成のためだけに利用し、変更されないベースから jail を作るためのものです。原文はこれを「読み取り専用」と表現しています。以下では、作成したスナップショットが不変の作成元になります。
+
+テンプレート用データセットを作成します。
 
 ```shell
 # zfs create -p zroot/jails/templates/{rel-latest}-RELEASE
 ```
 
-次に、以下のコマンドを実行して userland をダウンロードします。
+ユーザーランドをダウンロードします。
 
 ```shell
 # fetch https://download.freebsd.org/releases/amd64/amd64/{rel-latest}-RELEASE/base.txz -o /usr/local/jails/media/{rel-latest}-RELEASE-base.txz
 ```
 
-ダウンロードが完了したら、次のコマンドを実行して、テンプレートディレクトリに内容を展開する必要があります。
+テンプレートに展開します。
 
 ```shell
 # tar -xf /usr/local/jails/media/{rel-latest}-RELEASE-base.txz -C /usr/local/jails/templates/{rel-latest}-RELEASE --unlink
 ```
 
-templates ディレクトリに userland を展開したら、次のコマンドを実行して、タイムゾーンと DNS サーバーのファイルをテンプレートディレクトリにコピーする必要があります。
+タイムゾーンと DNS サーバーの設定をコピーします。
 
 ```shell
 # cp /etc/resolv.conf /usr/local/jails/templates/{rel-latest}-RELEASE/etc/resolv.conf
 # cp /etc/localtime /usr/local/jails/templates/{rel-latest}-RELEASE/etc/localtime
 ```
 
-次に、以下のコマンドを実行して、最新のパッチレベルに更新します。
+最新のパッチレベルに更新します。
 
 ```shell
 # freebsd-update -b /usr/local/jails/templates/{rel-latest}-RELEASE/ fetch install
 ```
 
-更新が完了すると、テンプレートの
+これでテンプレートの準備ができました。スナップショットを作成します。
 
-eebsd.org/releases/amd64/amd64/{rel-latest}-RELEASE/base.txz -o /usr/local/jails/media/{rel-latest}-RELEASE-base.txz
+```shell
+# zfs snapshot zroot/jails/templates/{rel-latest}-RELEASE@base
+```
 
-ダウンロードが完了したら、次のコマンドを実行してテンプレートディレクトリに内容を展開する必要があります。
+スナップショットから、OpenZFS のクローン機能で必要な数の jail を作成できます。次は `thinjail` を作る例です。
+
+```shell
+# zfs clone zroot/jails/templates/{rel-latest}-RELEASE@base zroot/jails/containers/thinjail
+```
+
+最後に `/etc/jail.conf` または `/etc/jail.conf.d/` のファイルへ設定を追加します。
+
+```text
+thinjail {
+  # STARTUP/LOGGING
+  exec.start = "/bin/sh /etc/rc";
+  exec.stop = "/bin/sh /etc/rc.shutdown";
+  exec.consolelog = "/var/log/jail_console_${name}.log";
+
+  # PERMISSIONS
+  allow.raw_sockets;
+  exec.clean;
+  mount.devfs;
+
+  # HOSTNAME/PATH
+  host.hostname = "${name}";
+  path = "/usr/local/jails/containers/${name}";
+
+  # NETWORK
+  ip4 = inherit;
+  interface = em0;
+}
+```
+
+> **訳注:** 原文例の `ip4 = inherit` は、ホストのすべての IPv4 アドレスへのアクセスを許可します。このモードでは `interface` によって特定のアドレスに制限されません。固有の IP に制限する構成は [Jail 設定ファイル](#jail-configuration-files)を参照してください。
+
+起動します。
+
+```shell
+# service jail start thinjail
+```
+
+管理方法は [Jail の管理](#jail-management)を参照してください。既存クローンへテンプレートの更新は伝播しません。
+
+<a id="creating-thin-jail-nullfs"></a>
+### NullFS を使用した Thin Jail の作成
+
+NullFS を使ってホスト上の特定ディレクトリを jail に共有すると、システムファイルの重複を減らせます。
+
+まず、テンプレートの保存先を作成します。OpenZFS の場合はデータセットを作ります。
+
+```shell
+# zfs create -p zroot/jails/templates/{rel-latest}-RELEASE-base
+```
+
+UFS の場合はディレクトリを作ります。
+
+```shell
+# mkdir /usr/local/jails/templates/{rel-latest}-RELEASE-base
+```
+
+ユーザーランドをダウンロードします。
+
+```shell
+# fetch https://download.freebsd.org/releases/amd64/amd64/{rel-latest}-RELEASE/base.txz -o /usr/local/jails/media/{rel-latest}-RELEASE-base.txz
+```
+
+取得後、テンプレートに展開します。
 
 ```shell
 # tar -xf /usr/local/jails/media/{rel-latest}-RELEASE-base.txz -C /usr/local/jails/templates/{rel-latest}-RELEASE-base --unlink
 ```
 
-テンプレートディレクトリにユーザーランドが展開されたら、次のコマンドを実行して、タイムゾーンファイルとDNSサーバーファイルをテンプレートディレクトリにコピーする必要があります。
+タイムゾーンと DNS サーバーの設定をコピーします。
 
 ```shell
 # cp /etc/resolv.conf /usr/local/jails/templates/{rel-latest}-RELEASE-base/etc/resolv.conf
 # cp /etc/localtime /usr/local/jails/templates/{rel-latest}-RELEASE-base/etc/localtime
 ```
 
-ファイルをテンプレートに移動したら、次に次のコマンドを実行して最新のパッチレベルに更新します。
+最新のパッチレベルに更新します。
 
 ```shell
 # freebsd-update -b /usr/local/jails/templates/{rel-latest}-RELEASE-base/ fetch install
 ```
 
-ベーステンプレートに加えて、`skeleton`（スケルトン）を配置するディレクトリも作成する必要があります。一部のディレクトリはテンプレートから`skeleton`にコピーされます。
-
-OpenZFSを使用する場合は、次のコマンドを実行して`skeleton`用のデータセットを作成します。
+ベーステンプレートとは別に、jail ごとのローカルディレクトリを保持する `skeleton` を準備し、一部のディレクトリをテンプレートから移します。OpenZFS の場合は次のデータセットを作ります。
 
 ```shell
 # zfs create -p zroot/jails/templates/{rel-latest}-RELEASE-skeleton
 ```
 
-UFSを使用する場合は、次のコマンドを実行します。
+UFS の場合は次のディレクトリを作ります。
 
 ```shell
 # mkdir /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton
 ```
 
-次に`skeleton`ディレクトリを作成します。`skeleton`ディレクトリにはjailのローカルディレクトリが保持されます。
-
-次のコマンドを実行してディレクトリを作成します。
+`skeleton` のディレクトリを作り、jail 固有の書き込み可能な部分を移動します。
 
 ```shell
 # mkdir -p /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton/home
 # mkdir -p /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton/usr
 # mv /usr/local/jails/templates/{rel-latest}-RELEASE-base/etc /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton/etc
-# mv /usr/local/jails/templates/{rel-latest}-RELEASE-base/usr/local /
+# mv /usr/local/jails/templates/{rel-latest}-RELEASE-base/usr/local /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton/usr/local
+# mv /usr/local/jails/templates/{rel-latest}-RELEASE-base/tmp /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton/tmp
+# mv /usr/local/jails/templates/{rel-latest}-RELEASE-base/var /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton/var
+# mv /usr/local/jails/templates/{rel-latest}-RELEASE-base/root /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton/root
+```
 
-`ase.fstab` ファイルは次のようになります:
+ベース側から `skeleton` を参照するシンボリックリンクを作成します。
 
 ```shell
+# cd /usr/local/jails/templates/{rel-latest}-RELEASE-base/
+# mkdir skeleton
+# ln -s skeleton/etc etc
+# ln -s skeleton/home home
+# ln -s skeleton/root root
+# ln -s ../skeleton/usr/local usr/local
+# ln -s skeleton/tmp tmp
+# ln -s skeleton/var var
+```
+
+`skeleton` の準備ができたら、各 jail にコピーします。OpenZFS ではスナップショットとクローンで必要な数を作成できます。
+
+```shell
+# zfs snapshot zroot/jails/templates/{rel-latest}-RELEASE-skeleton@base
+# zfs clone zroot/jails/templates/{rel-latest}-RELEASE-skeleton@base zroot/jails/containers/thinjail
+```
+
+UFS では `cp(1)` を使います。
+
+```shell
+# cp -R /usr/local/jails/templates/{rel-latest}-RELEASE-skeleton /usr/local/jails/containers/thinjail
+```
+
+ベーステンプレートと skeleton をマウントする場所を作ります。
+
+```shell
+# mkdir -p /usr/local/jails/thinjail-nullfs-base
+```
+
+`/etc/jail.conf` または `/etc/jail.conf.d/` のファイルに次のエントリを追加します。
+
+```text
+thinjail {
+  # STARTUP/LOGGING
+  exec.start = "/bin/sh /etc/rc";
+  exec.stop = "/bin/sh /etc/rc.shutdown";
+  exec.consolelog = "/var/log/jail_console_${name}.log";
+
+  # PERMISSIONS
+  allow.raw_sockets;
+  exec.clean;
+  mount.devfs;
+
+  # HOSTNAME/PATH
+  host.hostname = "${name}";
+  path = "/usr/local/jails/${name}-nullfs-base";
+
+  # NETWORK
+  ip4.addr = 192.168.1.153;
+  interface = em0;
+
+  # MOUNT
+  mount.fstab = "/usr/local/jails/${name}-nullfs-base.fstab";
+}
+```
+
+`/usr/local/jails/thinjail-nullfs-base.fstab` を作成します。
+
+```text
 /usr/local/jails/templates/{rel-latest}-RELEASE-base  /usr/local/jails/thinjail-nullfs-base/ nullfs   ro          0 0
 /usr/local/jails/containers/thinjail     /usr/local/jails/thinjail-nullfs-base/skeleton nullfs  rw  0 0
 ```
 
-この `fstab` ファイルは、man:mount_nullfs(8) がベーステンプレートとスケルトンを jail 内でどのように提示するかを制御します。
-ベーステンプレートは読み取り専用 (`ro`) でマウントされるため、すべての NullFS jail がベースシステムの不変のコピーを 1 つ共有します。
-jail ごとのスケルトンは読み書き可能 (`rw`) でマウントされ、各 jail は独自の書き込み可能な `/etc`、`/var`、`/usr/local` などのローカルディレクトリをここに保持します。
-すべての jail が単一の読み取り専用ベーステンプレートを共有するため、テンプレートを 1 つ更新するだけで、すべての NullFS jail が一度に更新されます。これは、それぞれを個別に更新する必要がある独立した OpenZFS クローンとは対照的です。
+この fstab は `mount_nullfs(8)` によるベースと skeleton の見せ方を指定します。ベースは読み取り専用（`ro`）で、各 jail が共通のベースを共有します。jail ごとの skeleton は読み書き可能（`rw`）で、独自の `/etc`、`/var`、`/usr/local` などを保持します。
 
-以下のコマンドを実行して jail を起動します:
+共通ベースを更新すると、それをマウントするすべての NullFS jail に反映されます。個別に更新する OpenZFS クローンとの違いです。
+
+次のコマンドで起動します。
 
 ```shell
 # service jail start thinjail
 ```
 
-[[creating-vnet-jail]]
+<a id="creating-vnet-jail"></a>
+## VNET Jail の作成
 
+VNET Jail は、インターフェース、IP アドレス、ルーティングテーブル、ファイアウォールルールを含む独自のネットワークスタックを持ちます。
 
-
-ベースシステムには、この配線処理（plumbing）を自動的に行うヘルパースクリプト [.filename]#/usr/share/examples/jails/jib# が同梱されています。
-
-手書きの man:ifconfig[8] の5行の代わりに、jail のフックから次のように参照します：
+まず `bridge(4)` を作成します。
 
 ```shell
+# ifconfig bridge create
+```
+
+出力例です。
+
+```text
+bridge0
+```
+
+> **警告（保存済み原文の説明）:** ブリッジのメンバーであるインターフェースへの IP アドレス割り当ては非推奨です。ホストのアドレスは `em0` ではなく、下の rc.conf のとおり `bridge0` 自身に割り当てます。FreeBSD 15.0 ではアドレス付きインターフェースをブリッジに追加するとカーネル警告が出ます。`net.link.bridge.member_ifaddrs` をデフォルトの `1` から `0` にすると `EINVAL` で拒否します。原文の `bridge(4)` の説明では、16.0 でこの sysctl を削除し、メンバーへのアドレス設定を許可しなくなる予定とされています。
+
+ブリッジに `em0` を接続し、両方を有効にします。
+
+```shell
+# ifconfig bridge0 addm em0 up
+# ifconfig em0 up
+```
+
+再起動後も保持するには `/etc/rc.conf` に次を追加します。
+
+```text
+defaultrouter="192.168.1.1"
+cloned_interfaces="bridge0"
+ifconfig_bridge0="inet 192.168.1.150/24 addm em0 up"
+ifconfig_em0="up"
+```
+
+詳細は[ネットワークブリッジ](https://docs.freebsd.org/en/books/handbook/advanced-networking/#network-bridging)を参照してください。
+
+次に [クラシック Jail](#classic-jail) または [Thin Jail](#thin-jail) の手順で jail を作成します。変わるのは `/etc/jail.conf` の設定です。ここではルートを `/usr/local/jails/containers/vnet` とします。
+
+```text
+vnet {
+  # STARTUP/LOGGING
+  exec.consolelog = "/var/log/jail_console_${name}.log";
+
+  # PERMISSIONS
+  allow.raw_sockets;
+  exec.clean;
+  mount.devfs;
+  devfs_ruleset = 5;
+
+  # PATH/HOSTNAME
+  path = "/usr/local/jails/containers/${name}";
+  host.hostname = "${name}";
+
+  # VNET/VIMAGE
+  vnet;
+  vnet.interface = "${epair}b";
+
+  # NETWORKS/INTERFACES
+  $id = "154";
+  $ip = "192.168.1.${id}/24";
+  $gateway = "192.168.1.1";
+  $bridge = "bridge0";
+  $epair = "epair${id}";
+
+  # ADD TO bridge INTERFACE
+  exec.prestart  = "/sbin/ifconfig ${epair} create up";
+  exec.prestart += "/sbin/ifconfig ${epair}a up descr jail:${name}";
+  exec.prestart += "/sbin/ifconfig ${bridge} addm ${epair}a up";
+  exec.start    += "/sbin/ifconfig ${epair}b ${ip} up";
+  exec.start    += "/sbin/route add default ${gateway}";
+  exec.start    += "/bin/sh /etc/rc";
+  exec.stop      = "/bin/sh /etc/rc.shutdown";
+  exec.poststop = "/sbin/ifconfig ${bridge} deletem ${epair}a";
+  exec.poststop += "/sbin/ifconfig ${epair}a destroy";
+}
+```
+
+- `$id` は、epair 名（`epair${id}`）と IP アドレスの末尾（`192.168.1.${id}`）の両方に使う、jail ごとの固有番号です。同じブリッジ上の各 jail で異なる値を使います。
+- `$bridge` は先ほど作成したブリッジを指します。
+
+`vnet.interface` は、jail 作成後に `jail(8)` が jail のスタックへ移すインターフェースを指定します。ここでは epair の jail 側 `${epair}b` です。jail の実行中はホスト側から消え、停止すると自動的にホストへ戻ります。物理 NIC や SR-IOV の仮想機能も同様に渡せるため、ブリッジや epair を使わない専用ネットワークも構成できます。
+
+`devfs_ruleset = 5` は `/etc/defaults/devfs.rules` の `devfsrules_jail_vnet` を適用し、標準 jail 用ルールセットに `/dev/pf` を追加します。そのため jail 内の `pf_enable="YES"` と独自の `pf.conf` で、ホストとは独立した `pf(4)` を利用できます。[Devfs ルールセット](#jail-conf-devfs)と[ファイアウォール](https://docs.freebsd.org/en/books/handbook/firewalls/)を参照してください。
+
+<a id="jail-vnet-jib"></a>
+### jib による VNET ネットワークの自動化
+
+多くの jail で `exec.prestart` と `exec.poststop` に epair の作成・ブリッジ接続を手書きするのは手間がかかります。ベースシステム付属の `/usr/share/examples/jails/jib` は、その処理を自動化するヘルパースクリプトです。
+
+上の 5 行の手動 `ifconfig(8)` コマンドの代わりに、フックから次のように呼び出します。
+
+```text
   exec.prestart += "jib addm ${name} em0";
   exec.poststop += "jib destroy ${name}";
 
   vnet.interface = "e0b_${name}";
 ```
 
-`jib addm` は、ホスト側が `e0a_<name>`、jail 側が `e0b_<name>` という名前の epair を作成し、ホスト側を、メンバーインターフェイスにちなんで名付けられたブリッジ（`em0` の場合、ブリッジは `em0bridge`）に自動的に接続します。その jail 側を `vnet.interface` に指定します。jail が停止すると、`jib destroy` が epair を削除します。このスクリプトには、管理しているインターフェイスを一覧表示する `jib show` サブコマンドもあります。
+`jib addm` は、ホスト側が `e0a_<name>`、jail 側が `e0b_<name>` の epair を作成し、ホスト側を自動作成したブリッジに追加します。ブリッジ名はメンバーインターフェースに由来し、`em0` なら `em0bridge` です。jail 側の名前を `vnet.interface` に指定します。停止時は `jib destroy` が epair を削除します。管理中のインターフェースは `jib show` で表示できます。
 
-[[jail-vnet-jng]]
-### jng による Netgraph VNET ネットワーキング
+> **訳注:** 例はフック設定の抜粋です。`jib` を実行できるパスの準備、jail 内の IP・経路設定などは別途必要です。
 
-「ネットワーキング」の概要で触れた3つ目のネットワーキングモードは、man:bridge[4] と epair の代わりに man:netgraph[4] を使用します。ベースシステムには2つ目のヘルパー [.filename]#/usr/share/examples/jails/jng# が同梱されており、各 jail に接続された `ng_bridge` と `ng_eiface` を構築します：
+<a id="jail-vnet-jng"></a>
+### jng による Netgraph VNET ネットワーク
 
-```shell
+[ネットワーク](#jails-networking)で紹介した第 3 の方式は、`bridge(4)` と epair の代わりに `netgraph(4)` を使います。ベースシステムの `/usr/share/examples/jails/jng` は、jail ごとの `ng_eiface` を `ng_bridge` につなぐヘルパーです。
+
+```text
   exec.prestart += "jng bridge ${name} em0";
   exec.poststop += "jng shutdown ${name}";
 
   vnet.interface = "ng0_${name}";
 ```
 
-`jng bridge` は netgraph ノードと、`ng0_<name>` という名前の jail 側インターフェイスを作成し、それを `vnet.interface` に指定します。`jng shutdown` は jail が停止したときにトポロジーを破棄します。結果は機能的には epair とブリッジの構成と同等ですが、man:bridge[4] ではなく netgraph ノード上に構築されます。
+`jng bridge` は netgraph ノードと jail 側の `ng0_<name>` を作成します。この名前を `vnet.interface` に指定します。停止時に `jng shutdown` が構成を撤去します。機能は epair とブリッジの構成に相当しますが、`bridge(4)` ではなく netgraph ノードで実現します。
 
-[[jail-vnet-firewall]]
-### VNET Jail 内でのファイアウォールと DHCP の実行
+<a id="jail-vnet-firewall"></a>
+### VNET Jail 内でのファイアウォールと DHCP
 
-`devfs_ruleset = 5` は [.filename]#/dev/pf# を公開するため、VNET jail は独自のファイアウォールを実行できます。ホスト上とまったく同様に、jail の [.filename]#/etc/rc.conf# で `pf_enable="YES"` を設定し、独自の [.filename]#/etc/pf.conf# を用意することで、jail 内でファイアウォールを有効にできます。
+`devfs_ruleset = 5` は `/dev/pf` を公開するため、VNET jail は独自のファイアウォールを実行できます。通常のホストと同様に jail 内の `/etc/rc.conf` に `pf_enable="YES"` を設定し、独自の `/etc/pf.conf` を用意します。
 
-ただし、ルールセット5は [.filename]#/dev/bpf# を公開しません。DHCP でアドレスを取得する VNET jail（たとえば [.filename]#/etc/rc.conf# の `ifconfig_e0b_myjail="SYNCDHCP"`）は man:dhclient[8] を実行しますが、これには bpf が必要なため、ルールセット5では失敗します。「Devfs ルールセット（Devfs Rulesets）」のレシピに従い、[.filename]#/etc/devfs.rules# に `devfsrules_jail_vnet` から始まり、さらに bpf デバイスの非表示を解除するカスタムルールセットを定義します：
+ただし、ルールセット 5 は `/dev/bpf` を公開しません。たとえば jail 内の rc.conf に `ifconfig_e0b_myjail="SYNCDHCP"` を設定すると、DHCP クライアント `dhclient(8)` は bpf を必要とするため、そのままでは失敗します。[Devfs ルールセット](#jail-conf-devfs)に従い、ホストの `/etc/devfs.rules` に `devfsrules_jail_vnet` を基に bpf を追加した独自ルールセットを作成します。
 
-```shell
+```text
 [devfsrules_jail_vnet_dhcp=101]
 add include $devfsrules_jail_vnet
 add path 'bpf*' unhide
 ```
 
-ホスト上で `service devfs restart` を実行した後、jail の設定で `devfs_ruleset = 101;` を指定して新しいルールセットを参照させます。
+ホストで `service devfs restart` を実行した後、jail に `devfs_ruleset = 101;` を指定します。
 
-<!-- [[creating-linux-jail]] -->
+<a id="creating-linux-jail"></a>
+## Linux Jail の作成
 
-## Linux Jail
+FreeBSD は [Linux バイナリ互換機能](https://docs.freebsd.org/en/books/handbook/linuxemu/)と `sysutils/debootstrap` を使い、jail 内で Linux ユーザーランドを実行できます。jail は独自のカーネルを持たず、ホストのカーネルを使うため、ホスト側で Linux バイナリ互換機能を有効にする必要があります。
 
-FreeBSD は、Linux バイナリ互換（Linux Binary Compatibility）と `sysutils/debootstrap` を利用することで、jail 内で Linux ユーザーランドを実行できます。jail にはカーネルがありません。jail はホストのカーネル上で動作します。したがって、ホストシステムで Linux バイナリ互換を有効にする必要があります。
-
-起動時に Linux ABI を有効にするには、次のコマンドを実行します。
+起動時に Linux ABI を有効にします。
 
 ```shell
 # sysrc linux_enable="YES"
 ```
 
-有効にすると、再起動せずに次のコマンドで開始できます。
+再起動せずに開始するには次を実行します。
 
 ```shell
 # service linux start
 ```
 
-次の手順は、上記で示したとおり、たとえば「OpenZFS スナップショットを使用したシン Jail の作成」の手順で jail を作成することですが、*設定は行わない*でください。FreeBSD Linux jail には、以下で詳しく説明する特定の設定が必要です。
+続いて、たとえば [OpenZFS スナップショットからの Thin Jail](#creating-thin-jail-openzfs-snapshots)の手順で jail を作ります。ただし通常の設定は行わず、以下の Linux 用設定を使います。
 
-ホストに `/etc/jail.conf` がまだない場合（たとえば、これまでコマンドラインからのみ jail を作成してきたシステム）は、後で `man service(8)` が jail を停止できるように、空のファイルを作成します。
+コマンドラインだけで jail を作ってきたホストなど、`/etc/jail.conf` が存在しない場合は、後で `service(8)` による停止ができるよう空のファイルを作ります。
 
 ```shell
 # touch /etc/jail.conf
 ```
 
-`man service(8)` の jail スクリプトは jail を停止する際に `/etc/jail.conf` を読み取るため、ファイルが存在しないと停止コマンドは失敗します。以前の節で `/etc/jail.conf` がすでにある場合は、この手順は不要です。
+jail の rc スクリプトは停止時に `/etc/jail.conf` を読むため、存在しないと停止コマンドが失敗します。既にある場合はこの作業は不要です。
 
-次の `man jail(8)` コマンドは、jail に必要な設定を実行し、`/etc/jail.conf` のエントリなしで直接起動します。`-c` フラグは新しい jail を作成し、`-m` は既存の jail を変更します。`-cm` と組み合わせると、`man jail(8)` は jail が存在しなければ作成し、存在すれば更新します。
+次のコマンドは、jail.conf のエントリを使わずに設定と起動を行います。`-c` は作成、`-m` は既存 jail の変更です。`-cm` は、なければ作成し、あれば更新します。
 
 ```shell
 # jail -cm \
@@ -746,32 +988,32 @@ FreeBSD は、Linux バイナリ互換（Linux Binary Compatibility）と `sysut
     enforce_statfs=1
 ```
 
-新しく作成した jail に `root` として `man jexec(8)` でアクセスします。
+作成した jail に root で入ります。
 
 ```shell
 # jexec -u root ubuntu sh
 ```
 
-jail 内で、`sysutils/debootstrap` をインストールし、それを使用して `/compat/ubuntu` の下に Ubuntu ユーザーランドを構築します。`sysutils/debootstrap` は Linux ユーザーランドを構築するツールです。その後、jail に入るために必要になることはありません。`man pkg(7)` を初めて実行すると、自動的にブートストラップされます。
+ここからは jail 内で `sysutils/debootstrap` をインストールし、`/compat/ubuntu` に Ubuntu ユーザーランドを構築します。debootstrap は構築用ツールであり、以後 jail に入るために必要なものではありません。`pkg(7)` は初回実行時に自動でブートストラップされます。
 
 ```shell
 # pkg install debootstrap
 # debootstrap jammy /compat/ubuntu
 ```
 
-`jammy` は Ubuntu 22.04 LTS を選択します。linuxulator で動作する限り、`noble`（Ubuntu 24.04）などの新しい LTS を代わりに選択することもできます。
+`jammy` は Ubuntu 22.04 LTS を選びます。linuxulator 上で動くことを確認できれば、`noble`（24.04）などの新しい LTS を選ぶこともできます。
 
-プロセスが完了し、コンソールに `Base system installed successfully` というメッセージが表示されたら、ホストシステムから jail を停止します。この jail は `/etc/rc.conf` で有効化されておらず、`/etc/jail.conf` にもまだ記載されていないため、有効化されていない jail でも実行できる `one` 接頭辞付きの `man service(8)` アクションを使用します。
+`Base system installed successfully` と表示されたら、ホストに戻って jail を停止します。まだ rc.conf で有効化されておらず jail.conf にも登録されていないため、有効化されていなくても動作する `one` 接頭辞付きの操作を使います。
 
 ```shell
 # service jail onestop ubuntu
 ```
 
-`onestart` アクションと `onestop` アクションは、`jail_enable` によって有効化されていない、または `jail_list` に記載されていない jail に対する `start` と `stop` の対応物です。
+`onestart` と `onestop` は、`jail_enable` で有効化されていない jail や `jail_list` にない jail を扱うための `start`、`stop` に相当する操作です。
 
-次に、Linux jail 用のエントリを `/etc/jail.conf` に追加します。
+次に Linux jail のエントリを `/etc/jail.conf` へ追加します。
 
-```
+```text
 ubuntu {
   # STARTUP/LOGGING
   exec.start = "/bin/sh /etc/rc";
@@ -803,206 +1045,265 @@ ubuntu {
 }
 ```
 
-> **ヒント:**
-> 
-> jail は（原文ここで途切れています）
+> **ヒント:** jail 内の Linux プログラムに、独自の Linux カーネル識別情報を提示できます。`linux` はホストの Linux エミュレーション環境を継承する `inherit` と独自環境の `new` を選び、`linux.osname`、`linux.osrelease`、`linux.oss_version` は OS 名・リリース・OSS バージョンを指定します。たとえば `linux.osrelease=6.1.0` は、ホスト全体の `compat.linux.osrelease` の代わりに、その値を `uname(1)` やバージョン検査を行う Linux プログラムに報告します。
 
-また、jail 内で実行されるプログラムに対して、特定の Linux カーネル識別情報を提示します。
-`linux` パラメータは、jail がホストの Linux エミュレーション環境を継承するか (`inherit`)、独自の環境を持つか (`new`) を選択します。また、`linux.osname`、`linux.osrelease`、`linux.oss_version` は、Linux バイナリが認識する OS 名、リリース、OSS バージョンを設定します。
-たとえば、`linux.osrelease=6.1.0` と設定すると、jail 内の `man uname(1)` やバージョンを確認する Linux プログラムは、ホスト全体の `compat.linux.osrelease` 値ではなく、そのカーネルリリースを報告するようになります。
-
-その後、jail は以下のコマンドで通常どおり起動できます。
+通常の方法で起動します。
 
 ```shell
 # service jail start ubuntu
 ```
 
-Ubuntu 環境には、以下のコマンドでアクセスできます。
+Ubuntu 環境へ入ります。
 
 ```shell
 # jexec ubuntu chroot /compat/ubuntu /bin/bash
 ```
 
-詳細については、Linux バイナリ互換（Linux Binary Compatibility）の章を参照してください。
+詳細は [Linux バイナリ互換機能](https://docs.freebsd.org/en/books/handbook/linuxemu/)を参照してください。
 
 <a id="jail-nat"></a>
+## Jail の NAT とポート転送
 
+`lo1` など複製した `lo(4)`、プライベートブリッジ、内部ネットワーク上の VNET epair にプライベートアドレスを割り当てた jail は、それだけではインターネットに到達できません。ホストが通信を経路制御可能なアドレスへ変換し、外からサービスへ接続するには受信接続を jail へ転送します。
 
+ホストでインターフェース間のパケット転送を有効にします。起動時と現在の両方に反映するには次を実行します。
 
+```shell
+# sysrc gateway_enable="YES"
+# sysctl net.inet.ip.forwarding=1
+```
+
+IPv6 では `ipv6_gateway_enable="YES"` と `net.inet6.ip6.forwarding=1` を使います。
+
+続いてホストの `pf(4)` で NAT を設定します。次の `/etc/pf.conf` は、`192.168.0.0/24` の jail から外部インターフェース `em0` 経由で通信できるようにし、ホストの TCP ポート 80 を jail 内の Web サーバーへ転送します。
+
+```text
+ext_if = "em0"
+
+# Translate outbound jail traffic to the host address
+nat on $ext_if from 192.168.0.0/24 to any -> ($ext_if)
+
+# Forward inbound web traffic to the jailed server
+rdr on $ext_if proto tcp to port 80 -> 192.168.0.151
+```
+
+`rdr` の転送先には jail 自身のアドレスを指定します。
+
+pf を有効にして起動します。
+
+```shell
+# sysrc pf_enable="YES"
+# service pf start
+```
+
+> **注（保存済み原文の説明）:** FreeBSD 15.0 では OpenBSD 形式のインライン `nat-to` と `rdr-to` 構文が追加され、`pass` や `match` ルールに変換を記述できます。例は `match out on $ext_if from 192.168.0.0/24 to any nat-to ($ext_if)` です。上の従来形式 `nat on`、`rdr on` は 14.x と 15.x の両方で利用できます。
+
+完全なルールセットや `ipfw(8)` による NAT を含む説明は[ファイアウォール](https://docs.freebsd.org/en/books/handbook/firewalls/)を参照してください。
+
+<a id="service-jails-config"></a>
+## Service Jail の設定
+
+Service Jail は FreeBSD 15.0 以降で利用でき、設定は `/etc/rc.conf` または `sysrc(8)` だけで行います。ベースシステムのサービスは Service Jail に対応しており、必要なネットワークや制限解除の設定を持ちます。起動・停止時にマウントを操作するもの、経路やファイアウォールだけを設定するものなど、jail 内で動かす意味がないサービスは、rc.conf で有効にしても Service Jail として起動しないよう構成されています。
+
+サードパーティーのサービスは対応しているとは限りません。次のコマンドで確認できます。
+
+```shell
+# grep _svcj_options /path/to/rc.d/servicename
+```
+
+出力がなければ、非対応か、ネットワークなどの追加権限が不要なサービスです。
+
+非対応のサービスがネットワークを必要とする場合は、rc.conf に必要な設定を追加します。
+
+```shell
+# sysrc servicename_svcj_options=net_basic
+```
+
+利用できる `_svcj_options` は `rc.conf(5)` を参照してください。
+
+特定サービスを jail 化するには、まず停止してから `servicename_svcj` を `YES` にします。`syslogd(8)` の例です。
+
+```shell
+# service syslogd stop
+# sysrc syslogd_svcj=YES
+# service syslogd start
+```
+
+`servicename_svcj` を変更する前に、必ずサービスを停止します。停止せずに変更すると rc フレームワークが状態を正しく判断できず、要求した操作に失敗します。
+
+Service Jail は `rc.conf(5)`／`sysrc(8)` と `service(8)` だけで管理します。[Jail の管理](#jail-management)の `jls(8)` などは動作の調査に利用できますが、管理に `jail(8)` を直接使うことは想定されていません。
+
+<a id="jail-management"></a>
 ## Jail の管理
 
-jail を作成したら、起動、再起動、削除、ソフトウェアのインストールなど、実行できる操作がいくつかあります。このセクションでは、ホストから jail に対して行えるさまざまな操作について説明します。
+作成した jail には、起動・再起動・削除やソフトウェアのインストールなどを行えます。この節ではホスト側からの操作を説明します。
 
-### 実行中の jail の一覧表示 {#list-running-jails}
+<a id="list-running-jails"></a>
+### 実行中の jail の一覧
 
-ホストシステム上で実行中の jail を一覧表示するには、`man jls(8)` コマンドを使用します。
+ホスト上で実行中の jail は `jls(8)` で一覧表示できます。
 
 ```shell
 # jls
 ```
 
-出力は次のようになります。
+出力例です。
 
-```
+```text
    JID  IP Address      Hostname                      Path
      1  192.168.1.151  classic                       /usr/local/jails/containers/classic
 ```
 
-`man jls(8)` は `--libxo` 引数をサポートしており、`man libxo(3)` ライブラリを通じて `JSON` や `HTML` などの他の形式で表示できます。
-
-たとえば、`JSON` 出力を得るには次のコマンドを実行します。
+`jls(8)` は `--libxo` に対応し、`libxo(3)` を通じて JSON や HTML などでも出力できます。JSON の例です。
 
 ```shell
 # jls --libxo=json
 ```
 
-出力は次のようになります。
+出力例です。
 
-```
+```text
 {"__version": "2", "jail-information": {"jail": [{"jid":1,"ipv4":"192.168.1.151","hostname":"classic","path":"/usr/local/jails/containers/classic"}]}}
 ```
 
-デフォルトの一覧は、`man jls(8)` が報告できる内容のほんの一部にすぎません。各 jail の状態と割り当てられた cpuset ID を含む、詳細な複数行の要約を表示するには、`-v` フラグを追加します。
+デフォルトの一覧は取得できる情報の一部です。`-v` は状態や cpuset ID を含む複数行の詳細を表示します。
 
 ```shell
 # jls -v
 ```
 
-要求したパラメータの値の上にフィールド名を持つヘッダー行を表示するには、`-h` を使用します。
+`-h` は指定したパラメータの値の上に、フィールド名のヘッダーを表示します。
 
 ```shell
 # jls -h jid name path
 ```
 
-単一の jail の特定のパラメータを照会するには、`-j` で名前を指定し、表示するパラメータを列挙します。
+`-j` に名前を指定すると、単一 jail の指定パラメータを問い合わせられます。
 
 ```shell
 # jls -j classic path host.hostname ip4.addr
 ```
 
-出力は次のようになります。
+出力例です。
 
-```
+```text
 /usr/local/jails/containers/classic classic 192.168.1.151
 ```
 
-シャットダウン中の jail も含めるには `-d` を追加します。シャットダウン中の jail は、dying 状態の間は通常は表示されません。
+通常は非表示になる停止処理中（dying 状態）の jail も含めるには `-d` を使います。
 
 ```shell
 # jls -d
 ```
 
-### jail の起動、再起動、停止 {#start-jail}
+<a id="start-jail"></a>
+### Jail の起動・再起動・停止
 
-`man service(8)` は、ホスト上で jail を起動、再起動、または停止するために使用されます。
-
-たとえば、jail を起動するには、次のコマンドを実行します。
+ホスト側で `service(8)` を使って jail を起動・再起動・停止します。
 
 ```shell
 # service jail start jailname
 ```
 
-jail に対して他の操作を行うには、`start` 引数を `restart` または `stop` に変更します。
+`start` を `restart` または `stop` に置き換えると、対応する操作になります。
 
-jail の停止は、その中のプロセスを kill するだけではありません。jail が停止されると、`man jail(8)` は最初に `exec.stop` パラメータ（通常は `/bin/sh /etc/rc.shutdown`）のコマンドを jail 内で実行し、サービスがクリーンにシャットダウンされるようにします。次に、jail 内でまだ実行中のプロセスに `SIGTERM` を送信し、それらが終了するまで `stop.timeout` 秒（デフォルトでは 10 秒）待機します。その時間が経過すると、jail は削除され、残っているプロセスは `SIGKILL` で強制終了されます。`stop.timeout` がゼロに設定されている場合、`SIGTERM` は送信されず、jail は直ちに削除されます。これが、停止に時間のかかるデーモンを実行している jail が、停止中に 10 秒間フリーズしているように見える理由です。データベースや、正常にシャットダウンするためにより長い時間を必要とするサービスを実行している jail の場合は、`/etc/jail.conf` 内の `stop.timeout` を引き上げてください。
+停止は単なるプロセスの強制終了ではありません。まず `jail(8)` は jail 内で `exec.stop`（通常は `/bin/sh /etc/rc.shutdown`）を実行し、サービスを正常に終了させます。その後、残ったプロセスに `SIGTERM` を送り、`stop.timeout` 秒（デフォルト 10 秒）待ちます。時間が過ぎると jail を削除し、残存プロセスを `SIGKILL` で終了します。
 
-### jail の破棄 {#destroy-jail}
+`stop.timeout` が `0` なら `SIGTERM` を送らず、直ちに jail を削除します。停止が遅いデーモンでは 10 秒間止まったように見えることがあります。データベースなど正常終了に時間が必要なサービスでは、`/etc/jail.conf` の `stop.timeout` を増やします。
 
-jail の破棄は、`man service(8)` を使用して jail を停止し、jail ディレクトリと `/etc/jail.conf` エントリを削除するだけでは済みません。
+<a id="destroy-jail"></a>
+### Jail の破棄
 
-FreeBSD はシステムセキュリティを非常に重視しています。そのため、root ユーザーでも削除できないファイルがいくつかあります。この機能は File Flags（ファイルフラグ）として知られています。ファイルが UFS ファイルシステム上にある jail の場合、jail ディレクトリを削除する前に、これらのフラグをクリアする必要があります。
+jail の破棄は、停止してディレクトリと jail.conf のエントリを削除するだけとは限りません。FreeBSD のファイルフラグには root でも削除できないファイルを保護するものがあり、UFS 上の jail では削除前に解除する必要があります。
 
-最初のステップは、次のコマンドを実行して目的の jail を停止することです。
+まず対象 jail を停止します。
 
 ```shell
 # service jail stop classic
 ```
 
-2 番目のステップは、`man chflags(1)` を使用してこれらのフラグを削除することです。次のコマンドを実行します。ここで `classic` は削除する jail の名前です。
+次に `chflags(1)` でフラグを解除します。`classic` は削除対象の名前です。
 
 ```shell
 # chflags -R 0 /usr/local/jails/containers/classic
 ```
 
-3 番目のステップは、jail があったディレクトリを削除することです。
+ディレクトリを削除します。
 
 ```shell
 # rm -rf /usr/local/jails/containers/classic
 ```
 
-上記の 2 つのステップは、UFS ファイルシステムに保存されている jail に適用されます。独自の ZFS dataset によってバックアップされている jail（[Jail Directory Tree の設定](#host-configuration-directories) で作成したもの）は、代わりに dataset を破棄することで削除されます。dataset の破棄はファイルフラグによってブロックされないため、この場合 `man chflags(1)` のステップは不要です。
+以上のフラグ解除とディレクトリ削除は UFS 用です。[Jail ディレクトリツリー](#host-configuration-directories)のように jail が独立した ZFS データセットにある場合は、データセットを破棄します。データセット破棄はファイルフラグで妨げられないため、`chflags(1)` は不要です。
 
 ```shell
 # service jail stop classic
-# zfs destroy zroot/jails/containers/cl
+# zfs destroy zroot/jails/containers/classic
 ```
 
-`-r` を追加すると、データセットが保持するスナップショットも破棄されます。
+そのデータセットのスナップショットも破棄する場合は `-r` を追加します。
 
-> **注:** テンプレートスナップショットのクローンによって作成された ZFS シンジャイル（Thin Jails 参照）は、そのスナップショットに依存します。クローンが存在する間、`man zfs(8)` はテンプレートスナップショットの破棄を拒否し、依存するクローンのリストを表示します。テンプレートを廃止するには、まずそれからクローンされたすべてのジャイルを破棄するか、クローン上で `zfs promote` を実行して、テンプレートに依存しないようにします。
+> **注:** [Thin Jail](#thin-jail)として作った ZFS クローンは、元のテンプレートのスナップショットに依存します。クローンが残っている間は `zfs(8)` が元のスナップショットの破棄を拒否し、依存クローンを表示します。テンプレートを廃止するには、そこから作った jail をすべて破棄するか、クローンに `zfs promote` を実行して依存関係を変更します。[テンプレートとしての複製](#classic-jail-clone)の訳注も参照してください。
 
-最後に、どちらの場合でも、`/etc/jail.conf` または `/etc/jail.conf.d` からジャイルのエントリを削除します。NullFS シンジャイルの場合は、`.fstab` ファイルと、空になったマウントポイントディレクトリも削除してください。
+最後に `/etc/jail.conf` または `/etc/jail.conf.d/` からエントリを削除します。NullFS Thin Jail では、その `.fstab` と空になったマウント先ディレクトリも削除します。
 
-### ジャイル内のパッケージを扱う
+<a id="handle-packages-jail"></a>
+### Jail 内のパッケージ操作
 
-`man pkg(8)` ツールは、ジャイル内にインストールされたパッケージを扱うために `-j` 引数をサポートしています。
-
-たとえば、`www/nginx-lite` パッケージをジャイルにインストールするには、*ホストから*次のコマンドを実行できます。
+`pkg(8)` は `-j` で jail 内のパッケージを操作できます。次は **ホスト側から** `www/nginx-lite` をインストールする例です。
 
 ```shell
 # pkg -j classic install nginx-lite
 ```
 
-FreeBSD でのパッケージ操作の詳細については、ports の章の「Installing Applications: Packages and Ports」を参照してください。
+詳細は[アプリケーションのインストール: Packages と Ports](https://docs.freebsd.org/en/books/handbook/ports/)を参照してください。
 
-### ホストからジャイル内のサービスを管理する
+<a id="jail-services-host"></a>
+### ホストから jail 内のサービスを管理する
 
-ジャイル内のサービスは、`man jexec(8)` でジャイルに入らずに、ホストから有効化および制御できます。`man service(8)` と `man sysrc(8)` はどちらも、ID または名前で対象のジャイルを指定する `-j` 引数を受け付け、そのジャイルの `man rc(8)` 設定を操作します。
+`jexec(8)` で入らずに、ホストから jail 内のサービスを有効化・操作できます。`service(8)` と `sysrc(8)` は両方とも `-j` で jail の ID または名前を指定でき、その jail の `rc(8)` 設定を扱います。
 
-上記のパッケージの例に続けて、`classic` ジャイル内の nginx をホストから直接有効化して起動します：
+先ほどの `classic` jail で nginx を有効化して起動する例です。
 
 ```shell
 # sysrc -j classic nginx_enable=YES
 # service -j classic nginx start
 ```
 
-これらのコマンドは、`man jexec(8)` を介して `man sysrc(8)` と `man service(8)` を実行するのと同じ効果がありますが、ホスト側の管理とスクリプト作成を、ジャイル化されていないシステムと統一して行えます。
+`jexec(8)` 経由で `sysrc(8)` や `service(8)` を実行するのと同じ効果ですが、ホスト側の管理やスクリプトを通常のシステムと同じ書き方にできます。
 
-### ジャイルにアクセスする
+<a id="access-jail"></a>
+### Jail に入る
 
-前述のように、ジャイルの管理はホストシステムから行うのが最善ですが、`man jexec(8)` でジャイルに入ることもできます。
-
-ホストから `man jexec(8)` を実行することでジャイルに入れます：
+基本的にはホストから管理するのが適していますが、`jexec(8)` で jail 内へ入ることもできます。ホストで次を実行します。
 
 ```shell
 # jexec -u root jailname
 ```
 
-`-u` フラグは、実行するユーザーを選択し、*ホスト*のパスワードデータベースに対して名前を解決します。代わりに *ジャイル* 自身のパスワードデータベースに対してユーザーを解決するには、`-U` を使用します。ここで示すようにコマンドが指定されていない場合、`man jexec(8)` はそのユーザーのログインシェルをジャイル内で起動します。`-l` を追加すると、`HOME`、`SHELL`、`TERM`、`USER` のみを保持し、`PATH` を `/bin:/usr/bin` にリセットして、新しいログインのように動作するクリーンなログイン環境で実行できます。`-d` は作業ディレクトリを設定し、デフォルトはジャイルのルートです。
+`-u` は **ホスト側** のパスワードデータベースでユーザー名を解決します。**jail 内** のデータベースを使うには `-U` を指定します。例のようにコマンドを省略すると、そのユーザーのログインシェルを jail 内で開始します。
 
-ジャイルにアクセスすると、`man motd(5)` で設定されたメッセージが表示されます。
+`-l` はクリーンなログイン環境にし、`HOME`、`SHELL`、`TERM`、`USER` だけを保持し、`PATH` を `/bin:/usr/bin` に設定します。`-d` は作業ディレクトリを指定し、デフォルトは jail のルートです。jail に入ると `motd(5)` で設定したメッセージが表示されます。
 
-### ジャイル内でコマンドを実行する
+<a id="execute-commands-jail"></a>
+### Jail 内でコマンドを実行する
 
-ジャイル内でホストシステムからコマンドを実行するには、`man jexec(8)` を使用できます。
-
-たとえば、ジャイル内で実行中のサービスを停止するには、次のコマンドを実行します：
+ホストから jail 内のコマンドを実行するには `jexec(8)` を使います。次は jail 内の nginx を停止する例です。
 
 ```shell
 # jexec -l jailname service nginx stop
 ```
 
-### ホストからジャイル内のプロセスとソケットを表示する
+<a id="jail-view-processes"></a>
+### ホストから jail のプロセスとソケットを表示する
 
-ホストからは、すべてのジャイルのプロセスとソケットが見え、ジャイルごとにフィルタリングできます。
-
-`man ps(1)` は `-J` を受け付け、JID または名前で指定された単一のジャイルに出力を制限します：
+ホストは各 jail のプロセスとソケットを見ることができ、jail ごとに絞り込めます。`ps(1)` の `-J` に JID または名前を指定します。
 
 ```shell
 # ps -J classic
 ```
 
-出力は次のようになります。`STAT` 列の `J` は、ジャイル内で実行中のプロセスを示します：
+出力例です。`STAT` の `J` は jail 内のプロセスを表します。
 
 ```text
  PID TT  STAT    TIME COMMAND
@@ -1010,73 +1311,268 @@ FreeBSD でのパッケージ操作の詳細については、ports の章の「
 2903  -  IsJ  0:00.00 nginx: master process /usr/local/sbin/nginx
 ```
 
-`ps -J 0` を使用すると、ホスト自身のプロセスのみが表示されます。`-o` 出力形式に `jail` キーワードと `jid` キーワードを追加して、各プロセスがどのジャイルに属しているかを表示することもできます。たとえば、ホスト上のすべてのプロセスを、そのジャイルと一緒に一覧表示するには、次のようにします：
+`ps -J 0` はホスト自身のプロセスだけを表示します。`-o` の出力形式に `jail` や `jid` を追加することもできます。全プロセスと所属 jail の一覧は次のとおりです。
 
 ```shell
 # ps ax -o pid,jail,command
 ```
 
-`man top(1)` は `-J` を指定すると、ライブ表示を 1 つのジャイルにフィルタリングし、`-j` を暗黙的に指定して `JID` 列を追加します：
+`top(1)` の `-J` は表示を指定 jail に絞り、`-j` も暗黙に指定して `JID` 列を追加します。
 
 ```shell
 # top -J classic
 ```
 
-`man sockstat(1)` は、`-j` を指定するとジャイルに属するソケットを一覧表示します。これは、ジャイル内でサービスを起動した後、そのジャイルのデーモンが実際にバインドしたポートを確認する自然な方法です：
+`sockstat(1)` の `-j` は指定 jail のソケットを表示します。サービス起動後に、デーモンがどのポートで待ち受けているかを確認するのに適しています。
 
 ```shell
 # sockstat -4 -6 -l -j classic
 ```
 
-ジャイルの内部からは状況が逆転します。ジャイル内のプロセスは、自分自身のジャイルのプロセスとソケットだけが見え、ホストや他のジャイルのものは決して見えません。
+jail 内からは逆に、その jail 自身のプロセスとソケットだけが見え、ホストや他の jail のものは見えません。
 
+<a id="jail-manage-cli"></a>
+### jail ユーティリティによる直接管理
 
+起動時の管理には通常 `service(8)` を使いますが、`jail(8)` で直接作成・変更・削除することもできます。スクリプトや rc を介さない設定の試験に便利です。
 
+設定済み jail を名前で作成します。
 
+```shell
+# jail -c classic
+```
 
+実行中の jail を削除します。その jail が作成した子 jail も削除され、内部のプロセスも終了します。
 
+```shell
+# jail -r classic
+```
 
+`-m` は実行中の jail を再起動せずに変更します。IPv4 アドレスの追加例です。
 
+```shell
+# jail -m name=classic ip4.addr+=192.168.250.71
+```
 
-自動的に、新しいバージョンは `<file>.pkgnew` として残され、以前はパッケージ化されていなかったファイルを引き継ぐ場合には、古いコピーが `<file>.pkgsave` として保存されます。アップグレード後に `/etc` を確認し、そのようなファイルを手動で調整してください。
+ただし、実行中に変更できないパラメータもあります。`path` や `vnet` などは再起動が必要です。
 
-pkgbase システムでは `man etcupdate(8)` を実行しないでください。`man pkg(8)` が設定ファイルのマージを処理します。
+`-e` は作成・変更・削除を行わず、設定済みの非ワイルドカード jail とパラメータを表示します。引数はパラメータを区切る文字列であり、設定ファイルの確認に利用できます。
 
-ホスト側のベースパッケージのワークフローについては、「Updating and Upgrading FreeBSD」を参照してください。
+```shell
+# jail -e ,
+```
+
+<a id="jail-backup"></a>
+### Jail のバックアップと移行
+
+jail はおおむね自己完結しているため、バックアップや別ホストへの移行は主にファイルと設定のコピーです。
+
+整合性のあるコピーには先に jail を停止します。ZFS 上では稼働中のスナップショットも可能です。独立した ZFS データセット上の jail では、再帰スナップショットを取り、移行先へ送信します。
+
+```shell
+# service jail stop classic
+# zfs snapshot -r zroot/jails/containers/classic@migrate
+# zfs send -R zroot/jails/containers/classic@migrate | ssh newhost zfs receive zroot/jails/containers/classic
+```
+
+増分転送を含む `zfs-send(8)` と `zfs-receive(8)` の詳細は [ZFS のレプリケーション](https://docs.freebsd.org/en/books/handbook/zfs/#zfs-zfs-send)を参照してください。
+
+UFS 上では、所有者・アクセス権・ファイルフラグを保持するため `tar(1)` の `-p` を使います。
+
+```shell
+# tar -cpf classic.tar -C /usr/local/jails/containers classic
+```
+
+移行先では root として `tar -xpf` で展開します。独立した UFS ファイルシステム全体を jail が占める場合は `dump(8)` と `restore(8)` も使えますが、ファイルシステム全体を扱うため、本章のように共有ファイルシステム内のディレクトリとして jail を置く構成には適用できません。
+
+最後に jail.conf のブロックまたは jail.conf.d のファイルを移行先へコピーし、`interface`、`ip4.addr`、VNET のブリッジなどホスト固有の値を調整して起動します。
+
+> **注意:** 移行先の FreeBSD は、jail のユーザーランドより古くできません。NullFS Thin Jail は自己完結しておらず、テンプレートと skeleton も移行するか、先に Thick Jail 相当のコピーへ変換します。`/etc/rctl.conf` に保存したルールも別途移行します。
+
+> **訳注:** 稼働中のスナップショットだけではアプリケーションの整合性まで保証しません。必要な停止・静止化と、別データセットに置いたデータや設定のバックアップも考慮してください。
+
+<a id="jail-inside"></a>
+## Jail 内からの管理
+
+管理の多くはホストから行いますが、jail 内で行う作業もあります。スクリプトが jail 内で動作しているかを知るには `security.jail.jailed` を読みます。jail 内は `1`、ホストは `0` です。
+
+```shell
+# sysctl security.jail.jailed
+security.jail.jailed: 1
+```
+
+jail 内は意図的に制限されています。
+
+- 見えるのは自身の jail のプロセス・ソケット・ファイルシステムで、ホストや他の jail のものは見えません。
+- カーネルの状態は大部分が読み取り専用です。カーネル調整値の変更、`kldload(8)`、`kldunload(8)` は許可されません。`allow.read_msgbuf` がなければ `dmesg(8)` とカーネルメッセージバッファも利用できません。
+- 境界を越える特権操作はホストが明示的に許可しない限り拒否されます。`ping(8)` や `traceroute(8)` の raw ソケットには `allow.raw_sockets`、マウントには `allow.mount` と種類別の子パラメータが必要です。`chflags(1)` もデフォルトでは制限されます。[Jail 設定ファイル](#jail-configuration-files)と[アップグレード](#jail-upgrading)を参照してください。
+
+`kern.hostname`、`kern.domainname`、`kern.hostid`、`kern.hostuuid`、`kern.securelevel`、`security.bsd.suser_enabled` など、一部の jail 単位の sysctl はホストに影響せず jail 内で変更できます。利用可能な jail パラメータの説明は次で一覧できます。
+
+```shell
+# sysctl -d security.jail.param
+```
+
+jail 内のサービス管理は通常のシステムと同じです。`service(8)` と `sysrc(8)` は jail 自身の rc 設定を操作します。ホスト側の [service -j と sysrc -j](#jail-services-host)に対応する操作です。
+
+<a id="jail-upgrading"></a>
+## Jail のアップグレード
+
+jail を更新することで、隔離環境のセキュリティを維持し、新しい機能や改善を利用できます。更新ツールはユーザーランドの導入方法で決まります。
+
+- 配布セット（`base.txz` または `bsdinstall(8)` で導入）: FreeBSD 14.x と 15.x とも、ホストから `freebsd-update(8)` の `-j` で更新します。
+- ベースパッケージ（FreeBSD 15.0 から利用可能）: `pkg(8)` で更新します。`freebsd-update(8)` は適用しません。
+- ソースビルド: ソースからのインストール手順で更新します。同じ jail でこれらの方式を混在させません。
+
+> **訳注:** 原文のこの箇所はソース更新に `make distribution` も列挙していますが、[ユーザーランドの取得](#creating-jail-userland)で説明するとおり、これは初期構築時だけの処理です。更新時には既存設定を保持し、`etcupdate -D` でマージします。
+
+> **注（保存済み原文の説明）:** 配布セットのサポートは FreeBSD 16 で廃止予定ですが、15 の stable ブランチの存続期間は `freebsd-update(8)` とともに継続する予定です。15.0 のベースパッケージはテクノロジープレビューで、将来の標準方式になることが見込まれています。
+
+OpenZFS では、更新前に jail のデータセットのスナップショットを作ると、失敗時に戻せます。
+
+```shell
+# zfs snapshot zroot/jails/containers/classic@preupgrade
+```
+
+失敗した場合は jail を停止して `zfs rollback zroot/jails/containers/classic@preupgrade` を実行します。jail が独立したデータセットである必要があります。OpenZFS Thin Jail のクローンは既に独立していますが、`mkdir` で作成したクラシック jail はそうではないため、初めから `zfs create` で用意します。NullFS Thin Jail ではテンプレートのデータセットをスナップショットにします。`zfs-rollback(8)` は通常最新のスナップショットにだけ戻れます。新しいスナップショットを破棄して古いものに戻すには `-r` が必要です。
+
+<a id="jails-updating"></a>
+### クラシック Jail／OpenZFS Thin Jail の更新
+
+配布セットから導入した jail は **ホスト側から更新**します。FreeBSD は jail 内での `chflags(1)` をデフォルトで制限するため、一部ファイルを更新できず、内部からの更新は失敗します。
+
+同一リリースの最新パッチへ更新するには、ホストで次を実行します。
+
+```shell
+# freebsd-update -j classic fetch install
+# service jail restart classic
+```
+
+メジャー／マイナーバージョンを上げる場合は、先に[ホストのアップグレード](https://docs.freebsd.org/en/books/handbook/cutting-edge/#freebsdupdate-upgrade)と再起動を完了し、その後 jail を更新します。バージョン間の更新では、新しい jail を作る方が容易な場合もあります。
+
+`classic` を `{rel-latest}-RELEASE` に上げる例です。実際の対象リリースへ置き換え、ホストで実行します。
+
+```shell
+# freebsd-update -j classic -r {rel-latest}-RELEASE upgrade
+# freebsd-update -j classic install
+# service jail restart classic
+# freebsd-update -j classic install
+# service jail restart classic
+```
+
+`install` を 2 回行うのは意図的です。jail はホストのカーネルを使うので、ここでカーネルを更新するわけではありません。最初の `install` で新しいユーザーランドを書き込み、再起動後の 2 回目で旧バージョンが使用中だったため置き換えられなかった部分を仕上げます。
+
+メジャーバージョン間では ABI が変わるため、ホスト側からすべてのインストール済みパッケージを再インストールし、再起動します。
+
+```shell
+# pkg -j classic upgrade -f
+# service jail restart classic
+```
+
+<a id="jail-upgrade-zfs-template"></a>
+### OpenZFS Thin Jail の更新
+
+[OpenZFS スナップショットから作った Thin Jail](#creating-thin-jail-openzfs-snapshots)は、作成後はテンプレートと独立しています。テンプレートを更新しても既存クローンは更新されず、クローンを更新してもテンプレートは変わりません。保守には 2 通りあります。
+
+第 1 は、[クラシック Jail と同じ方法](#jails-updating)で各クローンを `freebsd-update(8)` により個別に更新する方法です。少数の jail には単純ですが、変更したブロックが各 jail に複製されるため共有による容量削減が減り、メジャー更新ではユーザーランドの大部分が書き換わります。
+
+第 2 は、テンプレートを更新してクローンを作り直す方法です。まずホストでテンプレートにパッチを適用します。
+
+```shell
+# freebsd-update -b /usr/local/jails/templates/{rel-latest}-RELEASE/ fetch install
+```
+
+> **注:** `freebsd-update(8)` の `-b` はテンプレートではなくホストの `uname -r` から実行中リリースを判断します。テンプレートがホストより古い場合は `--currently-running <template-release>` を追加します。[NullFS Thin Jail の更新](#upgrading-thin-jail)も参照してください。
+
+新しいスナップショットを作り、以後の jail をそこから複製します。
+
+```shell
+# zfs snapshot zroot/jails/templates/{rel-latest}-RELEASE@base-p2
+# zfs clone zroot/jails/templates/{rel-latest}-RELEASE@base-p2 zroot/jails/containers/newjail
+```
+
+既存クローンは、新しいスナップショットから作り直すまで元のベースのままです。メジャー／マイナー更新では、既存テンプレートをその場で更新する代わりに、[作成手順](#creating-thin-jail-openzfs-snapshots)に沿って新リリース用データセットを作り、その `@base` から新しい jail を作成します。
+
+アプリケーションのデータや設定を別データセットまたは jail 固有のストレージに分けて保持すると、更新済みテンプレートからの再作成が容易になり、すべてのクローンを個別に更新するより適した運用にできます。
+
+<a id="upgrading-thin-jail"></a>
+### NullFS Thin Jail の更新
+
+NullFS Thin Jail はシステムディレクトリの大部分を共有するため、テンプレートの更新で複数の jail をまとめて更新できます。
+
+同一リリースの最新パッチへ更新するには、ホストで次を実行します。
+
+```shell
+# freebsd-update -b /usr/local/jails/templates/{rel-latest}-RELEASE-base/ fetch install
+# service jail restart
+```
+
+メジャー／マイナー更新では、先に[ホストの更新と再起動](https://docs.freebsd.org/en/books/handbook/cutting-edge/#freebsdupdate-upgrade)を済ませます。
+
+その結果ホストがテンプレートより新しくなるため、`-b` だけではホストの `uname -r` の新しいバージョンで判定されます。jail 自身のユーザーランドを検出する `-j` とは異なります。テンプレートの実際のリリースを `--currently-running <template-release>` で指定します。
+
+次は 14.2-RELEASE のテンプレートを 14.3-RELEASE に更新する原文例です。適用するリリースに置き換えてください。
+
+```shell
+# freebsd-update -b /usr/local/jails/templates/14.2-RELEASE-base/ --currently-running 14.2-RELEASE -r 14.3-RELEASE upgrade
+# freebsd-update -b /usr/local/jails/templates/14.2-RELEASE-base/ install
+# service jail restart
+# freebsd-update -b /usr/local/jails/templates/14.2-RELEASE-base/ install
+# service jail restart
+```
+
+<a id="jail-upgrade-pkgbase"></a>
+### pkgbase Jail の更新
+
+FreeBSD 15.0 以降でベースパッケージから導入した jail は、`freebsd-update(8)` ではなく `FreeBSD-base` に対する `pkg(8)` で更新します。
+
+保存済み原文では、15.0 の `FreeBSD-base` は `/etc/pkg/FreeBSD.conf` に定義されているもののデフォルトで無効のため、更新前に有効化すると説明されています。
+
+ホストから `-r`（`--rootdir`）でルートを指定します。
+
+```shell
+# pkg -r /usr/local/jails/containers/pkgjail update
+# pkg -r /usr/local/jails/containers/pkgjail upgrade
+# service jail restart pkgjail
+```
+
+jail 内から通常の `pkg upgrade` を実行する方法もあります。
+
+```shell
+# jexec -l pkgjail pkg upgrade
+# service jail restart pkgjail
+```
+
+`pkg(8)` は `/etc` 内の設定ファイルとして識別されたファイルを 3 ウェイマージします。自動マージできない場合は新しい版を `<file>.pkgnew` に残し、それまでパッケージ管理されていなかったファイルを引き継ぐ場合は旧版を `<file>.pkgsave` に保存します。更新後に `/etc` を確認し、これらを手動で調整してください。
+
+pkgbase では `pkg(8)` 自身が設定をマージするため、`etcupdate(8)` は実行しません。ホスト側の説明は [FreeBSD の更新とアップグレード](https://docs.freebsd.org/en/books/handbook/cutting-edge/)を参照してください。
 
 <a id="jail-resource-limits"></a>
+## Jail のリソース制限
 
-## Jail Resource Limits（jail リソース制限）
+管理者はホストから jail の資源使用量を制御できます。`rctl(8)` を使って設定します。`/boot/loader.conf` で `kern.racct.enable` を有効にしておく必要があります。
 
-ホストシステムから jail が使用するリソースを制御することは、システム管理者が考慮すべき業務です。
+構文は次のとおりです。
 
-jail がホストシステムから使用できるリソースを管理するには、`man rctl(8)` を使用します。
-
-> **ヒント:**
->
-> `kern.racct.enable` チューナブルを /boot/loader.conf で有効にする必要があります。
-
-jail のリソースを制限する構文は次のとおりです:
-
-```
+```text
 rctl -a jail:<jailname>:resource:action=amount[/per]
 ```
 
-省略可能な `per` 要素はパーセンテージではなく、制限が適用される会計対象（accounting entity）であり、`process`、`user`、`loginclass`、`jail` のいずれかです。たとえば、`deny=2G/jail` は jail 全体の合計を制限し、`deny=2G/process` は同じ値を各プロセス個別に適用します。パーセンテージが意味を持つのは `pcpu` リソースだけであり、その量は単一 CPU コアに対するパーセンテージで表されます。
+省略可能な `per` は割合ではなく、制限を集計する対象です。`process`、`user`、`loginclass`、`jail` のいずれかを指定します。`deny=2G/jail` は jail 全体の合計、`deny=2G/process` は各プロセスに個別に適用します。割合を使うのは `pcpu` で、単一 CPU コアに対する百分率です。
 
-たとえば、jail がアクセスできる最大 RAM を制限するには、次のコマンドを実行します:
+RAM 使用量を制限する例です。
 
 ```shell
 # rctl -a jail:classic:memoryuse:deny=2G
 ```
 
-この制限をホストシステムの再起動後も持続させるには、ルールを /etc/rctl.conf ファイルに次のように追加する必要があります:
+ホスト再起動後も保持するには `/etc/rctl.conf` にルールを追加します。
 
-```
+```text
 jail:classic:memoryuse:deny=2G/jail
 ```
 
-`man rctl(8)` はメモリ以外にも多くのものを制限できます。jail に最も関連するリソースには、`pcpu`（単一 CPU コアのパーセンテージ）、`maxproc`（プロセス数）、`openfiles`（オープン中のファイルディスクリプタ数）、`vmemoryuse`（アドレス空間）、`swapuse`（スワップ領域）があります。それぞれは同じ方法で設定します:
+メモリ以外にも、`pcpu`（単一コアに対する CPU 使用率）、`maxproc`（プロセス数）、`openfiles`（開いたファイル記述子数）、`vmemoryuse`（アドレス空間）、`swapuse`（スワップ）などを制限できます。
 
 ```shell
 # rctl -a jail:classic:pcpu:deny=80
@@ -1085,172 +1581,258 @@ jail:classic:memoryuse:deny=2G/jail
 # rctl -a jail:classic:vmemoryuse:deny=4G
 ```
 
-ディスクスループットは `readbps` と `writebps` で制限しますが、これらのリソースは `deny` アクションをサポートしていません。代わりに `throttle` と組み合わせます:
+ディスク転送量は `readbps` と `writebps` です。これらは `deny` に対応しないため `throttle` を使います。
 
 ```shell
 # rctl -a jail:classic:writebps:throttle=1m
 ```
 
-リソースの後のアクションは、制限に達したときに何が起こるかを選択します: `deny` は操作をブロックし、`log` はシステムログに記録し、`devctl` は `man devd(8)` を通じて通知を送ります。
+資源名の後のアクションは上限到達時の処理です。`deny` は割り当てを拒否し、`log` は警告を記録し、`devctl` は `devd(8)` を通じて通知します。
 
-`-u` フラグで jail の現在のリソース使用量を報告し、`-h` を追加すると人間が読みやすい単位になります:
+> **訳注:** 原文は `log` の出力先をシステムログとしていますが、FreeBSD 15.0 の [rctl(8)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.bin/rctl/rctl.8) はコンソールへの警告と説明しています。
+
+`-u` で現在の使用量、`-h` で読みやすい単位を表示します。
 
 ```shell
 # rctl -hu jail:classic
 ```
 
-jail に適用されるルールを一覧表示します:
+適用ルールを一覧表示します。
 
 ```shell
 # rctl jail:classic
 ```
 
-`-r` で jail に一致するすべてのルールを削除します:
+`-r` で jail に一致するルールをすべて削除します。
 
 ```shell
 # rctl -r jail:classic
 ```
 
-リソース制限の詳細については、セキュリティ章の「Resource Limits（リソース制限）」セクションを参照してください。
+詳細は Security 章の[リソース制限](https://docs.freebsd.org/en/books/handbook/security/#security-resourcelimits)を参照してください。
 
-## CPU Pinning with cpuset（cpuset による CPU 固定）
+<a id="jail-cpu-pinning"></a>
+### cpuset による CPU 固定
 
-`pcpu` を指定した `man rctl(8)` は、jail が消費できる CPU 時間を制限しますが、jail を特定のコアに固定するわけではありません。代わりに `man cpuset(1)` が特定のコアを割り当てます。
-
-実行中の jail を名前または JID で CPU セットに制限します:
+`rctl(8)` の `pcpu` は CPU 使用量を制限しますが、特定のコアへ固定しません。使用コアの指定には `cpuset(1)` を使います。実行中の jail を名前または JID で指定します。
 
 ```shell
 # cpuset -l 0-3 -j classic
 ```
 
-`-g` で jail が現在使用を許可されているコアを照会します:
+現在許可されているコアは `-g` で確認します。
 
 ```shell
 # cpuset -g -j classic
 ```
 
-割り当てられたセットは `jls -v` の cpuset 列にも表示されます。jail.conf には CPU アフィニティ用のパラメータがないため、ホスト環境で実行される `exec.created` または `exec.poststart` フックから `man cpuset(1)` を実行して、起動時に jail を固定します:
+割り当てた集合の ID は `jls -v` の cpuset 列にも表示されます。CPU アフィニティを指定する jail.conf パラメータはないため、ホスト側で実行される `exec.created` または `exec.poststart` から `cpuset(1)` を呼び出します。
 
-```
+```text
 exec.poststart = "cpuset -l 0-3 -j classic";
 ```
 
-## Limiting Disk Space（ディスク容量の制限）
+<a id="limiting-disk-space"></a>
+### ディスク容量の制限
 
-`man rctl(8)` にはファイルシステム領域用のリソースがありません。各 jail が独自の ZFS dataset にある場合は、代わりに ZFS の quota（クォータ）と reservation（予約）でディスク使用量を制限・保証します:
+`rctl(8)` にはファイルシステムの容量を制限する資源がありません。jail ごとに ZFS データセットを使う場合は、quota と reservation で上限と予約容量を設定します。
 
 ```shell
 # zfs set quota=20G zroot/jails/containers/classic
 # zfs set reservation=5G zroot/jails/containers/classic
 ```
 
-これには、jail が独自の dataset である必要があります。先ほど作成した ZFS thin jail はすでにそうですが、Classic Jail の手順では共有 `containers` dataset 内に `mkdir` で jail ディレクトリを作成するため、これらのコマンドを適用するにはまず `zfs create` で作成してください。dataset の構成については「Setting Up the Jail Directory Tree（jail ディレクトリツリーの設定）」を、`quota` と `reservation` プロパティについては `man zfs-set(8)` を参照してください。
+独立したデータセットが必要です。先ほどの ZFS Thin Jail はそうなっていますが、クラシック jail の例は共通の `containers` 内に `mkdir` で作るため、これらのコマンドを使うなら先に `zfs create` で作成します。構成は [Jail ディレクトリツリー](#host-configuration-directories)、プロパティは `zfs-set(8)` を参照してください。
 
 <a id="jail-more-options"></a>
+## 追加の Jail オプション
 
+`jail(8)` には本章の例以外にも多くのパラメータがあります。jail は強い分離境界ですが、絶対的なものではありません。`allow.*` による制限緩和は機能と引き換えに分離性を下げ、jail 内の特権ユーザーをホストの root の権限へ近づけます。処理に必要な権限だけを許可し、それ以外は制限の厳しいデフォルトのままにします。
 
+全一覧は `jail(8)` と `jail.conf(5)` にあります。以下ではよく使うものを説明します。
 
-制限事項。
+<a id="allow-permissions"></a>
+### allow.* による権限
 
-| 値 | 説明 |
-|:---|:---|
-| `1` | jail のルートディレクトリ以下のマウントポイントのみ。 |
-| `2`（デフォルト） | jail のルートディレクトリが配置されている単一のマウントポイントのみ。 |
+`allow.*` は個別の権限を渡す真偽値パラメータです。原文が参照する `jail(8)` では、`allow.set_hostname` と `allow.reserved_ports` を除いてデフォルトは無効と説明されています。必要な機能を明示的に許可します。
 
-`allow.mount.*` 許可は `2` 未満の値を必要とするため、自身のファイルシステムをマウントする必要がある jail は、通常 `enforce_statfs = 1` で設定されます。
+| パラメータ | デフォルト | 効果 |
+|---|---|---|
+| `allow.set_hostname` | 有効 | jail 自身のホスト名を変更可能にする。 |
+| `allow.reserved_ports` | 有効 | jail 内の root に 1024 未満の予約ポートへのバインドを許可する。 |
+| `allow.raw_sockets` | 無効 | raw ソケットを有効にし、`ping(8)` や `traceroute(8)` を利用可能にする。 |
+| `allow.chflags` | 無効 | jail 内の root がシステムファイルフラグを操作できる。 |
+| `allow.mount` | 無効 | 対応する `allow.mount.*` と組み合わせてマウント・アンマウントを許可する。 |
+| `allow.quotas` | 無効 | ファイルシステムのクォータ管理を許可する。 |
+| `allow.read_msgbuf` | 無効 | `dmesg(8)` によるカーネルメッセージバッファの読み取りを許可する。 |
+| `allow.socket_af` | 無効 | IPv4、IPv6、local、route 以外のソケットアドレスファミリーを許可する。 |
+| `allow.mlock` | 無効 | `mlock(2)` による物理メモリのロックを許可する。 |
+| `allow.unprivileged_proc_debug` | 無効 | 非特権ユーザーが自身のプロセスにデバッグ機能を使える。 |
+| `allow.vmm` | 無効 | `vmm(4)` による `bhyve(8)` ゲストの実行を許可する。 |
+| `allow.nfsd` | 無効 | NFS サーバーの実行を許可する。 |
 
-### Per-Jail securelevel {#per-jail-securelevel}
+制限緩和で何が公開されるかを検討します。`allow.raw_sockets` はパケットの偽装を、`allow.chflags` はホストが保護に使う immutable や append-only フラグの解除を可能にします。`allow.mount` はファイルシステムの名前空間を開放します。
 
-`securelevel` パラメータは、jail の `kern.securelevel` を設定し、jail 内のカーネルの immutable フラグとデバイス保護を強化します。
-`man jail(8)` によれば、「jail は親システムよりも低い securelevel になることはありませんが、このパラメータを設定することで、より高い securelevel にすることができます」。
-したがって、ネットワークに面した jail は、ホストがデフォルトのままでも、強化された `securelevel = 3` で実行できます。
+FreeBSD 14.0 のリリースノートでも紹介された jail 内 NFS サーバーには、`allow.nfsd`、VNET jail、ファイルシステムのマウントポイント自体を jail のルートとすること、`enforce_statfs` を `0` にしないことが必要です。
 
-### Hierarchical Jails {#hierarchical-jails}
+<a id="system-v-ipc"></a>
+### System V IPC
 
-jail はそれ自体が子 jail を作成できます。これが、ネストされた、または階層的な jail 階層が構築される仕組みです。
-`children.max` パラメータは、jail が作成できる子 jail の数を設定します。デフォルトは `0` で、子 jail は許可されないことを意味し、読み取り専用の `children.cur` は現在存在する数を報告します。
-子は親の権限を超えることはできません。`man jail(8)` によれば、「jail 内のプロセスは、自分自身に与えられた権限よりも大きな権限を付与することは許可されていません」。
-これにより、jail 内で jail マネージャを実行することが可能になります。
+System V の共有メモリ・セマフォ・メッセージキューを使うデータベースなどは、`sysvmsg`、`sysvsem`、`sysvshm` でモジュールごとに制御します。
 
-### Empty and Persistent Jails {#empty-persistent-jails}
+- `inherit`: ホストの IPC オブジェクトを jail に公開します。
+- `new`: jail 固有のキー名前空間を作成します。
+- `disable`: 対応するシステムコールを失敗させます。
 
-デフォルトでは、jail は実行中のプロセスがある間だけ存在し、最後のプロセスが終了すると jail は消滅します。
-`persist` パラメータを設定すると、`man jail(8)` の言葉を借りれば、「プロセスなしで jail が存在できるようになります」。
-これは、空の状態で作成されてから何かが投入されるまでの間、jail を存続させ、ネットワーク状態のみを保持する VNET jail を固定するものです。
-jail を空で作成し、実験のために存続させることができます:
+PostgreSQL を動かす典型的な例では、ホストの名前空間を見せず独自の共有メモリ環境を用意する `new` が適しています。
+
+```text
+sysvmsg = new;
+sysvsem = new;
+sysvshm = new;
+```
+
+古い `allow.sysvipc` は非推奨です。3 パラメータすべてを `inherit` にするのと同じで、ホスト全体の IPC 名前空間を共有するため、上のモジュール別パラメータを使います。
+
+<a id="mounting-filesystems"></a>
+### ファイルシステムのマウント
+
+`allow.mount` は jail 内からのマウントを許可し、`allow.mount.devfs`、`allow.mount.fdescfs`、`allow.mount.fusefs`、`allow.mount.nullfs`、`allow.mount.procfs`、`allow.mount.linprocfs`、`allow.mount.linsysfs`、`allow.mount.tmpfs`、`allow.mount.zfs` で種類を選びます。それぞれ、`allow.mount` があり、`enforce_statfs` が `2` 未満の場合にだけ有効です。
+
+`mount.devfs`、`mount.fdescfs`、`mount.procfs` は指定ファイルシステムを jail 用に自動マウントし、`mount.fstab` は追加のマウントを記述した fstab を指します。
+
+`enforce_statfs` は見えるマウントポイントと、上述のマウント権限の有効性を制御します。
+
+| 値 | jail から見えるマウントポイント |
+|---|---|
+| `0` | ホストのすべてのマウントポイント。制限なし。 |
+| `1` | jail のルートディレクトリ配下だけ。 |
+| `2`（デフォルト） | jail のルートが置かれている単一のマウントポイントだけ。 |
+
+`allow.mount.*` は `2` 未満を必要とするため、jail 自身でマウントする構成では通常 `enforce_statfs = 1` を使います。
+
+<a id="per-jail-securelevel"></a>
+### Jail ごとの securelevel
+
+`securelevel` は jail の `kern.securelevel` を設定し、jail 内の immutable フラグやデバイスの保護を強化します。jail の securelevel は親より低くできませんが、高くすることはできます。そのためホストをデフォルトのままにし、ネットワークに面した jail を `securelevel = 3` で動かす構成も可能です。
+
+<a id="hierarchical-jails"></a>
+### 階層化された Jail
+
+jail が子 jail を作成すると、入れ子・階層構成になります。`children.max` は作成できる子 jail の数で、デフォルトの `0` は作成不可です。読み取り専用の `children.cur` は現在の数を示します。
+
+子に親より大きい権限を与えることはできません。jail 内のプロセスは、自身が与えられた権限を超えて他者へ許可できないためです。この仕組みで jail 内から jail マネージャーを実行できます。
+
+<a id="empty-persistent-jails"></a>
+### 空の Jail と永続 Jail
+
+通常 jail はプロセスが動いている間だけ存在し、最後のプロセスが終了すると消えます。`persist` を設定するとプロセスがなくても存在できます。空の jail を作成して内容を準備する間や、ネットワーク状態だけを持つ VNET jail を維持するのに使えます。
+
+実験用に空の jail を作成して維持する例です。
 
 ```shell
 # jail -c name=test path=/rescue persist
 ```
 
-`nopersist` でフラグを解除すると、再びアイドル状態になった jail が削除されるようになります。
+`nopersist` でフラグを解除すると、再びプロセスがなくなった時点で削除されるようになります。
 
-### Presenting a Different OS Release {#jail-osrelease}
+<a id="jail-osrelease"></a>
+### 異なる OS リリースの提示
 
-jail のユーザーランドはホストカーネルより古い場合がありますが、その中のツールは、特に指定がない限り、`man uname(1)` を通じてホストのバージョンを読み取ります。
-`osrelease` パラメータは、jail の `kern.osrelease` と `uname -r` によって報告される文字列を設定し、`osreldate` は `kern.osreldate` と `uname -K` によって報告される数値を設定します。
-古いユーザーランドが自身のリリースを報告するように設定すると、`man uname(1)`、`man sysctl(8)` の利用者、およびバージョンを検出するビルドツールが正しく動作し、jail 内で実行される `man freebsd-update(8)` も含めて正しく動作します。
-パッケージ管理はどちらの場合でも影響を受けません。`man pkg(8)` は `man uname(1)` ではなく、jail 自身のバイナリの ELF ノートから ABI を導出するためです。
-これは、jail のユーザーランドがホストカーネルより新しいことは決してないという規則を補完します。[Jail Upgrading](#jail-upgrading) を参照してください。
+jail のユーザーランドはホストより古くできますが、指定がなければ内部の `uname(1)` はホストのバージョンを読みます。`osrelease` は `kern.osrelease` と `uname -r` の文字列、`osreldate` は `kern.osreldate` と `uname -K` の数値を設定します。
+
+古いユーザーランドに対応した値にすると、`uname(1)` や `sysctl(8)` の利用側、バージョンを検出するビルドツールなどが適切に動作します。原文は jail 内で実行する `freebsd-update(8)` も挙げていますが、配布セットの更新場所は[アップグレード手順](#jails-updating)のとおりホスト側です。
+
+`pkg(8)` は `uname(1)` ではなく jail 自身のバイナリの ELF notes から ABI を求めるため、この設定でパッケージ管理の ABI は変わりません。ユーザーランドをホストのカーネルより新しくできないという規則も変わりません。[Jail のアップグレード](#jail-upgrading)を参照してください。
 
 <a id="jails-zfs"></a>
+## Jail と ZFS
 
----
+jail に ZFS データセットを委任すると、jail 内の root はホスト管理者を介さず、子データセットの作成・スナップショット・クローン・ロールバックを行えます。書き込み可能でスナップショットを利用できる独自ストレージを渡す方法です。
 
-## Jails と ZFS（Jails and ZFS）
+ホストはデータセットの所有を維持し、指定ツリーとその子孫の管理だけを委任します。`jailed` プロパティと `zfs jail` の関係は [ZFS と Jail](https://docs.freebsd.org/en/books/handbook/zfs/#zfs-zfs-jail)を参照してください。
 
-jail に 1 つ以上の ZFS dataset の制御を与えることができます。これにより、jail 内の root ユーザーは、ホスト管理者の関与なしに、子 dataset の作成、スナップショット、クローン、ロールバックを行えます。これは、jail に独自の書き込み可能でスナップショット対応のストレージを提供するための推奨方法です。
+<a id="delegating-dataset-manually"></a>
+### データセットを手動で委任する
 
-ホストは dataset の所有権を保持し、委任されたツリーとその子孫の管理のみを jail に委任します。`jailed` プロパティ、`zfs jail`
+この方法は、原文が対象とするサポート中の FreeBSD リリースで利用できます。
 
+ホストで委任するデータセットを作成し、`jailed` を設定します。
+
+```shell
+# zfs create zroot/jails/data
+# zfs set jailed=on zroot/jails/data
+```
+
+`jailed` は jail 内から管理することを示し、ホストは自動マウントしなくなります。
+
+次に、jail に ZFS マウントを許可し、作成時にデータセットを接続します。jail.conf の対象ブロックに追加します。
+
+```text
+allow.mount;
+allow.mount.zfs;
+enforce_statfs = 1;
+exec.created += "zfs jail ${name} zroot/jails/data";
+```
+
+`allow.mount.zfs` には `allow.mount` と `2` 未満の `enforce_statfs` が必要です。[追加オプション](#jail-more-options)も参照してください。停止時に接続が解除されるため、起動ごとに `exec.created` で接続し直します。`${name}` は jail 名に展開されます。実行中の jail へは `zfs jail <jid|name> zroot/jails/data` でも接続できます。
+
+> **注:** jail は `/dev/zfs` へアクセスできる必要があります。標準の `devfsrules_jail`（ルールセット 4）は既に公開するため、ZFS 委任のための独自ルールセットは不要です。
+
+jail 内で委任したデータセットをマウントして操作します。
+
+```shell
+# zfs mount -a
+# zfs create zroot/jails/data/work
+# zfs snapshot zroot/jails/data/work@monday
+```
+
+jail 内の root は委任ツリー内で作成・スナップショット・クローン・ロールバックを行えますが、委任元データセットの `quota` はホスト側でのみ設定できます。
+
+<a id="attaching-datasets-automatically"></a>
+### データセットを自動接続する
+
+`zfs.dataset` は FreeBSD 15.0 で追加されたパラメータです。14.3 の `jail(8)` にはありません。
+
+15.0 以降では、`jail(8)` がデータセットを接続でき、手動の `jailed` 設定と `zfs jail` の手順を省けます。委任するデータセットを列挙します。
+
+```text
+allow.mount;
+allow.mount.zfs;
+enforce_statfs = 1;
+zfs.dataset = "zroot/jails/data";
+```
+
+起動時に列挙したデータセットを接続するため、上の `exec.created` フックは不要です。`allow.mount.zfs` が必要です。
+
+まだ `zfs.dataset` に対応しない古い jail マネージャーのために、rc.d/jail は `/etc/rc.conf` の従来変数 `jail_<jailname>_zfs_dataset` も扱います。
+
+<a id="accessing-snapshots-inside-jail"></a>
+### Jail 内からスナップショットへアクセスする
+
+FreeBSD 14.x と 15.x の `zfs.mount_snapshot` は、データセット全体を委任せずにスナップショットの内容へアクセスする機能です。`1` にすると jail 内のユーザーが `.zfs/snapshot` 配下を読めます。
+
+```text
+zfs.mount_snapshot = 1;
+```
+
+ホストで取ったスナップショットから個々のファイルを復元するのに便利です。`allow.mount.zfs` もあれば、jail 内でスナップショットをマウントすることもできます。`.zfs` の表示はデータセットの `snapdir` プロパティで制御します。
+
+> **警告:** データセットの委任と `allow.mount.zfs` を組み合わせると、jail 内の root はマウント関連の ZFS プロパティを設定し、ファイルシステムをマウントできます。独自ストレージの管理を信頼できる jail にだけ、意図して許可してください。
+
+<a id="jail-managers-and-containers"></a>
 ## Jail マネージャーとコンテナ
 
-前述のとおり、FreeBSD Jail の各タイプは手動で作成・設定できますが、設定と管理を容易にするためのサードパーティ製ユーティリティも存在します。
+各種 jail は手動で作成・設定できますが、設定や管理を容易にするサードパーティーツールもあります。以下は原文にある一部の例です。
 
-以下は、さまざまな FreeBSD Jail マネージャーの一覧です（不完全なリストです）。
+| 名前 | ライセンス | Ports のパス | ドキュメント |
+|---|---|---|---|
+| BastilleBSD | BSD-3 | `sysutils/bastille` | [Documentation](https://bastille.readthedocs.io/en/latest/) |
+| pot | BSD-3 | `sysutils/pot` | [Documentation](https://pot.pizzamig.dev/) |
+| cbsd | BSD-2 | `sysutils/cbsd` | [Documentation](https://github.com/cbsd/cbsd) |
+| AppJail | BSD-3 | `sysutils/appjail`、開発版 `sysutils/appjail-devel` | [Documentation](https://github.com/DtxdF/AppJail#getting-started) |
+| iocage | BSD-2 | `sysutils/iocage` | [Documentation](https://freebsd.github.io/iocage/) |
+| ezjail | [Beer Ware](https://erdgeist.org/beerware.html) | `sysutils/ezjail` | [Documentation](https://erdgeist.org/arts/software/ezjail/) |
 
-.Jail マネージャー
-[options="header", cols="1,1,1,1"]
-|===
-| 名称 | ライセンス | パッケージ | ドキュメント
+FreeBSD は 14.3-RELEASE から公式の OCI ベースシステムイメージを公開しています。同じ jail 技術を基盤に Podman で管理する OCI（Docker 形式）コンテナは、[Containers 章](17-containers.md)で説明します。ネイティブ jail を扱う本章とあわせて参照してください。
 
-| BastilleBSD
-| BSD-3
-| package:sysutils/bastille[]
-| link:https://bastille.readthedocs.io/en/latest/[ドキュメント]
-
-| pot
-| BSD-3
-| package:sysutils/pot[]
-| link:https://pot.pizzamig.dev/[ドキュメント]
-
-| cbsd
-| BSD-2
-| package:sysutils/cbsd[]
-| link:https://github.com/cbsd/cbsd[ドキュメント]
-
-| AppJail
-| BSD-3
-| package:sysutils/appjail[]、開発版は package:sysutils/appjail-devel[]
-| link:https://github.com/DtxdF/AppJail#getting-started[ドキュメント]
-
-| iocage
-| BSD-2
-| package:sysutils/iocage[]
-| link:https://freebsd.github.io/iocage/[ドキュメント]
-
-| ezjail
-| link:https://erdgeist.org/beerware.html[Beer Ware]
-| package:sysutils/ezjail[]
-| link:https://erdgeist.org/arts/software/ezjail/[ドキュメント]
-
-|===
-
-FreeBSD は FreeBSD 14.3-RELEASE 以降、公式の OCI ベースシステムイメージを公開しています。OCI（Docker スタイル）コンテナは、同じ jail テクノロジー上に構築され、Podman ツールキットで管理されます。これらについては、本章で説明するネイティブ jail を補完するものとして、crossref:containers[containers,Containers] の章で説明しています。
-
----
-
-## 翻訳メモ
-
-- 機械支援初訳。コマンド例は原文照合推奨。
-- 用語は `handbook/ja/glossary.md` と揃える。
