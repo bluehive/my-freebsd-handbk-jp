@@ -11,7 +11,7 @@
 | 02 | Installing FreeBSD (bsdinstall) | [02-bsdinstall.md](ja/02-bsdinstall.md) | **自己校正済（意訳）** | 2026-11-04 原文31見出し・95アンカー・60画像・5コード例を照合。実機導入は未検証 |
 | 03 | FreeBSD Basics | [03-basics.md](ja/03-basics.md) | **ドラフト** | 2026-08-21 |
 | 04 | Packages and Ports | [04-ports.md](ja/04-ports.md) | **自己校正済（意訳）** | 2026-11-04 原文34見出し・73コード例を照合。実機導入は未検証 |
-| 05 | X Window System | — | 未着手 | |
+| 05 | X Window System | [05-x11.md](ja/05-x11.md) | **自己校正済（意訳）** | 2026-11-04 原文21見出し・47コード例を照合。GPU実機検証は未実施 |
 | 06 | Wayland | — | 未着手 | |
 | 07 | Desktop Applications | — | 未着手 | |
 | 08 | Multimedia | — | 未着手 | |
