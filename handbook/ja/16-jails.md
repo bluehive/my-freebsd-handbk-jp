@@ -253,90 +253,190 @@ jail を起動する前に、ホストが現在何を待ち受けているかを
 
 jail が使用できるアドレスをファイアウォールレベルで制御するには、[英語 Handbook の「Firewalls」章](https://docs.freebsd.org/en/books/handbook/firewalls/) を参照してください。
 
-[[host-configuration-directories]]
-=== Jail ディレクトリツリーのセットアップ
+<a id="host-configuration-directories"></a>
+### Jail ディレクトリツリーのセットアップ
 
-jail のファイルを置く場所に特別な決まりはありません。
+jail のファイルを置く場所に特別な決まりはありません。管理者によって `/jail`、`/usr/jail`、`/usr/local/jails` などが使われます。この章では `/usr/local/jails` を使用します。
 
-[.filename]#/jail# を使用する管理者もいれば、[.filename]#/usr/jail# を使用する管理者もおり、さらに [.filename]#/usr/local/jails# を使用する管理者もいます。
-この章では [.filename]#/usr/local/jails# を使用します。
+その下に、次のディレクトリを作成します。
 
-[.filename]#/usr/local/jails# の他に、以下のディレクトリも作成されます。
+- `media`: ダウンロードしたユーザーランドの圧縮ファイル。
+- `templates`: Thin Jail 用のテンプレート。
+- `containers`: jail 本体。
 
-* [.filename]#media# には、ダウンロードしたユーザーランドの圧縮ファイルが格納されます。
-* [.filename]#templates# には、Thin Jail を使用する際のテンプレートが格納されます。
-* [.filename]#containers# には、jail が格納されます。
-
-OpenZFS を使用する場合は、次のコマンドを実行してこれらのディレクトリのデータセットを作成します。
-
-[source,shell]
-....
+OpenZFS を使用する場合は、次のコマンドでデータセットを作成します。
+```shell
 # zfs create -o mountpoint=/usr/local/jails zroot/jails
 # zfs create zroot/jails/media
 # zfs create zroot/jails/templates
 # zfs create zroot/jails/containers
-....
+```
 
-[TIP]
-====
-この例では親データセットに `zroot` を使用しましたが、他のデータセットを使用することもできました。
-====
 
-jail ごとに個別の子データセットを作成することで、jail ごとのスナップショット、クローン、クォータ、データセット委任が後で可能になります。
-各 jail ディレクトリが独自のデータセットになるため、OpenZFS は `quota` プロパティと `reservation` プロパティを使用してディスク使用量を上限設定および保証の両方ができます。crossref:jails[jail-resource-limits,Jail リソース制限] を参照してください。
+> **ヒント:** この例では親データセットに `zroot` を使用していますが、別のデータセットも使用できます。
 
-UFS を使用する場合は、次のコマンドを実行してディレクトリを作成します。
+jail ごとに個別の子データセットを作成すると、jail 単位のスナップショット、クローン、クォータ、データセット委任が可能になります。各 jail ディレクトリが独自のデータセットになるため、OpenZFS の `quota` と `reservation` プロパティでディスク使用量の上限と予約容量を設定できます。[Jail リソース制限](#jail-resource-limits)を参照してください。
 
-[source,shell]
-....
+UFS を使用する場合は、次のコマンドでディレクトリを作成します。
+```shell
 # mkdir /usr/local/jails/
 # mkdir /usr/local/jails/media
 # mkdir /usr/local/jails/templates
 # mkdir /usr/local/jails/containers
-....
+```
+
 
 <a id="jail-configuration-files"></a>
-=== Jail 設定ファイル
+### Jail 設定ファイル
 
-jail を設定する方法は 2 つあります。
+jail の設定方法は 2 つあります。`/etc/jail.conf` に jail ごとのエントリを追加する方法と、`/etc/jail.conf.d/` に jail ごとのファイルを作成する方法です。
 
-f
+ホスト上の jail が少数であれば、`/etc/jail.conf` に各エントリを追加できます。多数の場合は、`/etc/jail.conf.d/` に jail ごとに 1 ファイルを置く方法が適しています。
 
-ホストシステムに jail が少数しかない場合は、各 jail のエントリを `/etc/jail.conf` ファイルに追加できます。  
-もう 1 つの方法は、`/etc/jail.conf.d/` ディレクトリ内に各 jail 用のファイルを作成する方法です。
-
-ホストシステムに jail が多数ある場合は、`/etc/jail.conf.d/` ディレクトリに jail ごとに 1 つの設定ファイルを置くことをお勧めします。
-
-`/etc/jail.conf.d/` 内のファイルは、拡張子が `.conf` であり、かつ `/etc/jail.conf` にインクルードされる必要があります:
-
+`/etc/jail.conf.d/` 内のファイルには `.conf` 拡張子を付け、`/etc/jail.conf` から次のように読み込みます。
 ```text
 .include "/etc/jail.conf.d/*.conf";
 ```
 
-典型的な jail エントリは次のようになります:
 
+典型的な jail のエントリは次のようになります。
 ```text
-jailname { (1)
+jailname {
   # STARTUP/LOGGING
-  exec.start = "/bin/sh /etc/rc"; (2)
-  exec.stop = "/bin/sh /etc/rc.shutdown"; (3)
-  exec.consolelog = "/var/log/jail_console_${name}.log"; (4)
+  exec.start = "/bin/sh /etc/rc";
+  exec.stop = "/bin/sh /etc/rc.shutdown";
+  exec.consolelog = "/var/log/jail_console_${name}.log";
 
   # PERMISSIONS
-  allow.raw_sockets; (5)
-  exec.clean; (6)
-  mount.devfs; (7)
+  allow.raw_sockets;
+  exec.clean;
+  mount.devfs;
 
   # HOSTNAME/PATH
-  host.hostname = "${name}"; (8)
-  path = "/usr/local/jails/containers/${name}"; (9)
+  host.hostname = "${name}";
+  path = "/usr/local/jails/containers/${name}";
 
   # NETWORK
-  ip4.addr =
+  ip4.addr = 192.168.1.151;
+  ip6.addr = "2001:db8::151";
+  interface = em0;
+}
+```
 
-#### グローバル設定、ワイルドカ
 
-`man jail(8)` および `man jail.conf(5)` を参照してください。
+- `jailname`: jail の名前。
+- `exec.start`: jail 作成時に jail 内で実行するコマンド。通常は `/bin/sh /etc/rc` です。
+- `exec.stop`: jail 削除前に jail 内で実行するコマンド。通常は `/bin/sh /etc/rc.shutdown` です。
+- `exec.consolelog`: コマンドの標準出力と標準エラー出力を書き込むファイル。
+- `allow.raw_sockets`: jail 内での raw ソケット作成を許可します。これにより `ping(8)` や `traceroute(8)` などを利用できます。
+- `exec.clean`: クリーンな環境でコマンドを実行します。
+- `mount.devfs`: jail 内から見えるデバイスを制限するため、chroot 先の `/dev` に `devfs(5)` をマウントします。`devfs_ruleset` で指定したルールセットを適用します。このパラメータがデフォルトの `0` の場合は、`mount.devfs` の既定のルールセット 4（`devfsrules_jail`）を使用し、jail 向けの最小限のデバイス以外を隠します。[Devfs ルールセット](#jail-conf-devfs)を参照してください。
+- `host.hostname`: jail のホスト名。
+- `path`: jail のルートとなるディレクトリ。jail 内で `jail` や `jexec(8)` によって実行されるコマンドは、このディレクトリをルートとして実行されます。
+- `ip4.addr`: jail に割り当てる IPv4 アドレス 1 つ、またはカンマ区切りのアドレス一覧。指定すると `ip4 = new` が暗黙に設定されます。`ip4` は独立したデフォルト値のままにはなりません。`ip4` には、指定アドレスに制限する `new`、ホストのすべての IPv4 アドレスへの無制限なアクセスを許す `inherit`、IPv4 を無効にする `disable` を指定できます。`ip4` と `ip4.addr` のいずれも指定しない jail は `inherit` と同様に動作します。`inherit` では `interface` と `ip4.addr` は効果を持ちません。複数アドレスがある場合、`ip4.saddrsel` はバインドされていないソケットの外向き接続でカーネルによる送信元アドレス選択を許可し、`ip4.nosaddrsel` は一覧の先頭アドレスを強制します。
+- `ip6.addr`: jail に割り当てる IPv6 アドレス 1 つ、またはカンマ区切りのアドレス一覧。`ip6` も `ip4` と同じく `new`、`inherit`、`disable` を取り、`ip6.saddrsel` と `ip6.nosaddrsel` で送信元アドレスの選択を制御します。IPv4 のみの jail では `ip6 = disable`、IPv6 のみの jail では `ip4 = disable` を使用します。
+- `interface`: jail の IP アドレスを追加するネットワークインターフェース。通常はホストのインターフェースです。
+
+> **注:** jail には仮想コンソールがありません。`init(8)` と `getty(8)` は jail 内で動作しないため、対話的に接続するコンソールはありません。`exec.consolelog` が記録するのは `exec.*` コマンドの標準出力と標準エラー出力、すなわち `/etc/rc` と `/etc/rc.shutdown` スクリプトの出力です。対話的な操作には [jail へのアクセス](https://docs.freebsd.org/en/books/handbook/jails/#access-jail)で説明する `jexec(8)`、または jail 内で動作させた `sshd(8)` を使います。jail 内のデーモンがその後に出力するログは、jail 自身の syslog に送られます。
+
+> **ヒント:** `exec.consolelog` のファイルは制限なく増大します。`newsyslog(8)` でローテーションするため、たとえば `/etc/newsyslog.conf.d/jail` に次の glob エントリを追加します。
+```text
+/var/log/jail_console_*.log            640  7     100  *     J
+```
+
+
+<a id="global-settings-wildcards-variables"></a>
+#### 共通設定、ワイルドカード、変数
+
+jail ブロックの外に設定したパラメータは、ワイルドカードのデフォルト値になります。`jail.conf(5)` は、`*` ワイルドカード節に書いた場合と同様に、すべての jail に適用します。共通パラメータを一度だけ設定することで、各 jail のブロックを短くできます。
+
+ドル記号を前置した名前（必要に応じて波括弧で囲む）は、対応するパラメータや変数の値に置き換えられます。組み込みの `${name}` は jail 自身の名前に展開されます。独自の変数は、名前の先頭にドル記号を付け、パラメータと同じように定義します。
+
+次の `/etc/jail.conf` は共通設定を先頭に一度だけ定義し、jail ごとに異なる値だけを上書きします。
+```text
+# Shared defaults applied to every jail
+exec.start = "/bin/sh /etc/rc";
+exec.stop = "/bin/sh /etc/rc.shutdown";
+exec.consolelog = "/var/log/jail_console_${name}.log";
+exec.clean;
+mount.devfs;
+host.hostname = "${name}";
+path = "/usr/local/jails/containers/${name}";
+interface = em0;
+
+www {
+    ip4.addr = 192.168.1.151;
+}
+
+db {
+    host.hostname = "database.example.com";
+    ip4.addr = 192.168.1.152;
+}
+```
+
+
+`www` は共通設定をすべて継承してアドレスだけを設定し、`db` はさらに `host.hostname` も上書きします。
+
+<a id="jail-conf-hooks"></a>
+#### コマンドフック
+
+`jail(8)` は一連のライフサイクルフックを通じて jail を管理します。各フックがホスト側と jail 内のどちらで実行されるかを区別することが重要です。作成時の実行順序は次のとおりです。
+
+| フック | 実行場所とタイミング |
+|---|---|
+| `exec.prestart` | ホスト側で、jail を作成する前に実行。 |
+| `exec.created` | ホスト側で、jail が作成された後、jail 内でプロセスが起動する前に実行。 |
+| `exec.start` | jail 内で実行。通常は `/bin/sh /etc/rc` でサービスを起動。 |
+| `exec.poststart` | ホスト側で、jail が起動した後に実行。 |
+
+停止時は逆の流れになります。
+
+| フック | 実行場所とタイミング |
+|---|---|
+| `exec.prestop` | ホスト側で、jail を停止する前に実行。 |
+| `exec.stop` | jail 内で実行。通常は `/bin/sh /etc/rc.shutdown`。 |
+| `exec.poststop` | ホスト側で、jail が停止した後に実行し、`exec.prestart` で準備したものを片付ける。 |
+
+`+=` を使って追加すると、1 つのフックに複数のコマンドを割り当てられます。
+```text
+exec.poststart += "logger jail ${name} started";
+```
+
+
+`exec.timeout` は `jail(8)` がコマンドの終了を待つ時間に上限を設け、`exec.consolelog` はこれらのコマンドの出力を記録します。[VNET Jail](#creating-vnet-jail)では、`exec.prestart` と `exec.poststop` を使い、ホスト上で各 jail のネットワーク接続を構築・撤去します。
+
+フックが単一 jail 内のコマンドの順序を制御するのに対し、`depend` パラメータは jail 間の順序を制御します。`depend = otherjail;` と書くと、`jail(8)` はこの jail が `otherjail` に依存すると判断します。依存先を先に作成し、その最後の `exec.poststart` コマンドが完了してから、この jail を作成します。停止・削除は逆順で行われます。
+
+<a id="jail-conf-devfs"></a>
+#### Devfs ルールセット
+
+`mount.devfs` を設定した jail では、`/dev` に表示するデバイスノードを devfs ルールセットで制御します。`devfs_ruleset` の指定があればその値を、指定がなければ `mount.devfs` のデフォルトであるルールセット 4 を使います。
+
+`devfs.rules(5)` の名前付きルールセットは `/etc/defaults/devfs.rules` に定義されています。jail 向けのものは 2 つあります。ルールセット 4 の `devfsrules_jail` は jail 用の標準的な最小デバイス集合です。ルールセット 5 の `devfsrules_jail_vnet` は、VNET jail が独自のファイアウォールを動かせるよう `/dev/pf` を追加します。VNET jail の例は `devfs_ruleset = 5`、Linux jail の例は `devfs_ruleset = 4` を指定します。クラシック jail と Thin Jail の例は `mount.devfs` のみを設定するため、デフォルトのルールセット 4 を使います。
+
+追加のデバイスを公開するには、標準ルールセットを取り込み、必要なデバイスを表示する独自ルールセットを `/etc/devfs.rules` に記述します。次の例は `devfsrules_jail` を基に、`bpf(4)` デバイスも表示します。
+```text
+[devfsrules_jail_bpf=100]
+add include $devfsrules_jail
+add path 'bpf*' unhide
+```
+
+
+ルールを再読み込みします。
+```shell
+# service devfs restart
+```
+
+
+続いて jail の設定で、新しいルールセットを番号で指定します。
+```text
+devfs_ruleset = 100;
+```
+
+
+`/etc/devfs.rules` にあるルールセットは、同じ番号の `/etc/defaults/devfs.rules` のルールセットを上書きします。それ以外は、両ファイルのルールセットが統合されます。
+
+設定変数の詳細は `jail(8)` と `jail.conf(5)` を参照してください。
 
 <a id="classic-jail"></a>
 
