@@ -44,6 +44,13 @@ handbook/
 - 原文注釈を取り除いた末尾空行の正規化を共通検査器で修正。新章と、既存第1〜14・16・23・24章の検査が成功。
 - [出典・検証記録](docs/translation-ch26-ch27.md) / [原文ハッシュと章別状態](docs/translation-ch26-ch27.json)。実機のロケール変更・更新・ビルドと第三者専門校閲は未実施。
 
+### 2026-11-04 — 公式Chapter 19 MAC・20 Security Event Auditingを意訳
+
+- 公式の章番号に従い、[MAC](handbook/ja/19-mac.md)と[Security Event Auditing](handbook/ja/20-audit.md)を追加。既存TOCのID 18・19へ対応付け、他章の一括改番は行っていません。他の章を作業中の別ブランチと競合しないよう、専用ブランチ `docs/translate-ch19-ch20-mac-audit` で作業。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、38見出し・40アンカー・49コード例・2表を照合。全節を意訳・自己校正しました。
+- 原文のコードと出力は保持し、設定例の不備や古い記述（`login.conf` の継続記号漏れ、`mac_portacl` のカーネル設定行、`www/apache22` など）は訳注で区別。
+- [作業・検証記録](docs/translation-ch19-ch20.md) / [原文ハッシュと章別状態](docs/translation-ch19-ch20.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-04 — 公式Chapter 23 ZFS・24 Other File Systemsを意訳（Codex）
 
 - 公式の章番号に従い、[ZFS](handbook/ja/23-zfs.md)と[Other File Systems](handbook/ja/24-filesystems.md)を追加。既存TOCのID 22・23へ対応付け、他章の一括改番は行っていません。
