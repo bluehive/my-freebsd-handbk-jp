@@ -47,4 +47,11 @@
 | dataset delegation | データセットの委任 | 指定したZFSツリーの管理をjailへ渡す |
 | origin snapshot | originスナップショット | クローンの作成元。promoteは依存関係を変更する |
 
+| distfile | distfile（配布ソース） | Portsのビルドで取得する元ファイル |
+| ports skeleton | ports skeleton | Makefile・パッチなどのビルド手順一式。ソース自体は含まない |
+| origin（Ports） | origin | `www/nginx`などのPortsツリー内の識別パス |
+| Quarterly / Latest | Quarterly / Latest | 四半期の安定運用向け／新しい版を追うブランチ |
+| pkgbase | pkgbase | FreeBSDのベースシステムをパッケージとして管理する方式 |
+| automatic package | automaticパッケージ | 他パッケージの依存先として自動導入されたもの |
+
 更新ルール: 章翻訳で迷ったらここに追記し、既存と衝突したら issue で決める。
