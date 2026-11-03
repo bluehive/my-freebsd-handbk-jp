@@ -51,3 +51,5 @@
 第1〜14章の番号は本リポジトリの既存TOCに準拠します。固定上流ではネットワーク章が新設され、デスクトップ以降は番号が1つ後ろへずれています。各章の内容対応と上流番号はマニフェストの `id`・`slug`・`upstream_chapter_number` で区別します。
 
 第10章のlpqの訳注は、[FreeBSD 15.0 lpq(1)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.sbin/lpr/lpq/lpq.1)の、引数がない場合はキュー内の全ジョブを報告する説明を参照しています。
+
+第12章では、[xrdp公式サイト](https://www.xrdp.org/)でRDPサーバであることを確認し、[X.Org xhost(1)](https://xorg.freedesktop.org/archive/X11R7.5/doc/man/man1/xhost.1.html)のlocalファミリの定義を参照して、原文のクライアントの例とユーザー限定の説明を補足しています。

@@ -33,7 +33,7 @@
 | 09 | Kernel Configuration | 意訳・原文照合済み。7見出し・8アンカー・17コード例・0画像 |
 | 10 | Printing | 意訳・原文照合済み。29見出し・38アンカー・47コード例・0画像 |
 | 11 | Linux Binary Compatibility | 意訳・原文照合済み。13見出し・13アンカー・35コード例・0画像 |
-| 12 | WINE | 未着手 |
+| 12 | WINE | 意訳・原文照合済み。54見出し・54アンカー・23コード例・28画像 |
 | 13 | Configuration and Tuning | 未着手 |
 | 14 | Booting Process | 未着手 |
 

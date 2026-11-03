@@ -192,9 +192,17 @@
       "source_path": "handbook/en/through-ch14/12-wine.adoc.txt",
       "translation_path": "handbook/ja/12-wine.md",
       "source_sha256": "3428089da8edbca730eadf2de8df3fca2f1c50a831fb829d271e5fb5af074b0c",
-      "status": "pending",
+      "status": "translated",
       "existing_translation": false,
-      "upstream_chapter_number": 13
+      "upstream_chapter_number": 13,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, code, screenshots, prerequisites, and multi-user cautions; obsolete package assumptions and malformed fontconfig sample distinguished; runtime not tested",
+      "counts": {
+        "headings": 54,
+        "anchors": 54,
+        "code_blocks": 23,
+        "images": 28
+      }
     },
     {
       "id": 13,
