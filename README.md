@@ -34,6 +34,14 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-04 — 公式Chapter 26 Localization・27 Updating and Upgradingを意訳（Codex）
+
+- [ローカライズ](handbook/ja/26-l10n.md)と[FreeBSDの更新](handbook/ja/27-cutting-edge.md)を追加。公式章番号に合わせ、既存TOCのID 25・26へ対応付けました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全58見出し・67アンカー・105コード例・6表を意訳・照合。
+- 古い文字コード・コンソール設定、過去のリリース番号、実験的なpkgbase手順は、原文の前提と訳注を区別しました。
+- 原文注釈を取り除いた末尾空行の正規化を共通検査器で修正。新章と、既存第1〜14・16・23・24章の検査が成功。
+- [出典・検証記録](docs/translation-ch26-ch27.md) / [原文ハッシュと章別状態](docs/translation-ch26-ch27.json)。実機のロケール変更・更新・ビルドと第三者専門校閲は未実施。
+
 ### 2026-11-04 — 公式Chapter 23 ZFS・24 Other File Systemsを意訳（Codex）
 
 - 公式の章番号に従い、[ZFS](handbook/ja/23-zfs.md)と[Other File Systems](handbook/ja/24-filesystems.md)を追加。既存TOCのID 22・23へ対応付け、他章の一括改番は行っていません。

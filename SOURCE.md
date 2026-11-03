@@ -61,3 +61,14 @@
 ## 公式Chapter 23・24の意訳用スナップショット
 
 2026-11-04に、公式Chapter 23 ZFSとChapter 24 Other File Systemsを、`freebsd/freebsd-doc` のコミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch23-ch24/`、出典・SHA-256・進捗は [マニフェスト](docs/translation-ch23-ch24.json)と[作業記録](docs/translation-ch23-ch24.md)に保存します。公式章番号と既存TOCのIDには1の差があります。今回の対象にVirtualizationは含みません。
+
+## 公式Chapter 26・27の意訳用スナップショット
+
+- 取得日：2026-11-04（日本時間）。
+- 上流：`freebsd/freebsd-doc`、固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`。
+- 公式Chapter 26：`documentation/content/en/books/handbook/l10n/_index.adoc`。
+- 公式Chapter 27：`documentation/content/en/books/handbook/cutting-edge/_index.adoc`。
+- 原文保存先：`handbook/en/ch26-ch27/`。SHA-256、章別の状態・構造数は [マニフェスト](docs/translation-ch26-ch27.json)に保存。
+- 既存TOCのID 25・26に対応します。新しいファイル名は公式章番号の26・27を使用し、他の章は一括改番していません。
+
+第26章のLC_ALLの優先順位の訳注は、[FreeBSD 15.0 environ(7)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/share/man/man7/environ.7)も参照しています。原文にはsysconsや古い文字コード・Portsの例が残り、第27章には過去のリリース番号・開発中のpkgbaseの説明が含まれます。原文の時点と実機の現在の対応状況を混同しないよう、訳注で区別しています。

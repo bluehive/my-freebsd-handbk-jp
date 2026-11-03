@@ -1,0 +1,46 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-04",
+  "scope": "Official Chapter 26 Localization and Chapter 27 Updating and Upgrading FreeBSD",
+  "chapters": [
+    {
+      "id": 26,
+      "slug": "l10n",
+      "upstream_chapter_number": 26,
+      "legacy_toc_id": 25,
+      "source_path": "handbook/en/ch26-ch27/26-l10n.adoc.txt",
+      "translation_path": "handbook/ja/26-l10n.md",
+      "source_sha256": "c7e59eeda2f0e9f71e26514b36bd79f87e2fc2fe7d9df9fddfd4aadd454413cb",
+      "status": "translated",
+      "reviewed_at": "2026-11-04",
+      "review": "All pinned source sections, examples, four original tables and legacy locale/console caveats interpreted and checked; runtime not tested",
+      "counts": {
+        "headings": 13,
+        "anchors": 17,
+        "code_blocks": 27,
+        "images": 0,
+        "tables": 4
+      }
+    },
+    {
+      "id": 27,
+      "slug": "cutting-edge",
+      "upstream_chapter_number": 27,
+      "legacy_toc_id": 26,
+      "source_path": "handbook/en/ch26-ch27/27-cutting-edge.adoc.txt",
+      "translation_path": "handbook/ja/27-cutting-edge.md",
+      "source_sha256": "44c14de419861d78dc9be2e5c3a9d957867864644ad1adad3c0e1c55731126b7",
+      "status": "translated",
+      "reviewed_at": "2026-11-04",
+      "review": "All pinned source sections, listings, branches table, pkgbase table and migration cautions interpreted and checked; historical release examples and experimental methods distinguished; runtime not tested",
+      "counts": {
+        "headings": 45,
+        "anchors": 50,
+        "code_blocks": 78,
+        "images": 0,
+        "tables": 2
+      }
+    }
+  ]
+}
