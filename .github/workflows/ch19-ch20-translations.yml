@@ -1,0 +1,38 @@
+name: Handbook official chapters 19-20
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/ch19-ch20/**'
+      - 'handbook/ja/19-mac.md'
+      - 'handbook/ja/20-audit.md'
+      - 'docs/translation-ch19-ch20.json'
+      - 'scripts/check_ch19_ch20_translations.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch19-ch20-translations.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/ch19-ch20/**'
+      - 'handbook/ja/19-mac.md'
+      - 'handbook/ja/20-audit.md'
+      - 'docs/translation-ch19-ch20.json'
+      - 'scripts/check_ch19_ch20_translations.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch19-ch20-translations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-official-ch19-ch20:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check both complete translations and pinned sources
+        run: python3 scripts/check_ch19_ch20_translations.py --require-complete

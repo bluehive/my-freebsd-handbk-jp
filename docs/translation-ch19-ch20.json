@@ -1,0 +1,45 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-04",
+  "scope": "Official Chapter 19 Mandatory Access Control and Chapter 20 Security Event Auditing; official numbering as requested by the user",
+  "chapters": [
+    {
+      "id": 19,
+      "slug": "mac",
+      "upstream_chapter_number": 19,
+      "legacy_toc_id": 18,
+      "source_path": "handbook/en/ch19-ch20/19-mac.adoc.txt",
+      "translation_path": "handbook/ja/19-mac.md",
+      "source_sha256": "db2780a7a0eb2b4465683be1cfe4d003986bbc0e600a412691e41d747e356b37",
+      "status": "translated",
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all pinned source sections, listings, labels, policy module descriptions and troubleshooting items; source inconsistencies (login.conf continuation, MAC_PORTACL option line, getfmac example, apache22) annotated; runtime not tested",
+      "counts": {
+        "headings": 27,
+        "anchors": 27,
+        "code_blocks": 35,
+        "images": 0
+      }
+    },
+    {
+      "id": 20,
+      "slug": "audit",
+      "upstream_chapter_number": 20,
+      "legacy_toc_id": 19,
+      "source_path": "handbook/en/ch19-ch20/20-audit.adoc.txt",
+      "translation_path": "handbook/ja/20-audit.md",
+      "source_sha256": "2ac4c20bb3467383de5a6ab0f7850d732ea5e7fbd35e9284ab68507088d623ed",
+      "status": "translated",
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against every fixed source section, the two class/prefix tables, listings and warnings; expire-after size form annotated; runtime not tested",
+      "counts": {
+        "headings": 11,
+        "anchors": 13,
+        "code_blocks": 14,
+        "images": 0,
+        "tables": 2
+      }
+    }
+  ]
+}

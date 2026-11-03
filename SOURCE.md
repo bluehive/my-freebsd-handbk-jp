@@ -72,3 +72,7 @@
 - 既存TOCのID 25・26に対応します。新しいファイル名は公式章番号の26・27を使用し、他の章は一括改番していません。
 
 第26章のLC_ALLの優先順位の訳注は、[FreeBSD 15.0 environ(7)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/share/man/man7/environ.7)も参照しています。原文にはsysconsや古い文字コード・Portsの例が残り、第27章には過去のリリース番号・開発中のpkgbaseの説明が含まれます。原文の時点と実機の現在の対応状況を混同しないよう、訳注で区別しています。
+
+## 公式Chapter 19・20の意訳用スナップショット
+
+2026-11-04に、公式Chapter 19 Mandatory Access ControlとChapter 20 Security Event Auditingを、`freebsd/freebsd-doc` のコミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch19-ch20/`、出典・SHA-256・進捗は [マニフェスト](docs/translation-ch19-ch20.json)と[作業記録](docs/translation-ch19-ch20.md)に保存します。公式章番号と既存TOCのIDには1の差があります。今回の対象にChapter 21以降は含みません。

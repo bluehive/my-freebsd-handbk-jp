@@ -24,8 +24,8 @@
 | 15 | Security | [15-security.md](ja/15-security.md) | **ドラフト** | 2026-08-21 高工数 |
 | 16 | Jails | [16-jails.md](ja/16-jails.md) | **自己校正済** | 2026-11-04 保存済み原文の全66見出し・139コード例を照合。[検証記録](../docs/jails-proofreading.md)。実機検証・最新上流同期は未実施 |
 | 17 | Containers | [17-containers.md](ja/17-containers.md) | **ドラフト** | 2026-08-21 Podman/OCI |
-| 18 | MAC | — | 未着手 | |
-| 19 | Security Event Auditing | — | 未着手 | |
+| 18 | MAC（公式Chapter 19） | [19-mac.md](ja/19-mac.md) | **自己校正済（意訳）** | 2026-11-04 原文27見出し・35コード例を照合。実機検証は未実施 |
+| 19 | Security Event Auditing（公式Chapter 20） | [20-audit.md](ja/20-audit.md) | **自己校正済（意訳）** | 2026-11-04 原文11見出し・14コード例・2表を照合。実機検証は未実施 |
 | 20 | Storage / Disks | — | 未着手 | |
 | 21 | GEOM | — | 未着手 | |
 | 22 | OpenZFS（公式Chapter 23） | [23-zfs.md](ja/23-zfs.md) | **自己校正済（意訳）** | 2026-11-04 原文81見出し・192コード例を照合。実機検証は未実施 |
