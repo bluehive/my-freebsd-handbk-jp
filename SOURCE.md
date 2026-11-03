@@ -55,3 +55,5 @@
 第12章では、[xrdp公式サイト](https://www.xrdp.org/)でRDPサーバであることを確認し、[X.Org xhost(1)](https://xorg.freedesktop.org/archive/X11R7.5/doc/man/man1/xhost.1.html)のlocalファミリの定義を参照して、原文のクライアントの例とユーザー限定の説明を補足しています。
 
 第14章のUEFIの訳注は、[FreeBSD 12.4 loader.efi(8)](https://man.freebsd.org/cgi/man.cgi?manpath=FreeBSD+12.4-RELEASE&query=loader.efi&sektion=8)を参照しています。固定原文に残る「UEFI起動を開発中」という古い説明と、実装済みのUEFI起動を区別するための参照です。
+
+第3章の訳注は、FreeBSD 15.0の [chflags(1)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/bin/chflags/chflags.1)、[execve(2)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/lib/libsys/execve.2)、[sticky(7)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/share/man/man7/sticky.7)を参照し、ディレクトリのフラグ、スクリプトとnosuidでのset-IDの扱い、stickyディレクトリで削除・改名できる条件を補足しています。
