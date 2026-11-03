@@ -34,6 +34,16 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-04 — 第16章全体の原文照合・自己校正（Codex）
+
+- 保存済み英語スナップショットに対応する66見出しを照合し、139個のコード・出力例を復元・確認。
+- Thin Jail、テンプレート複製、VNET、Linux Jail、NAT、Service Jail、管理・移行、アップグレード、権限、ZFS委任の欠落・途中切れを修復。既に校正したホスト設定は保持。
+- OpenZFSクローンとNullFSの更新の違い、`zfs promote`、ソース更新時の設定保持など、原文の食い違いを訳注で明示。
+- `scripts/check_jails_translation.py` とGitHub Actionsで、原文ハッシュ・見出し・コード例・フェンス・アンカー・内部リンクを継続検査。
+- `SOURCE.md` / `docs/jails-source.json` に照合基点と原文ハッシュを記録。上流コミット・取得日時は未記録のため不明と明記。
+- 状態は「自己校正済」。最新上流との全差分同期・第三者校閲・FreeBSD実機検証を終えたという意味ではない。
+- 検証範囲・再現方法: [第16章の校正記録](docs/jails-proofreading.md)。他章とIssue #1のDokuWiki/Caddy実験は別作業。
+
 ### 2026-11-04 — 第16章のディレクトリ構成・Jail設定ファイルを部分校正（Codex）
 
 - 保存済み英語原文と照合し、途中で切れていた `jail.conf` の設定例とパラメータ解説を復元。
@@ -132,7 +142,8 @@ DeepSeek (`deepseek-v4-flash`) 分割翻訳。**要校正**。関連: [Issue #1]
 2. 必要なら `freebsd-doc` から該当 `_index.adoc` を `handbook/en/` に抜粋  
 3. `handbook/ja/NN-name.md` に翻訳  
 4. 用語は `handbook/ja/glossary.md` を更新  
-5. TOC の状態列を更新し、**本 README の進捗ログに1エントリ追加**  
+5. 第16章を変更した場合は `python3 scripts/check_jails_translation.py` を実行（[検証範囲](docs/jails-proofreading.md)）  
+6. TOC の状態列を更新し、**本 README の進捗ログに1エントリ追加**  
 
 ## リンク
 

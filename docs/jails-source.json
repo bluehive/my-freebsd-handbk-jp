@@ -1,0 +1,13 @@
+{
+  "source_path": "handbook/en/16-jails.adoc.txt",
+  "translation_path": "handbook/ja/16-jails.md",
+  "source_sha256": "92a503c41b482492207461cc610fdb0b575b6d384bcaab4ad2b8ea15c1309600",
+  "repository_review_base": "d6ce50909e0cfe63851b0d652960da72c34e750a",
+  "source_first_repository_commit": "6eceb3782150540e668175efae8ca2ae250df1bb",
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_path": "documentation/content/en/books/handbook/jails/_index.adoc",
+  "upstream_revision": null,
+  "upstream_retrieved_at": null,
+  "reviewed_at": "2026-11-04",
+  "note": "Upstream revision and acquisition date were not recorded for this snapshot; do not infer them from local commits. This manifest pins the repository snapshot used for proofreading, not a verified upstream revision."
+}

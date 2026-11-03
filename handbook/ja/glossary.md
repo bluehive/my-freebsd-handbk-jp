@@ -20,8 +20,8 @@
 | encumbered | 権利付き（encumbered） | 歴史節 |
 | snapshot | スナップショット | |
 | man page | man ページ | |
-| thick jail | シック jail | 完全なユーザランド |
-| thin jail | シン jail | テンプレ共有／NullFS 等 |
+| thick jail | Thick Jail（シック jail） | 完全なユーザーランド。第16章では英語表記を使用 |
+| thin jail | Thin Jail（シン jail） | OpenZFSクローンは個別更新、NullFSはベースを実行時共有 |
 | VNET jail | VNET jail | 仮想ネットワークスタック |
 | Podman | Podman | OCI ランタイム |
 | OCI | OCI | Open Container Initiative |
@@ -36,10 +36,15 @@
 | Makejail | Makejail | AppJail の定義ファイル |
 | volume（AppJail） | ボリューム | 永続データ用 |
 | nullfs | nullfs | ホスト→jail マウント |
-| Service Jails | Service Jails | rc 連携の軽量 jail（FS 共有） |
+| Service Jails | Service Jail | rc 連携の軽量 jail（FS 共有） |
 | rc.conf | rc.conf | 起動設定の中心 |
 | rc.d | rc.d | サービス起動スクリプト群 |
 | sysrc | sysrc | rc.conf を安全に編集する公式 CLI |
 | svcj | svcj | Service Jail 関連の rc 変数接尾辞 |
+
+| copy-on-write | コピーオンライト（CoW） | 未変更ブロックを共有し、変更分を個別に保持 |
+| skeleton（jail） | skeleton | NullFS構成のjail固有の書き込み可能部分 |
+| dataset delegation | データセットの委任 | 指定したZFSツリーの管理をjailへ渡す |
+| origin snapshot | originスナップショット | クローンの作成元。promoteは依存関係を変更する |
 
 更新ルール: 章翻訳で迷ったらここに追記し、既存と衝突したら issue で決める。

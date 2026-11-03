@@ -1,0 +1,32 @@
+name: Jails translation
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/16-jails.adoc.txt'
+      - 'handbook/ja/16-jails.md'
+      - 'docs/jails-source.json'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/jails-translation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/16-jails.adoc.txt'
+      - 'handbook/ja/16-jails.md'
+      - 'docs/jails-source.json'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/jails-translation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the English snapshot and Japanese translation
+        run: python3 scripts/check_jails_translation.py
