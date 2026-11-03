@@ -62,8 +62,16 @@
       "source_path": "handbook/en/through-ch14/05-x11.adoc.txt",
       "translation_path": "handbook/ja/05-x11.md",
       "source_sha256": "f874156638d26d54b84b9cce42878c865bd3a8a9b50b7ea9d96249a6c5de3872",
-      "status": "pending",
-      "existing_translation": false
+      "status": "translated",
+      "existing_translation": false,
+      "reviewed_at": "2026-11-04",
+      "review": "Interpretive translation checked against all source sections, listings, original tables, cautions, and links; physical GPU setup not tested",
+      "counts": {
+        "headings": 21,
+        "anchors": 29,
+        "code_blocks": 47,
+        "images": 0
+      }
     },
     {
       "id": 6,

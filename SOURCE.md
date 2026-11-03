@@ -43,3 +43,5 @@
 - 画像は同じ上流コミットの `documentation/static/images/books/handbook/<章名>/` を参照し、原文と画面の版を揃える。
 
 このスナップショットの保存だけでは各章の翻訳完了を意味しません。マニフェストの `translated` は原文全節との意訳照合を終えた章、`pending` は未照合です。以前からある `handbook/en/01-introduction.adoc.txt` 等は過去の原文であり、この作業の固定版と混同しません。
+
+第5章の追加訳注は、[X.orgのフォント文書](https://xorg.freedesktop.org/releases/current/doc/xorg-docs/fonts/fonts.html)のcore fontとXftの区別・索引作成・組み込みフォント機能、および[X.orgのxorg.confマニュアル](https://www.x.org/archive/X11R7.0/doc/html/xorg.conf.5.html)のBusID書式も参照しています。これらは原文の旧来手順を説明するための一次資料で、現在の各FreeBSDパッケージを実機で検証したという意味ではありません。

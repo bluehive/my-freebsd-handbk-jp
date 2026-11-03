@@ -24,7 +24,7 @@
 | 02 | Installing FreeBSD | 意訳・原文照合済み。31見出し・95アンカー・60画像・5コード例 |
 | 03 | FreeBSD Basics | 既存ドラフトあり、固定原文との再照合は未完了 |
 | 04 | Packages and Ports | 意訳・原文照合済み。34見出し・35アンカー・73コード例 |
-| 05 | X Window System | 未着手 |
+| 05 | X Window System | 意訳・原文照合済み。21見出し・29アンカー・47コード例 |
 | 06 | Wayland | 未着手 |
 | 07 | Desktop Applications | 未着手 |
 | 08 | Multimedia | 未着手 |
