@@ -42,7 +42,8 @@ def verify(source, translation, entry, upstream_commit):
     except ValueError as error:
         return [str(error)], {}
     source_parts = source_sections(source, entry['id'])
-    expected_anchors = re.findall(r'^\[\[([^\]]+)\]\]', source, re.M)
+    source_prose = BLOCK.sub('', source)
+    expected_anchors = re.findall(r'\[\[([^\]]+)\]\]', source_prose)
     expected_anchors += [a for a, _, _ in source_parts if a not in expected_anchors]
     actual_anchors = re.findall(r'^<a id="([^"]+)"></a>$', prose, re.M)
     if sorted(actual_anchors) != sorted(expected_anchors):
