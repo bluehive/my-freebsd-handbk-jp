@@ -53,3 +53,5 @@
 第10章のlpqの訳注は、[FreeBSD 15.0 lpq(1)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.sbin/lpr/lpq/lpq.1)の、引数がない場合はキュー内の全ジョブを報告する説明を参照しています。
 
 第12章では、[xrdp公式サイト](https://www.xrdp.org/)でRDPサーバであることを確認し、[X.Org xhost(1)](https://xorg.freedesktop.org/archive/X11R7.5/doc/man/man1/xhost.1.html)のlocalファミリの定義を参照して、原文のクライアントの例とユーザー限定の説明を補足しています。
+
+第14章のUEFIの訳注は、[FreeBSD 12.4 loader.efi(8)](https://man.freebsd.org/cgi/man.cgi?manpath=FreeBSD+12.4-RELEASE&query=loader.efi&sektion=8)を参照しています。固定原文に残る「UEFI起動を開発中」という古い説明と、実装済みのUEFI起動を区別するための参照です。
