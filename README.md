@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-19 — 00 Preface（序文）を意訳
+
+- [序文（Preface）](handbook/ja/00-preface.md)を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全12見出し・12アンカー・3コード例・全相互参照を意訳・自己校正しました。
+- 「Organization of This Book」の章一覧から `network`・`containers`・`serialcomms` が欠落している原文の仕様は補完せず、`book.adoc` への参照を訳注で明記しました。共有 `include::` や古いコマンド例・プロンプト表記も訳注で区別しています。
+- [作業・検証記録](docs/translation-preface.md) / [原文ハッシュと状態](docs/translation-preface.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-04 — 公式Chapter 26 Localization・27 Updating and Upgradingを意訳（Codex）
 
 - [ローカライズ](handbook/ja/26-l10n.md)と[FreeBSDの更新](handbook/ja/27-cutting-edge.md)を追加。公式章番号に合わせ、既存TOCのID 25・26へ対応付けました。

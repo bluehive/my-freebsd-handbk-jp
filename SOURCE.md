@@ -76,3 +76,7 @@
 ## 公式Chapter 19・20の意訳用スナップショット
 
 2026-11-04に、公式Chapter 19 Mandatory Access ControlとChapter 20 Security Event Auditingを、`freebsd/freebsd-doc` のコミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch19-ch20/`、出典・SHA-256・進捗は [マニフェスト](docs/translation-ch19-ch20.json)と[作業記録](docs/translation-ch19-ch20.md)に保存します。公式章番号と既存TOCのIDには1の差があります。今回の対象にChapter 21以降は含みません。
+
+## Preface（序文）の意訳用スナップショット
+
+2026-11-19に、公式Handbookの Preface（`documentation/content/en/books/handbook/preface/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/preface/00-preface.adoc.txt`、出典・SHA-256・進捗は [マニフェスト](docs/translation-preface.json)と[作業記録](docs/translation-preface.md)に保存しています。同じ固定コミットの `book.adoc` には `network`・`containers`・`serialcomms` が含まれますが、原文の「Organization of This Book」からは欠落しているため、補完せず訳注で区別しています。
