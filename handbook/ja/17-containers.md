@@ -856,3 +856,148 @@ Writing manifest to image destination
 ```shell
 # podman pull ghcr.io/freebsd/freebsd-runtime:{rel-latest}
 ```
+
+<a id="containers-building-sources"></a>
+## ソースからのコンテナイメージの構築
+
+FreeBSD のリリースツールには、`podman load` で利用できるイメージをビルドするための `oci-release` ターゲットが用意されています。
+あらかじめ world、カーネル、およびベースシステムパッケージをビルドしておく必要があるため、処理には時間がかかることがあります。
+
+次の例は `arm64` 向けイメージをビルドする手順です。
+
+```shell
+# cd /usr/src \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 -s -j32 buildworld \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 KERNCONF=GENERIC -s -j32 buildkernel \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 KERNCONF=GENERIC -s -j32 packages \
+    && cd ./release \
+    && make TARGET_ARCH=aarch64 TARGET=arm64 -j32 -s clean \
+    && make KERNCONF=GENERIC TARGET_ARCH=aarch64 TARGET=arm64 WITH_OCIIMAGES=yes \
+      -s oci-release
+```
+
+`amd64` 向けも同様です。
+
+```shell
+# cd /usr/src \
+    && make TARGET_ARCH=amd64 TARGET=amd64 -s -j32 buildworld \
+    && make TARGET_ARCH=amd64 TARGET=amd64 KERNCONF=GENERIC -s -j32 buildkernel \
+    && make TARGET_ARCH=amd64 TARGET=amd64 KERNCONF=GENERIC -s -j32 packages \
+    && cd ./release \
+    && make TARGET_ARCH=amd64 TARGET=amd64 -s -j32 clean \
+    && make KERNCONF=GENERIC TARGET_ARCH=amd64 TARGET=amd64 \
+      WITH_OCIIMAGES=yes -s oci-release
+```
+
+<a id="containers-cross-arch"></a>
+## クロスアーキテクチャテスト
+
+`emulators/qemu-user-static` パッケージを使うと、異なるアーキテクチャ向けにビルドされたコンテナイメージをテストできます。
+パッケージをインストールしたら、エミュレート対象の全アーキテクチャに対するイメージアクティベータを登録するため、サービスを有効化して起動します。
+
+```shell
+# pkg install emulators/qemu-user-static
+# service qemu_user_static enable
+# service qemu_user_static start
+```
+
+続いて、対応する QEMU バイナリをマウントすることで、`amd64` ホスト上で `arm64` イメージを実行できます。
+
+```shell
+# podman run -it --rm --arch=arm64 \
+    -v /usr/local/bin/qemu-aarch64-static:/usr/local/bin/qemu-aarch64-static \
+    ghcr.io/freebsd/freebsd-runtime:14.snap uname -a
+FreeBSD 73d4049d10b2 14.2-RELEASE-p1 FreeBSD 14.2-RELEASE-p1 GENERIC arm64
+```
+
+<a id="containers-troubleshooting"></a>
+## トラブルシューティング
+
+> **訳注**: 原文ではこの見出しの直下に本文がなく、内容は以下の小節で説明されています。
+
+<a id="containers-troubleshooting-hosts"></a>
+### パッケージアップグレードとマウントファイル
+
+Podman は `mount_nullfs(8)` を使用して `/etc/resolv.conf` と `/etc/hosts` をコンテナ内へマウントします。
+これらのマウントが原因で、`pkg(8)` の操作時に `Cross-device link` のようなエラーが発生することがあります。
+
+```text
+pkg: Fail to rename /etc/.pkgtemp.hosts.VeIDrHM0sKN5 -> /etc/hosts:Cross-device link
+```
+
+これを回避するには、`--no-hosts` および `--dns` フラグを使用します。
+
+```shell
+# podman run --no-hosts --dns 1.1.1.1 -it --rm \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest} /bin/sh
+```
+
+<a id="containers-troubleshooting-networking"></a>
+### ネットワークの確認
+
+まず `/usr/local/etc/containers/pf.conf.sample` のファイアウォールルールから始めます。
+コンテナ内から段階的に接続性をテストします。
+
+```shell
+# podman run --no-hosts --dns 1.1.1.1 \
+    --env ASSUME_ALWAYS_YES=1 \
+    -it --rm \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest} \
+    /bin/sh
+
+# route show 1.1.1.1
+   route to: 1.1.1.1
+destination: default
+    gateway: 10.88.0.1
+  interface: eth0
+
+# ping -c 3 10.88.0.1
+PING 10.88.0.1 (10.88.0.1): 56 data bytes
+64 bytes from 10.88.0.1: icmp_seq=0 ttl=64 time=0.083 ms
+...
+
+# ping -c 3 1.1.1.1
+PING 1.1.1.1 (1.1.1.1): 56 data bytes
+64 bytes from 1.1.1.1: icmp_seq=0 ttl=60 time=0.920 ms
+...
+
+# fetch -v http://1.1.1.1/
+...
+
+# pkg -dd bootstrap -r FreeBSD
+```
+
+`ping(8)` が失敗する場合は、ファイアウォールルールで ICMP がブロックされていないか確認してください。
+`fetch(1)` が失敗する場合は、ファイアウォールルールで TCP ポート 80 および 443 がブロックされていないか確認してください。
+ICMP と TCP は機能するのに `pkg(8)` が失敗する場合は、パケットのフラグメンテーションや MTU の問題である可能性があります。
+`/etc/pf.conf` に `set reassemble yes no-df` を追加し、ファイアウォールを再起動してください。
+
+ブロックされたパケットをデバッグするには、`/etc/pf.conf` のすべての block ルールで `log` を有効にし、`pflog(4)` デバイス上で `tcpdump(1)` を実行します。
+
+```shell
+# service pflog onerestart
+# tcpdump -vvveni pflog0 icmp or net 10.88.0.0/16
+```
+
+<a id="containers-troubleshooting-mtu"></a>
+### MTU の一貫性
+
+プライマリネットワークインターフェース、コンテナブリッジ、およびコンテナ自身の間で MTU 値が一貫していることを確認してください。
+MTU 値が一致していないと、パケットのフラグメンテーションや接続障害を引き起こす可能性があります。
+
+次の例では、`vtnet0` の MTU が 9000 であるのに対し、ブリッジとコンテナの MTU は 1500 です。
+一般的には、内部構成を外部ネットワークに合わせます。
+
+```shell
+# ifconfig vtnet0 mtu 9000
+# ifconfig cni-podman0 mtu 9000
+```
+
+コンテナ内で次を実行します。
+
+```shell
+# ifconfig eth0 mtu 9000
+```
+
+Podman が使用するブリッジと epair は一時的（ephemeral）なものであるため、ブリッジの作成ごとおよび各コンテナごとに設定する必要があります。
+一部のクラウド環境では、`/etc/pf.conf` に `set reassemble yes no-df` を追加することも必要になる場合があります。
