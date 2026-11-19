@@ -340,3 +340,548 @@ autofs_enable="YES"
 `autofs(5)` のマップ形式は他の OS と共通であるため、[Mac OS X のドキュメント（アーカイブ）](http://web.archive.org/web/20160813071113/http://images.apple.com/business/docs/Autofs.pdf)といった他システムの資料も参考になります。
 
 詳細は `automount(8)`、`automountd(8)`、`autounmountd(8)`、および `auto_master(5)` の各マニュアルページを参照してください。
+
+<a id="network-nis"></a>
+## Network Information System（NIS）
+
+Network Information System（NIS）は、Solaris™、HP-UX、AIX®、Linux、NetBSD、OpenBSD、FreeBSD といった UNIX® 系システムの管理を一元化するために設計されました。NIS はもともと Yellow Pages と呼ばれていましたが、商標上の問題から名称が変更されました。NIS のコマンド名が `yp` で始まるのはそのためです。
+
+NIS は Remote Procedure Call（RPC）ベースのクライアント／サーバシステムであり、1 つの NIS ドメインに属する複数のマシンが共通の設定ファイル群を共有できるようにします。これにより、システム管理者は最小限の設定データだけで NIS クライアントをセットアップし、1 か所から設定データの追加・削除・変更を行えるようになります。
+
+FreeBSD では NIS プロトコルのバージョン 2 を使用します。
+
+<a id="chapter-33-heading-13"></a>
+### NIS の用語とプロセス（NIS Terms and Processes）
+
+表 28.1 に、NIS で使われる用語と重要なプロセスをまとめます。
+
+**表: NIS の用語**
+
+| 用語 | 説明 |
+|---|---|
+| NIS ドメイン名 | NIS サーバとクライアントが共有する NIS ドメイン名。通常、この名前は DNS とは無関係である。 |
+| `rpcbind(8)` | RPC を有効にするサービス。NIS サーバとして動作させる場合も、NIS クライアントとして動作させる場合も起動しておく必要がある。 |
+| `ypbind(8)` | NIS クライアントを NIS サーバへバインドするサービス。NIS ドメイン名を受け取り、RPC を使ってサーバへ接続する。NIS 環境におけるクライアント／サーバ間通信の中核であり、クライアントマシン上でこのサービスが動いていないと NIS サーバへアクセスできない。 |
+| `ypserv(8)` | NIS サーバ側のプロセス。このサービスが停止するとサーバは NIS 要求に応答できなくなるため、引き継げるスレーブサーバを用意しておくことが望ましい。FreeBSD 以外のクライアントの一部はスレーブサーバへの再接続を試みないため、その場合はクライアント上で `ypbind` プロセスを再起動する必要がある。 |
+| `rpc.yppasswdd(8)` | NIS マスターサーバ上でのみ動作するプロセス。このデーモンにより、NIS クライアントから NIS パスワードを変更できるようになる。動いていない場合、ユーザーは NIS マスターサーバへログインしてパスワードを変更しなければならない。 |
+
+> **訳注**: 原文の表番号（表 28.1 および後述の表 28.2・28.3）は、上流ソースに残っている旧章番号に基づく表記です。
+
+<a id="chapter-33-heading-14"></a>
+### マシンの種類（Machine Types）
+
+NIS 環境には 3 種類のホストが存在します。
+
+* **NIS マスターサーバ**
+
+  ホスト設定情報の中央リポジトリとして機能し、すべての NIS クライアントが利用する設定ファイルの正本（authoritative copy）を保持します。NIS クライアントが参照する `passwd`、`group` などの各種ファイルはマスターサーバ上に保存されます。1 台のマシンを複数の NIS ドメインの NIS マスターサーバにすることも可能ですが、本章では比較的小規模な NIS 環境を想定しているため、そうした構成は扱いません。
+
+* **NIS スレーブサーバ**
+
+  NIS スレーブサーバは、冗長性を確保するために NIS マスターのデータファイルの複製を保持します。また、NIS クライアントは最初に応答した NIS サーバへ接続するため、スレーブサーバはマスターサーバの負荷分散にも役立ちます。
+
+* **NIS クライアント**
+
+  NIS クライアントは、ログイン時に NIS サーバに対して認証を行います。
+
+NIS を使えば多くのファイルの情報を共有できます。一般的に共有されるのは `master.passwd`、`group`、`hosts` ファイルです。クライアント上のプロセスが本来ローカルのこれらのファイルから取得する情報を必要とすると、代わりにバインド先の NIS サーバへ問い合わせを行います。
+
+<a id="chapter-33-heading-15"></a>
+### 設計上の考慮事項（Planning Considerations）
+
+この節では、一元管理の仕組みを持たない 15 台の FreeBSD マシンで構成されたサンプル NIS 環境を想定して説明します。各マシンはそれぞれ独自の `/etc/passwd` と `/etc/master.passwd` を持っており、これらのファイルは手動作業によってのみ同期が保たれています。現状では、ラボにユーザーを 1 人追加するたびに、15 台すべてのマシンで同じ作業を繰り返さなければなりません。
+
+ラボの構成は次のとおりです。
+
+| マシン名 | IP アドレス | マシンの役割 |
+|---|---|---|
+| `ellington` | `10.0.0.2` | NIS マスター |
+| `coltrane` | `10.0.0.3` | NIS スレーブ |
+| `basie` | `10.0.0.4` | 教員用ワークステーション |
+| `bird` | `10.0.0.5` | クライアントマシン |
+| `cli[1-11]` | `10.0.0.[6-17]` | その他のクライアントマシン |
+
+初めて NIS の仕組みを導入する場合は、事前に十分な設計を行っておく必要があります。ネットワークの規模にかかわらず、計画段階でいくつかの事項を決めておかなければなりません。
+
+<a id="chapter-33-heading-16"></a>
+#### NIS ドメイン名の決定（Choosing a NIS Domain Name）
+
+クライアントが情報要求をブロードキャストする際、自身が属する NIS ドメインの名前を含めます。これにより、同一ネットワーク上の複数のサーバが、どのサーバがどの要求に応答すべきかを判断できます。NIS ドメイン名は「ホストのグループに付ける名前」と考えるとわかりやすいでしょう。
+
+組織によってはインターネットドメイン名をそのまま NIS ドメイン名に使うことがありますが、ネットワーク障害のデバッグ時に混乱を招くため推奨されません。NIS ドメイン名はネットワーク内で一意であるべきで、それが表すマシン群を連想しやすい名前であると便利です。たとえば Acme Inc. の美術部門なら `"acme-art"` のような NIS ドメイン名が考えられます。この例ではドメイン名として `test-domain` を使用します。
+
+ただし、FreeBSD 以外の OS の中には、NIS ドメイン名がインターネットドメイン名と一致していることを要求するものもあります。ネットワーク上の 1 台以上のマシンにそのような制約がある場合は、インターネットドメイン名を NIS ドメイン名として*必ず*使用しなければなりません。
+
+<a id="chapter-33-heading-17"></a>
+#### 物理サーバの要件（Physical Server Requirements）
+
+NIS サーバとして使うマシンを選ぶ際には、いくつか留意すべき点があります。NIS クライアントはサーバの可用性に依存するため、頻繁に再起動されないマシンを選んでください。NIS サーバは、理想的には NIS サーバ専用として稼働するスタンドアロンマシンであるべきです。ネットワークの負荷が高くない場合は、他のサービスを動かすマシンに NIS サーバを同居させても構いません。ただし、NIS サーバが利用できなくなると、すべての NIS クライアントに悪影響が及びます。
+
+<a id="chapter-33-heading-18"></a>
+### NIS マスターサーバの設定（Configuring the NIS Master Server）
+
+すべての NIS ファイルの正本はマスターサーバ上に保存されます。情報の保存に使われるデータベースは「NIS マップ」と呼ばれます。FreeBSD では、これらのマップは `/var/yp/[domainname]`（`[domainname]` は NIS ドメイン名）に保存されます。複数ドメインに対応しているため、ドメインごとに複数のディレクトリを持つこともでき、各ドメインは独立したマップ一式を保持します。
+
+NIS マスターサーバおよびスレーブサーバは、すべての NIS 要求を `ypserv(8)` を通じて処理します。このデーモンは、NIS クライアントからの要求を受け取り、要求されたドメイン名とマップ名を対応するデータベースファイルのパスへ変換し、データベースからクライアントへデータを送信する役割を担います。
+
+マスター NIS サーバの構築は、環境要件にもよりますが比較的簡単です。FreeBSD には NIS サポートが組み込まれているため、`/etc/rc.conf` に次の行を追加するだけで有効にできます。
+
+```
+nisdomainname="test-domain"
+nis_server_enable="YES"
+nis_yppasswdd_enable="YES"
+```
+
+1. 1 行目で NIS ドメイン名を `test-domain` に設定します。
+2. 2 行目でシステム起動時に NIS サーバプロセスを自動起動します。
+3. 3 行目で `rpc.yppasswdd(8)` デーモンを有効にし、ユーザーがクライアントマシンから自分の NIS パスワードを変更できるようにします。
+
+サーバマシン自身も NIS クライアントとなるマルチサーバドメインでは注意が必要です。サーバがブロードキャストでバインド要求を出して互い（別のサーバ）にバインドしてしまうのを許すのではなく、自分自身にバインドするよう強制するのが一般的によい方法です。あるサーバが停止し、他のサーバがそれに依存している状態だと、不可解な障害パターンを引き起こすことがあります。最終的にはすべてのクライアントがタイムアウトして別のサーバへバインドしようとしますが、それまでにかなりの遅延が発生するうえ、サーバ同士が再び互いにバインドしてしまうと障害状態が再発します。
+
+クライアントも兼ねるサーバを特定のサーバへ強制的にバインドさせるには、`/etc/rc.conf` に次の行を追加します。
+
+```
+nis_client_enable="YES"
+nis_client_flags="-S test-domain,server"
+```
+
+1. クライアント関連のプロセスもあわせて動作するよう有効化します。
+2. NIS ドメイン名を `test-domain` に設定し、自分自身へバインドするよう指定します。
+
+編集を保存したら、`/etc/netstart` を実行してネットワークを再起動し、`/etc/rc.conf` に定義した値を反映させます。NIS マップを初期化する前に、`ypserv(8)` を起動してください。
+
+```shell
+# service ypserv start
+```
+
+<a id="chapter-33-heading-19"></a>
+#### NIS マップの初期化（Initializing the NIS Maps）
+
+NIS マップは NIS マスター上の `/etc` 配下の設定ファイルから生成されますが、1 つだけ例外があり、それが `/etc/master.passwd` です。これは、NIS ドメイン内のすべてのサーバへパスワードがそのまま伝播するのを防ぐためです。そのため、NIS マップを初期化する前に、元となるパスワードファイルを準備します。
+
+```shell
+# cp /etc/master.passwd /var/yp/master.passwd
+# cd /var/yp
+# vi master.passwd
+```
+
+システムアカウントのエントリや、`root` その他の管理用アカウントなど、NIS クライアントへ配布する必要のないユーザーアカウントはすべて削除しておくことを推奨します。
+
+> **注記（NOTE）**: `/var/yp/master.passwd` のパーミッションを `600` に設定し、グループやその他のユーザーから読み取れないように必ず確認してください。
+
+この作業が終わったら、NIS マップを初期化します。FreeBSD にはこのための `ypinit(8)` スクリプトが用意されています。マスターサーバ用のマップを生成する場合は、`-m` を付けて NIS ドメイン名を指定します。
+
+```shell
+ellington# ypinit -m test-domain
+Server Type: MASTER Domain: test-domain
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+Do you want this procedure to quit on non-fatal errors? [y/n: n] n
+Ok, please remember to go back and redo manually whatever fails.
+If not, something might not work.
+At this point, we have to construct a list of this domains YP servers.
+rod.darktech.org is already known as master server.
+Please continue to add any slave servers, one per line. When you are
+done with the list, type a <control D>.
+master server   :  ellington
+next host to add:  coltrane
+next host to add:  ^D
+The current list of NIS servers looks like this:
+ellington
+coltrane
+Is this correct?  [y/n: y] y
+
+[..output from map generation..]
+
+NIS Map update completed.
+ellington has been setup as an YP master server without any errors.
+```
+
+これにより、`/var/yp/Makefile.dist` から `/var/yp/Makefile` が作成されます。既定では、このファイルは FreeBSD クライアントのみが存在する単一 NIS サーバ環境を想定しています。`test-domain` にはスレーブサーバがあるため、`/var/yp/Makefile` 内の次の行の先頭にコメント（`#`）を付けて無効化します。
+
+```
+NOPUSH = "True"
+```
+
+<a id="chapter-33-heading-20"></a>
+#### 新しいユーザーの追加（Adding New Users）
+
+新しいユーザーを作成するたびに、マスター NIS サーバへユーザーアカウントを追加し、NIS マップを再構築する必要があります。これを行うまでは、新しいユーザーは NIS マスター以外のどのマシンにもログインできません。たとえば、`test-domain` ドメインに新しいユーザー `jsmith` を追加するには、マスターサーバ上で次のコマンドを実行します。
+
+```shell
+# pw useradd jsmith
+# cd /var/yp
+# make test-domain
+```
+
+`pw useradd smith`（訳注: 直前の例の `jsmith`）の代わりに `adduser jsmith` を使ってユーザーを追加することもできます。
+
+<a id="chapter-33-heading-21"></a>
+### NIS スレーブサーバの構築（Setting up a NIS Slave Server）
+
+NIS スレーブサーバを構築するには、スレーブサーバにログインし、マスターサーバのときと同様に `/etc/rc.conf` を編集します。すでにマスターサーバ上に存在するため、NIS マップを新規生成する必要はありません。スレーブサーバ上で `ypinit` を実行する際は、`-m`（master）ではなく `-s`（slave）を指定します。このオプションでは、次の例のようにドメイン名に加えて NIS マスターの名前も指定する必要があります。
+
+```shell
+coltrane# ypinit -s ellington test-domain
+
+Server Type: SLAVE Domain: test-domain Master: ellington
+
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+
+Do you want this procedure to quit on non-fatal errors? [y/n: n]  n
+
+Ok, please remember to go back and redo manually whatever fails.
+If not, something might not work.
+There will be no further questions. The remainder of the procedure
+should take a few minutes, to copy the databases from ellington.
+Transferring netgroup...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byuser...
+ypxfr: Exiting: Map successfully transferred
+Transferring netgroup.byhost...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+Transferring passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.bygid...
+ypxfr: Exiting: Map successfully transferred
+Transferring group.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring services.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring rpc.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring master.passwd.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring networks.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring netid.byname...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byaddr...
+ypxfr: Exiting: Map successfully transferred
+Transferring protocols.bynumber...
+ypxfr: Exiting: Map successfully transferred
+Transferring ypservers...
+ypxfr: Exiting: Map successfully transferred
+Transferring hosts.byname...
+ypxfr: Exiting: Map successfully transferred
+
+coltrane has been setup as an YP slave server without any errors.
+Remember to update map ypservers on ellington.
+```
+
+これにより、スレーブサーバ上に `/var/yp/test-domain` というディレクトリが作成され、NIS マスターサーバのマップの複製が格納されます。各スレーブサーバの `/etc/crontab` に次のエントリを追加しておくと、スレーブ側でマスターサーバのマップと定期的に同期させることができます。
+
+```
+20      *       *       *       *       root   /usr/libexec/ypxfr passwd.byname
+21      *       *       *       *       root   /usr/libexec/ypxfr passwd.byuid
+```
+
+マスターサーバはマップ変更時にスレーブへ自動的にプッシュを試みるため、これらのエントリは必須ではありません。しかし、クライアントが正しいパスワード情報の取得をスレーブサーバに依存している場合があるため、パスワードマップの更新を頻繁に強制しておくことが推奨されます。マップ更新が毎回完了するとは限らない高負荷なネットワークでは、特に重要です。
+
+設定を完了するには、スレーブサーバ上で `/etc/netstart` を実行して NIS サービスを起動します。
+
+<a id="chapter-33-heading-22"></a>
+### NIS クライアントの構築（Setting Up an NIS Client）
+
+NIS クライアントは `ypbind(8)` を使って NIS サーバへバインドします。このデーモンはローカルネットワーク上に RPC 要求をブロードキャストします。要求にはクライアントに設定されたドメイン名が含まれます。同じドメインに属する NIS サーバがそのブロードキャストを受信すると `ypbind` へ応答し、`ypbind` はそのサーバのアドレスを記録します。利用可能なサーバが複数ある場合、クライアントは最初に応答したサーバのアドレスを使用し、以後のすべての NIS 要求をそのサーバへ送ります。クライアントは定期的にサーバへ ping を送って生存確認を行います。一定時間内に応答が得られない場合、`ypbind` はそのドメインを未バインド状態としてマークし、別のサーバを見つけるために再びブロードキャストを開始します。
+
+FreeBSD マシンを NIS クライアントとして構成する手順は次のとおりです。
+
+1. `/etc/rc.conf` を編集し、NIS ドメイン名を設定してネットワーク起動時に `ypbind(8)` を起動するため、次の行を追加します。
+
+   ```
+   nisdomainname="test-domain"
+   nis_client_enable="YES"
+   ```
+
+2. NIS サーバから利用可能なすべてのパスワードエントリを取り込むため、`vipw` を使って `/etc/master.passwd` から 1 つを除いてすべてのユーザーアカウントを削除します。アカウントを削除する際は、少なくとも 1 つのローカルアカウントを残し、そのアカウントが `wheel` グループに所属しているようにしてください。NIS に問題が発生した場合でも、このローカルアカウントを使ってリモートログインし、スーパーユーザーになって問題を修復できます。編集を保存する前に、ファイルの末尾へ次の行を追加します。
+
+   ```
+   +:::::::::
+   ```
+
+   この行により、NIS サーバのパスワードマップに有効なアカウントを持つすべてのユーザーに対して、クライアント上でもアカウントが提供されるようになります。この行を書き換えることで NIS クライアントの挙動をさまざまに制御できます。その 1 つの方法が [ネットグループの利用（Using Netgroups）](#network-netgroups) で説明されています。さらに詳しくは、O'Reilly Media 刊の書籍『`Managing NFS and NIS`』を参照してください。
+
+3. NIS サーバから利用可能なすべてのグループエントリを取り込むため、`/etc/group` に次の行を追加します。
+
+   ```
+   +:*::
+   ```
+
+すぐに NIS クライアントを起動するには、スーパーユーザーとして次のコマンドを実行します。
+
+```shell
+# /etc/netstart
+# service ypbind start
+```
+
+これらの手順を完了したあと、クライアント上で `ypcat passwd` を実行すると、サーバ側の `passwd` マップが表示されるはずです。
+
+<a id="chapter-33-heading-23"></a>
+### NIS のセキュリティ（NIS Security）
+
+RPC はブロードキャストベースのサービスであるため、同一ドメイン内で `ypbind` を動かしているシステムであれば誰でも NIS マップの内容を取得できてしまいます。不正なやり取りを防ぐため、`ypserv(8)` は「securenets」と呼ばれる機能に対応しており、アクセスを許可するホスト群を制限できます。既定では、`-p` で別パスを指定して `ypserv(8)` を起動しない限り、この情報は `/var/yp/securenets` に保存されます。このファイルには、空白で区切ったネットワーク指定とネットワークマスクの組を記述します。`"#"` で始まる行はコメントとみなされます。`securenets` の記述例は次のとおりです。
+
+```
+# allow connections from local host -- mandatory
+127.0.0.1     255.255.255.255
+# allow connections from any host
+# on the 192.168.128.0 network
+192.168.128.0 255.255.255.0
+# allow connections from any host
+# between 10.0.0.0 to 10.0.15.255
+# this includes the machines in the testlab
+10.0.0.0      255.255.240.0
+```
+
+`ypserv(8)` がこれらのルールのいずれかに一致するアドレスから要求を受け取ると、通常どおり要求を処理します。どのルールにも一致しないアドレスからの要求は無視され、警告メッセージがログに記録されます。`securenets` ファイルが存在しない場合、`ypserv` はあらゆるホストからの接続を許可します。
+
+`securenets` の代わりに [TCP Wrapper](https://docs.freebsd.org/en/books/handbook/security/#tcpwrappers) を使ってアクセス制御を行うこともできます。いずれのアクセス制御機構も一定のセキュリティ向上にはなりますが、どちらも「IP スプーフィング」攻撃に対しては脆弱です。NIS 関連のトラフィックはすべてファイアウォールで遮断しておくべきです。
+
+`securenets` を使用しているサーバは、古い TCP/IP 実装を持つ正規の NIS クライアントに対して応答できなくなる場合があります。そうした実装の中には、ブロードキャスト時にホストビットをすべて 0 にしたり、ブロードキャストアドレスの計算時にサブネットマスクを無視したりするものがあります。クライアント設定の変更で解決できる場合もありますが、そうでない場合はそのクライアントシステムを退役させるか、`securenets` の使用を断念せざるを得なくなります。
+
+TCP Wrapper を使用すると NIS サーバの遅延（レイテンシ）が増加します。特に低速な NIS サーバと高負荷なネットワーク環境では、この追加遅延によってクライアントプログラムがタイムアウトするおそれがあります。1 台以上のクライアントで遅延が問題になる場合は、それらのクライアントを NIS スレーブサーバへ変更し、自分自身へバインドするように構成してください。
+
+<a id="chapter-33-heading-24"></a>
+#### 一部ユーザーのログイン禁止（Barring Some Users）
+
+次の例では、`basie` システムが NIS ドメイン内の教員用ワークステーションであるとします。マスター NIS サーバの `passwd` マップには教員と学生の両方のアカウントが含まれています。この節では、このシステムで教員のログインを許可しつつ、学生のログインを拒否する方法を示します。
+
+NIS データベースに登録されているユーザーであっても、特定のユーザーがシステムへログインできないようにするには、クライアント上の `/etc/master.passwd` の末尾付近に `vipw` を使って `-username`（`username` はログインを禁止するユーザー名）に適切な数のコロンを付けた行を追加します。ブロック対象ユーザーの行は、NIS ユーザーを許可する `+` 行よりも*前*に配置する必要があります。次の例では、`basie` への `bill` のログインを禁止しています。
+
+```shell
+basie# cat /etc/master.passwd
+root:[password]:0:0::0:0:The super-user:/root:/bin/csh
+toor:[password]:0:0::0:0:The other super-user:/root:/bin/sh
+daemon:*:1:1::0:0:Owner of many system processes:/root:/usr/sbin/nologin
+operator:*:2:5::0:0:System &:/:/usr/sbin/nologin
+bin:*:3:7::0:0:Binaries Commands and Source,,,:/:/usr/sbin/nologin
+tty:*:4:65533::0:0:Tty Sandbox:/:/usr/sbin/nologin
+kmem:*:5:65533::0:0:KMem Sandbox:/:/usr/sbin/nologin
+games:*:7:13::0:0:Games pseudo-user:/usr/games:/usr/sbin/nologin
+news:*:8:8::0:0:News Subsystem:/:/usr/sbin/nologin
+man:*:9:9::0:0:Mister Man Pages:/usr/share/man:/usr/sbin/nologin
+bind:*:53:53::0:0:Bind Sandbox:/:/usr/sbin/nologin
+uucp:*:66:66::0:0:UUCP pseudo-user:/var/spool/uucppublic:/usr/libexec/uucp/uucico
+xten:*:67:67::0:0:X-10 daemon:/usr/local/xten:/usr/sbin/nologin
+pop:*:68:6::0:0:Post Office Owner:/nonexistent:/usr/sbin/nologin
+nobody:*:65534:65534::0:0:Unprivileged user:/nonexistent:/usr/sbin/nologin
+-bill:::::::::
++:::::::::
+
+basie#
+```
+
+<a id="network-netgroups"></a>
+### ネットグループの利用（Using Netgroups）
+
+システムごとに特定ユーザーのログインを個別に禁止する方法は、大規模ネットワークでは拡張性がなく、NIS 最大の利点である*一元*管理の恩恵をすぐに失ってしまいます。
+
+ネットグループ（Netgroups）は、数百人ものユーザーと数百台ものマシンを抱える大規模で複雑なネットワークを扱うために開発されました。使い方は UNIX® のグループに似ていますが、数値 ID がない点と、ユーザーアカウントだけでなく他のネットグループも含めてネットグループを定義できる点が主な違いです。
+
+本章の例を拡張し、表 28.2 と表 28.3 に示すユーザーとシステムを NIS ドメインへ追加してみます。
+
+**表: 追加ユーザー**
+
+| ユーザー名 | 説明 |
+|---|---|
+| `alpha`, `beta` | IT 部門の社員 |
+| `charlie`, `delta` | IT 部門の研修生 |
+| `echo`, `foxtrott`, `golf`, ... | 一般社員 |
+| `able`, `baker`, ... | インターン |
+
+**表: 追加システム**
+
+| マシン名 | 説明 |
+|---|---|
+| `war`, `death`, `famine`, `pollution` | IT 部門の社員のみログインが許可されるサーバ。 |
+| `pride`, `greed`, `envy`, `wrath`, `lust`, `sloth` | IT 部門のすべてのメンバーにログインが許可されるサーバ。 |
+| `one`, `two`, `three`, `four`, ... | 一般社員が使用する通常のワークステーション。 |
+| `trashcan` | 重要なデータが入っていない非常に古いマシン。インターンも利用可能。 |
+
+ネットグループを使ってこの構成を設定する場合、各ユーザーを 1 つ以上のネットグループに割り当て、ネットグループのメンバー単位でログインを許可または禁止します。新しいマシンを追加するときはすべてのネットグループに対してログイン制限を定義し、新しいユーザーを追加するときは 1 つ以上のネットグループへアカウントを追加します。NIS の構成を慎重に設計しておけば、マシンへのアクセス許可や拒否を切り替える際に変更が必要なのは中央の設定ファイル 1 つだけになります。
+
+最初の手順は、NIS の `netgroup` マップの初期化です。FreeBSD ではこのマップは既定で作成されません。NIS マスターサーバ上でエディタを使い、`/var/yp/netgroup` という名前のマップを作成します。
+
+次の例では、IT 部門の社員、IT 部門の研修生、一般社員、インターンを表す 4 つのネットグループを作成しています。
+
+```
+IT_EMP  (,alpha,test-domain)    (,beta,test-domain)
+IT_APP  (,charlie,test-domain)  (,delta,test-domain)
+USERS   (,echo,test-domain)     (,foxtrott,test-domain) \
+        (,golf,test-domain)
+INTERNS (,able,test-domain)     (,baker,test-domain)
+```
+
+各エントリが 1 つのネットグループを定義します。エントリの 1 列目がネットグループ名です。各丸括弧の組は、1 人以上のユーザーの組または別のネットグループの名前を表します。ユーザーを指定する場合、括弧内のカンマで区切られた 3 つのフィールドは次の意味を持ちます。
+
+1. 他のフィールドで表されるユーザーが有効となるホスト名。ホスト名を指定しない場合、そのエントリはすべてのホストで有効になります。
+2. このネットグループに所属するアカウント名。
+3. そのアカウントが属する NIS ドメイン。他の NIS ドメインからネットグループへアカウントを取り込むこともできます。
+
+1 つのネットグループに複数のユーザーを含める場合は、各ユーザーを空白文字で区切ります。また、各フィールドにはワイルドカードも使用できます。詳細は `netgroup(5)` を参照してください。
+
+ネットグループ名には 8 文字を超える名前を使わないでください。名前は大文字・小文字を区別するため、ネットグループ名にすべて大文字を使うと、ユーザー名・マシン名・ネットグループ名を容易に見分けられます。
+
+FreeBSD 以外の NIS クライアントの一部は、16 件以上のエントリを含むネットグループを処理できません。この制限は、15 ユーザー以下のサブネットグループを複数作成し、それらをまとめた本来のネットグループを次のように定義することで回避できます。
+
+```
+BIGGRP1  (,joe1,domain)  (,joe2,domain)  (,joe3,domain) [...]
+BIGGRP2  (,joe16,domain)  (,joe17,domain) [...]
+BIGGRP3  (,joe31,domain)  (,joe32,domain)
+BIGGROUP  BIGGRP1 BIGGRP2 BIGGRP3
+```
+
+1 つのネットグループに 225（15 × 15）人を超えるユーザーがいる場合は、この階層化を繰り返してください。
+
+新しい NIS マップを有効化して配布するには、次のコマンドを実行します。
+
+```shell
+ellington# cd /var/yp
+ellington# make
+```
+
+これにより、`netgroup`、`netgroup.byhost`、`netgroup.byuser` の 3 つの NIS マップが生成されます。新しい NIS マップが利用可能かどうかを確認するには、`ypcat(1)` のマップキー表示オプションを使います。
+
+```shell
+ellington% ypcat -k netgroup
+ellington% ypcat -k netgroup.byhost
+ellington% ypcat -k netgroup.byuser
+```
+
+1 つ目のコマンドの出力は `/var/yp/netgroup` の内容と似たものになります。2 つ目のコマンドはホスト指定付きのネットグループを作成した場合にのみ出力を返します。3 つ目のコマンドは特定ユーザーが属するネットグループの一覧を取得する際に使います。
+
+クライアントを設定するには、`vipw(8)` を使ってネットグループ名を指定します。たとえば `war` という名前のサーバでは、次の行を
+
+```
++:::::::::
+```
+
+次のように置き換えます。
+
+```
++@IT_EMP:::::::::
+```
+
+これにより、ネットグループ `IT_EMP` で定義されたユーザーのみがこのシステムのパスワードデータベースへ取り込まれ、それらのユーザーだけがこのシステムへログインできるようになります。
+
+ただし、この設定はシェルの `~` 展開や、ユーザー名と数値ユーザー ID を相互変換するすべてのルーチンにも影響します。つまり、`cd ~user` が動かなくなり、`ls -l` はユーザー名の代わりに数値 ID を表示し、`find . -user joe -print` は `No such user` というメッセージで失敗します。これを防ぐには、サーバへのログインは許可しないまま、すべてのユーザーエントリだけを取り込むようにします。それには次の行を追加します。
+
+```
++:::::::::/usr/sbin/nologin
+```
+
+この行により、クライアントはすべてのエントリを取り込みつつ、それらのエントリのログインシェルを `/usr/sbin/nologin` に置き換えるようになります。
+
+この追加行は必ず `+@IT_EMP:::::::::` の*後ろ*に配置してください。さもないと、NIS から取り込まれたすべてのユーザーアカウントのログインシェルが `/usr/sbin/nologin` になり、誰もシステムへログインできなくなってしまいます。
+
+重要度の低いサーバを設定する場合は、従来の `+:::::::::` を次の行に置き換えます。
+
+```
++@IT_EMP:::::::::
++@IT_APP:::::::::
++:::::::::/usr/sbin/nologin
+```
+
+ワークステーションに対応する記述は次のようになります。
+
+```
++@IT_EMP:::::::::
++@USERS:::::::::
++:::::::::/usr/sbin/nologin
+```
+
+NIS は他のネットグループから新しいネットグループを作成することにも対応しており、ユーザーアクセスに関するポリシーを変更する際に便利です。1 つの方法として、役割ベースのネットグループを作るやり方があります。たとえば、重要なサーバのログイン制限を定義する `BIGSRV`、重要度の低いサーバ向けの `SMALLSRV`、ワークステーション向けの `USERBOX` というネットグループを作成します。それぞれのネットグループには、それらのマシンへログインを許可するネットグループを含めます。NIS の `netgroup` マップに追加する新しいエントリは次のようになります。
+
+```
+BIGSRV    IT_EMP  IT_APP
+SMALLSRV  IT_EMP  IT_APP  ITINTERN
+USERBOX   IT_EMP  ITINTERN USERS
+```
+
+このログイン制限の定義方法は、まったく同じ制限を持つマシングループを定義できる場合にはうまく機能します。しかし残念ながら、それは例外的なケースであり一般的ではありません。多くの場合、マシン単位でログイン制限を定義できる必要があります。
+
+ポリシー変更に対応するもう 1 つの方法が、マシン固有のネットグループ定義です。この方法では、各システムの `/etc/master.passwd` に `+` で始まる行を 2 行記述します。1 行目でそのマシンへのログインを許可するアカウントを含むネットグループを追加し、2 行目でそれ以外のすべてのアカウントをシェル `/usr/sbin/nologin` として追加します。ネットグループ名にはホスト名を「すべて大文字（ALL-CAPS）」にしたものを使うことを推奨します。
+
+```
++@BOXNAME:::::::::
++:::::::::/usr/sbin/nologin
+```
+
+すべてのマシンでこの設定を完了すれば、ローカルの `/etc/master.passwd` を二度と編集する必要はなくなります。以降の変更はすべて NIS マップの編集だけで処理できます。この構成における `netgroup` マップの例を次に示します。
+
+```
+# Define groups of users first
+IT_EMP    (,alpha,test-domain)    (,beta,test-domain)
+IT_APP    (,charlie,test-domain)  (,delta,test-domain)
+DEPT1     (,echo,test-domain)     (,foxtrott,test-domain)
+DEPT2     (,golf,test-domain)     (,hotel,test-domain)
+DEPT3     (,india,test-domain)    (,juliet,test-domain)
+ITINTERN  (,kilo,test-domain)     (,lima,test-domain)
+D_INTERNS (,able,test-domain)     (,baker,test-domain)
+#
+# Now, define some groups based on roles
+USERS     DEPT1   DEPT2     DEPT3
+BIGSRV    IT_EMP  IT_APP
+SMALLSRV  IT_EMP  IT_APP    ITINTERN
+USERBOX   IT_EMP  ITINTERN  USERS
+#
+# And a groups for a special tasks
+# Allow echo and golf to access our anti-virus-machine
+SECURITY  IT_EMP  (,echo,test-domain)  (,golf,test-domain)
+#
+# machine-based netgroups
+# Our main servers
+WAR       BIGSRV
+FAMINE    BIGSRV
+# User india needs access to this server
+POLLUTION  BIGSRV  (,india,test-domain)
+#
+# This one is really important and needs more access restrictions
+DEATH     IT_EMP
+#
+# The anti-virus-machine mentioned above
+ONE       SECURITY
+#
+# Restrict a machine to a single user
+TWO       (,hotel,test-domain)
+# [...more groups to follow]
+```
+
+マシンベースのネットグループを使うのが常に得策とは限りません。数十台から数百台のシステムを展開する場合は、NIS マップのサイズを妥当な範囲に収めるため、マシンベースではなく役割ベースのネットグループを使うほうがよい場合もあります。
+
+<a id="chapter-33-heading-26"></a>
+### パスワード形式（Password Formats）
+
+NIS では、NIS ドメイン内のすべてのホストがパスワード暗号化に同じ形式を使用している必要があります。NIS クライアント上で認証に問題が生じる場合、パスワード形式が異なっていることが原因かもしれません。異なる OS が混在するネットワークでは、すべての OS が対応している形式にする必要があり、最小公倍数の標準は DES となります。
+
+サーバやクライアントがどの形式を使っているかを確認するには、`/etc/login.conf` の次の箇所を参照します。
+
+```
+default:\
+	:passwd_format=des:\
+	[Further entries elided]
+```
+
+この例では、システムはパスワードハッシュに DES 形式を使用しています。他に指定できる値には、Blowfish の `blf`、MD5 の `md5`、SHA-256 と SHA-512 の `sha256` および `sha512` があります。詳細やそのシステムで利用可能な最新の形式一覧については、`crypt(3)` のマニュアルページを参照してください。
+
+> **訳注**: 上記の `passwd_format=des` は固定原文に含まれる過去の例です。現在の FreeBSD では、より強固なハッシュ形式（`sha512` 等）が既定として用いられます。利用可能な形式は対象版の `crypt(3)` および `login.conf(5)` を確認してください。
+
+NIS ドメインで使用している形式に合わせるためホスト側の形式を変更した場合は、変更を保存したあとにログイン機能データベース（login capability database）を再構築する必要があります。
+
+```shell
+# cap_mkdb /etc/login.conf
+```
+
+> **注記（NOTE）**: 既存のユーザーアカウントのパスワード形式は、ログイン機能データベースを再構築した*あと*で各ユーザーがパスワードを変更するまで更新されません。

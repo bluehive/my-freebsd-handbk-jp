@@ -28,7 +28,7 @@
 - [x] `#network-servers` / `#network-servers-synopsis`（章タイトル・概要）
 - [x] `#network-inetd`（inetd スーパーサーバ）
 - [x] `#network-nfs`（Network File System (NFS)）
-- [ ] `#network-nis`（Network Information System (NIS)）
+- [x] `#network-nis`（Network Information System (NIS)）
 - [ ] `#network-ldap`（Lightweight Directory Access Protocol (LDAP)）
 - [ ] `#network-dhcp`（Dynamic Host Configuration Protocol (DHCP)）
 - [ ] `#network-dns`（Domain Name System (DNS)）
