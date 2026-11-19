@@ -9,10 +9,10 @@
 ## 想定読者（Intended Audience）
 
 FreeBSD を初めて使う方は、本書の最初の部（Part）を通じてインストール手順を順を追って学びながら、UNIX® を支える基本的な考え方や慣習を無理なく身に付けることができます。
-この部を読み進めるのに特別な前提知識はほとんど不要で、新しい概念を順に吸収しながら試してみる意欲があれば十分です。
+この部を読み進めるのに特別な前提知識はほとんど不要で、探求したいという意欲と、新しい概念が出てくるたびにそれを受け入れる力があれば十分です。
 
 そこまで読み終えた先にある本書の後半（はるかに大部な部分）は、FreeBSD システム管理者が関心を寄せるあらゆる話題を網羅した総合リファレンスになっています。
-章によっては事前の予備知識を推奨している場合があり、その内容は各章冒頭の概要（Synopsis）に記載されています。
+章によっては事前に読んでおくべき資料を推奨している場合があり、その内容は各章冒頭の概要（Synopsis）に記載されています。
 
 その他の情報源の一覧については、[参考文献（Bibliography）](https://docs.freebsd.org/en/books/handbook/bibliography/#bibliography)を参照してください。
 
@@ -45,7 +45,7 @@ Handbook 第四版以降の主な変更点は次のとおりです。
 <a id="preface-changes-from3"></a>
 ## 第三版以降の改訂（Third Edition）
 
-現在のオンライン版 Handbook は、過去 10 年以上にわたる何百人もの貢献者の努力が積み重なった成果です。
+現在のオンライン版 Handbook は、過去 10 年にわたる何百人もの貢献者の努力が積み重なった成果です。
 2004 年に 2 分冊の第三版が刊行されて以降の主な変更点は次のとおりです。
 
 * FreeBSD 上で Windows® アプリケーションを動かす方法を解説する [WINE](12-wine.md#wine) を追加しました。
@@ -217,7 +217,7 @@ Handbook 第四版以降の主な変更点は次のとおりです。
 : FreeBSD ユーザーが質問を投稿したり、FreeBSD に関する技術的な議論に参加したりできる数多くのフォーラムを紹介します。
 
 *[OpenPGP 鍵（OpenPGP Keys）](https://docs.freebsd.org/en/books/handbook/pgpkeys/#pgpkeys)*
-: FreeBSD 開発者各氏の PGP フィンガープリントを一覧にしています。
+: 一部の FreeBSD 開発者の PGP フィンガープリントを一覧にしています。
 
 > **訳注**: 上記の章一覧は固定原文（`preface/_index.adoc`）の記述どおりに訳出しています。同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` の [`book.adoc`](https://github.com/freebsd/freebsd-doc/blob/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/content/en/books/handbook/book.adoc) には、`network`（Part I、Wayland の後）、`containers`（Part III、Jails の後）、`serialcomms`（Part IV、PPP の前）の 3 章が含まれていますが、原文のこの一覧からは欠落しています。また、`Installing FreeBSD` の「FreeBSD 9._x_ 以降」、`Electronic Mail` の `sendmail` 中心の説明、`Obtaining FreeBSD` の CDROM/DVD に関する記述は、いずれも固定原文時点の表記をそのまま保持しています。
 
@@ -278,7 +278,7 @@ C:\> tools\fdimage floppies\kern.flp A:
 % top
 ```
 
-> **訳注**: 上記の `C:\>`・`#`・`%` はプロンプト表記の例であり、実際の入力時にプロンプト文字自体は打ち込みません。また、フロッピーイメージを書き込む `fdimage` や `dd if=kern.flp of=/dev/fd0` はプロンプト例を示すための歴史的な記述です。そのまま実機のデバイスに対して `dd` を実行しないでください。さらに、原文は C シェル構文を前提としていますが、FreeBSD 14 以降の一般ユーザーの既定シェルは `sh(1)` です。
+> **訳注**: 上記の `C:\>`・`#`・`%` はプロンプト表記の例であり、実際の入力時にプロンプト文字自体は打ち込みません。また、フロッピーイメージを書き込む `fdimage` や `dd if=kern.flp of=/dev/fd0` はプロンプト例を示すための歴史的な記述です。そのまま実機のデバイスに対して `dd` を実行しないでください。さらに、原文は C シェル構文を前提としていますが、FreeBSD 14.0 以降、root ユーザーの既定シェルは `sh(1)` に変更されています（[FreeBSD 14.0-RELEASE リリースノート](https://www.freebsd.org/releases/14.0R/relnotes/)）。
 
 <a id="preface-acknowledgements"></a>
 ## 謝辞（Acknowledgments）
