@@ -140,3 +140,7 @@
 ## 公式Chapter 7（Network）の意訳用スナップショット
 
 2026-11-20に、公式Chapter 7 Network（`documentation/content/en/books/handbook/network/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch07/07-network.adoc.txt`（33774バイト、SHA-256: `1184065b01b76c506140ac2dcfd2f5e1b947fef8b2c12f9c94fbea9c0c2bd1f7`）、出典・進捗は [マニフェスト](docs/translation-ch07.json)と[作業記録](docs/translation-ch07.md)に保存しています。既存TOCには行がなかったため追加しており、既存の `07-desktop.md` 以降は旧TOC番号（公式Chapter 8以降）です。
+
+## 公式Chapter 31（PPP）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 31 PPP（`documentation/content/en/books/handbook/ppp-and-slip/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch31/31-ppp-and-slip.adoc.txt`（31380バイト、SHA-256: `fafc8c3b0608f5741f8d552d25cb397bd6203b0d20addb3474caa5a34fd13941`）、出典・進捗は [マニフェスト](docs/translation-ch31.json)と[作業記録](docs/translation-ch31.md)に保存しています。既存TOCのID 30に対応します。
