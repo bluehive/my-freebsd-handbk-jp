@@ -307,3 +307,135 @@ EndSection
 ```shell
 # mount_vboxvfs -w myshare /mnt
 ```
+
+<a id="virtualization-host-virtualbox"></a>
+## VirtualBox™ をホストとする FreeBSD
+
+VirtualBox™ は活発に開発されている完全な仮想化パッケージであり、Windows®、macOS®、Linux®、FreeBSD などほとんどのオペレーティングシステムで利用できます。
+Windows® ゲストと UNIX® 系ゲストのどちらも同じように動作させることができます。
+オープンソースソフトウェアとして公開されていますが、クローズドソースのコンポーネントが別の拡張パック（extension pack）として提供されています。
+これらのコンポーネントには USB 2.0 デバイスのサポートなどが含まれます。
+詳細は [VirtualBox™ Wiki の Downloads ページ](http://www.virtualbox.org/wiki/Downloads)を参照してください。
+現時点では、これらの拡張機能は FreeBSD 向けには提供されていません。
+
+<a id="virtualization-virtualbox-install"></a>
+### VirtualBox™ のインストール
+
+VirtualBox™ は FreeBSD のパッケージまたは port として `emulators/virtualbox-ose` に用意されています。
+port を使ってインストールするには、次のコマンドを実行します。
+
+```shell
+# cd /usr/ports/emulators/virtualbox-ose
+# make install clean
+```
+
+port の設定メニューにある便利なオプションの 1 つに、`GuestAdditions` プログラム群があります。
+これにより、ゲストオペレーティングシステムでさまざまな便利機能（ホストとゲスト間で特別なキーボードショートカットを押さずにマウスを共有できるマウスポインタ統合や、特に Windows® ゲストでの高速なビデオ描画など）を利用できるようになります。
+Guest Additions は、ゲストのインストール完了後に **Devices** メニューから利用できます。
+
+VirtualBox™ を初めて起動する前に、いくつかの設定変更が必要です。
+port をインストールすると `/boot/modules` にカーネルモジュールが配置されるため、実行中のカーネルへ読み込む必要があります。
+
+```shell
+# kldload vboxdrv
+```
+
+再起動後も常にこのモジュールが読み込まれるようにするには、`/boot/loader.conf` に次の行を追加します。
+
+```
+vboxdrv_load="YES"
+```
+
+ブリッジネットワークやホストオンリーネットワークを可能にするカーネルモジュールを使用するには、`/etc/rc.conf` に次の行を追加してコンピュータを再起動します。
+
+```
+vboxnet_enable="YES"
+```
+
+VirtualBox™ のインストール時に `vboxusers` グループが作成されます。
+VirtualBox™ にアクセスする必要があるユーザーは、すべてこのグループのメンバーとして追加する必要があります。
+新しいメンバーを追加するには `pw` を使用できます。
+
+```shell
+# pw groupmod vboxusers -m username
+```
+
+`/dev/vboxnetctl` の既定のパーミッションは制限が厳しいため、ブリッジネットワークを使う場合は変更する必要があります。
+
+```shell
+# chown root:vboxusers /dev/vboxnetctl
+# chmod 0660 /dev/vboxnetctl
+```
+
+このパーミッション変更を永続化するには、`/etc/devfs.conf` に次の行を追加します。
+
+```
+own     vboxnetctl root:vboxusers
+perm    vboxnetctl 0660
+```
+
+VirtualBox™ を起動するには、Xorg セッションから次のように入力します。
+
+```shell
+% VirtualBox
+```
+
+VirtualBox™ の設定や使用方法の詳細は、[公式 Web サイト](http://www.virtualbox.org)を参照してください。
+FreeBSD 固有の情報やトラブルシューティング手順については、[FreeBSD Wiki の該当ページ](http://wiki.FreeBSD.org/VirtualBox)を参照してください。
+
+<a id="virtualization-virtualbox-usb-support"></a>
+### VirtualBox™ の USB サポート
+
+VirtualBox™ は、USB デバイスをゲストオペレーティングシステムへパススルーするように設定できます。
+USB 2.0 および 3.0 デバイスに対応する拡張パックが FreeBSD で利用できるようになるまでは、OSE 版のホストコントローラは USB 1.1 デバイスのエミュレーションに制限されます。
+
+マシンに接続された USB デバイスを VirtualBox™ が認識できるようにするには、ユーザーが `operator` グループのメンバーである必要があります。
+
+```shell
+# pw groupmod operator -m username
+```
+
+次に、`/etc/devfs.rules` に以下の内容を追加します（ファイルが存在しない場合は新規作成します）。
+
+```
+[system=10]
+add path 'usb/*' mode 0660 group operator
+```
+
+これらの新しいルールを読み込むため、`/etc/rc.conf` に次の行を追加します。
+
+```
+devfs_system_ruleset="system"
+```
+
+その後、devfs を再起動します。
+
+```shell
+# service devfs restart
+```
+
+これらの変更を有効にするため、ログインセッションと VirtualBox™ を再起動し、必要に応じて USB フィルタを作成してください。
+
+<a id="virtualization-virtualbox-host-dvd-cd-access"></a>
+### VirtualBox™ のホスト DVD/CD アクセス
+
+ゲストからホストの DVD/CD ドライブへアクセスするには、物理ドライブを共有します。
+VirtualBox™ 内では、仮想マシンの Settings にある Storage ウィンドウから設定します。
+必要であれば、最初に空の IDE CD/DVD デバイスを作成します。
+次に、仮想 CD/DVD ドライブ選択のポップアップメニューからホストドライブ（Host Drive）を選びます。
+すると `Passthrough` というチェックボックスが表示されます。これを有効にすると、仮想マシンがハードウェアを直接利用できるようになります。
+たとえば、音楽 CD の再生やライティング機能はこのオプションを選択した場合にのみ動作します。
+
+ユーザーが VirtualBox™ の DVD/CD 機能を使用できるようにするには、`/dev/xpt0`、`/dev/cdN`、および `/dev/passN` へのアクセス権が必要です。
+通常は、ユーザーを `operator` グループのメンバーにすることで対応します。
+これらのデバイスへのパーミッションは、`/etc/devfs.conf` に次の行を追加して調整する必要があります。
+
+```
+perm cd* 0660
+perm xpt0 0660
+perm pass* 0660
+```
+
+```shell
+# service devfs restart
+```
