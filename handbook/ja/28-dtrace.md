@@ -73,3 +73,14 @@ options         KDTRACE_FRAME
 > **注**: `/usr/share/dtrace` にあるスクリプトは、FreeBSD 向けに特別に移植されたものです。DTrace Toolkit に含まれるスクリプトのすべてが FreeBSD でそのまま動作するわけではなく、FreeBSD 上で動作させるために手直しが必要なものもあります。
 
 DTrace Toolkit には、DTrace 専用の言語で書かれたスクリプトが多数含まれています。この言語は D 言語と呼ばれ、C++ によく似ています。この言語の詳しい解説は本書の範囲を超えています。FreeBSD 上での D 言語の概要については、FreeBSD の `d(7)` man ページを参照してください。また、D 言語は [illumos Dynamic Tracing Guide](https://www.illumos.org/books/dtrace/bookinfo.html) でも詳しく解説されています。
+
+<a id="dtrace-out-of-kernel"></a>
+## カーネル外モジュールでの DTrace 有効化
+
+開発やデバッグに役立つよう、カーネル外モジュール（out-of-kernel module）に DTrace サポートを追加するには、そのモジュールの Makefile に次の行を含めます。
+
+```
+CFLAGS+= -DKDTRACE_HOOKS
+```
+
+このフラグはコンパイル時に DTrace フックを有効にし、モジュールの高度なデバッグや監視を可能にします。DTrace 機能を有効にするため、この変更を行った後に必ずモジュールを再コンパイルしてください。
