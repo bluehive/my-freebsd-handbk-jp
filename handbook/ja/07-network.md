@@ -410,3 +410,205 @@ em0:\
 ```shell
 # sysrc ipv6_ipv4mapping="YES"
 ```
+
+<a id="network-wireless"></a>
+## 無線ネットワーク
+
+ほとんどの無線ネットワークは [IEEE® 802.11 規格](https://en.wikipedia.org/wiki/IEEE_802.11)に基づいています。
+
+FreeBSD は、[802.11a](https://en.wikipedia.org/wiki/IEEE_802.11a-1999)、[802.11b](https://en.wikipedia.org/wiki/IEEE_802.11b-1999)、[802.11g](https://en.wikipedia.org/wiki/IEEE_802.11g-2003)、および [802.11n](https://en.wikipedia.org/wiki/IEEE_802.11n-2009) を用いて動作するネットワークをサポートしています。
+
+> **注**: FreeBSD における [802.11ac](https://en.wikipedia.org/wiki/IEEE_802.11ac-2013) のサポートは現在開発中です。
+
+基本的な無線ネットワークは、2.4GHz 帯または 5GHz 帯の電波を用いて通信する複数のステーションで構成されます。ただし、使用する周波数帯は地域によって異なり、2.3GHz 帯や 4.9GHz 帯での通信も可能になりつつあります。
+
+無線ネットワークを設定するには、次の 3 つの基本ステップがあります。
+
+1. アクセスポイントをスキャンして選択する
+2. ステーションを認証する
+3. IP アドレスを設定する、または DHCP を使用する
+
+以下の節では、それぞれのステップを説明します。
+
+<a id="network-wireless-quick-start"></a>
+### 無線ネットワーク接続のクイックスタート
+
+FreeBSD を既存の無線ネットワークに接続するのは非常によくある状況です。
+
+このクイックスタート手順では、基本的な認証を使用するネットワークへ接続するために必要なステップを示します。より詳しい手順は次の節で説明します。
+
+最初のステップは、ネットワーク管理者から無線ネットワークの SSID（Service Set Identifier）と事前共有鍵（PSK: Pre-Shared Key）を入手することです。
+
+2 つ目のステップは、このネットワーク用のエントリを `/etc/wpa_supplicant.conf` に追加することです。
+
+ファイルが存在しない場合は作成してください。このファイルのエントリ書式の詳細は `wpa_supplicant.conf(5)` を参照してください。
+
+```text
+ctrl_interface=/var/run/wpa_supplicant
+eapol_version=1
+ap_scan=1
+fast_reauth=1
+
+network={
+ ssid="myssid"
+ psk="mypsk"
+}
+```
+
+1. `ssid` は無線ネットワークの SSID です。実際の無線ネットワーク名に置き換えてください。
+2. `psk` は無線ネットワークの PSK です。実際の無線ネットワークのパスワードに置き換えてください。
+
+3 つ目のステップは、起動時にネットワークを構成するためのネットワークインターフェースのエントリを追加することです。sysctl 変数 `net.wlan.devices` を使って、ネットワークデバイスのインターフェースを取得します。以下の出力例では、この sysctl の結果からネットワークデバイスのインターフェースが `"iwm0"` であることが分かります。
+
+```shell
+# sysctl net.wlan.devices
+```
+
+出力は次のようになります。
+
+```text
+net.wlan.devices: iwm0
+```
+
+次に続く `sysrc` の行では、必要に応じて `"iwm0"` を上記の `sysctl` コマンドの出力結果に置き換えてください。
+
+```shell
+# sysrc wlans_iwm0="wlan0"
+# sysrc ifconfig_wlan0="WPA DHCP"
+```
+
+* 最後のステップとして、次のコマンドを実行して `netif` サービスを再起動します。
+
+```shell
+# service netif restart
+```
+
+<a id="basic-wireless-configuration"></a>
+### 基本的な無線設定
+
+この節では、無線ネットワークカードを設定するより詳しい例を示します。システムに搭載されている無線ネットワークカードを調べるには、[ネットワークアダプタの特定](#config-identify-network-adapter)の節を参照してください。
+
+```shell
+# ifconfig wlan0 create wlandev iwm0
+```
+
+再起動後も変更を維持するには、次のコマンドを実行します。
+
+```shell
+# sysrc wlans_iwm0="wlan0"
+```
+
+> **注**: 電波法規は世界の各地域で異なるため、使用可能なチャネルに関する正しい情報を得るには、現在地に適用されるリージョンドメインを正しく設定する必要があります。
+>
+> 利用可能な地域定義は `/etc/regdomain.xml` に記載されています。実行時にこれらの値を設定するには `ifconfig` を使います。
+
+```shell
+# ifconfig wlan0 regdomain etsi2 country AT
+```
+
+> 設定を永続化するには、`/etc/rc.conf` に追加します。
+
+```shell
+# sysrc create_args_wlan0="country AT regdomain etsi2"
+```
+
+<a id="scan-wireless-networks"></a>
+### 無線ネットワークのスキャン
+
+利用可能な無線ネットワークは `ifconfig(8)` を使ってスキャンできます。
+
+無線ネットワークの一覧を表示するには、次のコマンドを実行します。
+
+```shell
+# ifconfig wlan0 up list scan
+```
+
+出力は次のようになります。
+
+```text
+SSID/MESH ID                      BSSID              CHAN RATE    S:N     INT CAPS
+FreeBSD                           e8:d1:1b:1b:58:ae    1   54M  -47:-96   100 EP   RSN BSSLOAD HTCAP WPS WME
+NetBSD                            d4:b9:2f:35:fe:08    1   54M  -80:-96   100 EP   RSN BSSLOAD HTCAP WPS WME
+OpenBSD                           fc:40:09:c6:31:bd   36   54M  -94:-96   100 EPS  VHTPWRENV APCHANREP RSN WPS BSSLOAD HTCAP VHTCAP VHTOPMODE WME
+GNU-Linux                         dc:f8:b9:a0:a8:e0   44   54M  -95:-96   100 EP   WPA RSN WPS HTCAP VHTCAP VHTOPMODE WME VHTPWRENV
+Windows                           44:48:b9:b3:c3:ff   44   54M  -84:-96   100 EP   BSSLOAD VHTPWRENV HTCAP WME RSN VHTCAP VHTOPMODE WPS
+MacOS                             46:48:b9:b3:c3:ff   44   54M  -84:-96   100 EP   BSSLOAD VHTPWRENV HTCAP WME RSN VHTCAP VHTOPMODE WPS
+```
+
+1. `SSID/MESH ID` はネットワークの名前を示します。
+2. `BSSID` はアクセスポイントの MAC アドレスを示します。
+3. `CAPS` フィールドは各ネットワークの種別と、そこで動作しているステーションの機能を示します（詳細は `ifconfig(8)` の `list scan` の定義を参照してください）。
+
+<a id="wireless-authentication"></a>
+### 無線ネットワークへの接続と認証
+
+スキャンされたネットワークの一覧から無線ネットワークを選択したら、接続と認証を行う必要があります。大半の無線ネットワークでは、ルータに設定されたパスワードを使って認証を行います。それ以外の方式では、データ通信を開始する前に、事前共有鍵やシークレット、あるいは RADIUS などのバックエンドサービスを伴うより複雑な方式を用いて暗号ハンドシェイクを完了させる必要があります。
+
+<a id="authenticate-wpa2-wpa-personal"></a>
+#### WPA2/WPA/Personal による認証
+
+無線ネットワークにおける認証処理は `wpa_supplicant(8)` によって管理されます。
+
+`wpa_supplicant(8)` の設定は `/etc/wpa_supplicant.conf` ファイルに記述します。詳細は `wpa_supplicant.conf(5)` を参照してください。
+
+無線ネットワークのスキャンを行って接続先のネットワークを選び、パスワード（PSK）を用意したら、次の例のように `/etc/wpa_supplicant.conf` ファイルへその情報を追加します。
+
+```text
+network={
+        scan_ssid=1
+        ssid="FreeBSD"
+        psk="12345678"
+}
+```
+
+1. `scan_ssid=1`: SSID スキャン手法を指定します。ネットワークが非公開（ステルス）の場合にのみ使用する必要があります。
+2. `ssid`: ネットワーク名。
+3. `psk`: 無線ネットワークのパスワード。
+
+次のステップは、`/etc/rc.conf` ファイルで無線接続を設定することです。
+
+静的アドレスを使用するには、次のコマンドを実行する必要があります。
+
+```shell
+# sysrc ifconfig_wlan0="inet 192.168.1.20 netmask 255.255.255.0"
+```
+
+動的アドレスを使用するには、次のコマンドを実行する必要があります。
+
+```shell
+# sysrc ifconfig_wlan0="WPA DHCP"
+```
+
+続いて、次のコマンドを実行してネットワークを再起動します。
+
+```shell
+# service netif restart
+```
+
+> **注**: より高度な認証方法を実行する手順の詳細は、[高度な無線認証（Wireless Advanced Authentication）](35-advanced-networking.md#network-advanced-wireless)を参照してください。
+
+<a id="authenticate-open-networks"></a>
+#### オープンネットワークへの認証
+
+> **ヒント**: いかなる認証も行われないオープンネットワークに接続する際は、**十分に**注意することが重要です。
+
+無線ネットワークのスキャンが完了し、接続する無線ネットワークの SSID を選んだら、次のコマンドを実行します。
+
+```shell
+# ifconfig wlan0 ssid SSID
+```
+
+その後、`dhclient(8)` を実行してアドレスを設定します。
+
+```shell
+# dhclient wlan0
+```
+
+<a id="chapter-07-heading-20"></a>
+### 有線接続と無線接続の併用
+
+有線接続は高いパフォーマンスと信頼性を提供し、無線接続は柔軟性と機動性を提供します。ノート PC のユーザーは通常、この 2 種類の接続の間をシームレスに切り替えられることを望みます。
+
+FreeBSD では、2 つ以上のネットワークインターフェースを「フェイルオーバー」方式でまとめることができます。この構成では、ネットワークインターフェースのグループから最も優先度が高く利用可能な接続を使用し、リンク状態が変化するとオペレーティングシステムが自動的に切り替えます。
+
+リンクアグリゲーションとフェイルオーバーについては[リンクアグリゲーションとフェイルオーバー（Link Aggregation and Failover）](35-advanced-networking.md#network-aggregation)で解説しており、有線接続と無線接続を併用する例は[イーサネットインターフェースと無線インターフェース間のフェイルオーバーモード（Failover Mode Between Ethernet and Wireless Interfaces）](35-advanced-networking.md#networking-lagg-wired-and-wireless)にあります。
