@@ -33,7 +33,7 @@
 - [x] `#network-dhcp`（Dynamic Host Configuration Protocol (DHCP)）
 - [x] `#network-dns`（Domain Name System (DNS)）
 - [x] `#network-zeroconf`（Zeroconf）
-- [ ] `#network-apache`（Apache HTTP Server）
+- [x] `#network-apache`（Apache HTTP Server）
 - [ ] `#network-ftp`（File Transfer Protocol (FTP)）
 - [ ] `#network-samba`（File and Print Services for Microsoft Windows Clients (Samba)）
 - [ ] `#network-ntp`（Clock Synchronization with NTP）

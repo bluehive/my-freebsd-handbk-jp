@@ -1510,3 +1510,286 @@ Zeroconf の代表的な実装の 1 つが [Avahi](https://avahi.org/) です。
 # service dbus start
 # service avahi-daemon start
 ```
+
+<a id="network-apache"></a>
+## Apache HTTP Server
+
+オープンソースの Apache HTTP Server は、最も広く使われている Web サーバです。FreeBSD では既定ではインストールされませんが、`www/apache24` のパッケージまたは Port からインストールできます。
+
+この節では、FreeBSD 上で Apache HTTP Server バージョン 2.*x* を設定・起動する方法を概説します。Apache 2.X および設定ディレクティブの詳細は、[httpd.apache.org](http://httpd.apache.org/) を参照してください。
+
+<a id="chapter-33-heading-40"></a>
+### Apache の設定と起動（Configuring and Starting Apache）
+
+FreeBSD では、Apache HTTP Server のメイン設定ファイルは `/usr/local/etc/apache2x/httpd.conf`（*x* はバージョン番号）としてインストールされます。この ASCII テキストファイルでは、`#` で始まる行がコメントになります。最も頻繁に変更されるディレクティブは次のとおりです。
+
+* `ServerRoot "/usr/local"`
+
+  Apache インストールの既定のディレクトリ階層を指定します。バイナリは ServerRoot 配下の `bin` および `sbin` サブディレクトリに、設定ファイルは `etc/apache2x` サブディレクトリに格納されます。
+
+* `ServerAdmin \you@example.com`
+
+  サーバの問題に関する通知を受け取るメールアドレスに変更してください。このアドレスは、エラーページなどサーバが自動生成する一部のページにも表示されます。
+
+* `ServerName www.example.com:80`
+
+  サーバからクライアントへ返すホスト名を設定します。たとえば実際のホスト名の代わりに `www` を使うことができます。システムに登録済みの DNS 名がない場合は、代わりに IP アドレスを入力してください。別のポートで待ち受ける場合は、`80` をそのポート番号に変更します。
+
+* `DocumentRoot "/usr/local/www/apache2x/data"`
+
+  ドキュメントを配信する元のディレクトリです。既定ではすべてのリクエストがこのディレクトリから処理されますが、シンボリックリンクやエイリアスを使って別の場所を指すこともできます。
+
+変更を加える前に、既定の Apache 設定ファイルのバックアップコピーを取っておくことを常にお勧めします。Apache の設定が終わったらファイルを保存し、`apachectl` を使って設定を検証します。`apachectl configtest` を実行して `Syntax OK` が返れば構文に問題はありません。
+
+システム起動時に Apache を自動起動するには、`/etc/rc.conf` に次の行を追加します。
+
+```
+apache24_enable="YES"
+```
+
+既定以外のオプション付きで Apache を起動したい場合は、`/etc/rc.conf` に次の行を追加して必要なフラグを指定できます。
+
+```
+apache24_flags=""
+```
+
+`apachectl` で設定エラーが報告されなければ、今すぐ `httpd` を起動します。
+
+```shell
+# service apache24 start
+```
+
+Web ブラウザで `http://localhost`（`localhost` は `httpd` が動作しているマシンの完全修飾ドメイン名に置き換えます）へアクセスすると、`httpd` サービスの動作を確認できます。既定で表示される Web ページは `/usr/local/www/apache24/data/index.html` です。
+
+`httpd` の稼働中に設定を変更したあと、次のコマンドで設定エラーがないかテストできます。
+
+```shell
+# service apache24 configtest
+```
+
+> **注記（NOTE）**: `configtest` は `rc(8)` の標準コマンドではないため、すべての起動スクリプトで使えるとは限らない点に注意してください。
+
+<a id="chapter-33-heading-41"></a>
+### バーチャルホスト（Virtual Hosting）
+
+バーチャルホスト（Virtual hosting）を使うと、1 台の Apache サーバ上で複数の Web サイトを運用できます。バーチャルホストには *IP ベース* と *名前ベース* があります。IP ベースでは Web サイトごとに異なる IP アドレスを使います。名前ベースではクライアントの HTTP/1.1 ヘッダからホスト名を判別するため、複数の Web サイトで同じ IP アドレスを共有できます。
+
+Apache で名前ベースのバーチャルホストを設定するには、Web サイトごとに `VirtualHost` ブロックを追加します。たとえば、Web サーバ `www.domain.tld` に仮想ドメイン `www.someotherdomain.tld` を同居させる場合は、`httpd.conf` に次のエントリを追加します。
+
+```
+<VirtualHost *>
+    ServerName www.domain.tld
+    DocumentRoot /www/domain.tld
+</VirtualHost>
+
+<VirtualHost *>
+    ServerName www.someotherdomain.tld
+    DocumentRoot /www/someotherdomain.tld
+</VirtualHost>
+```
+
+各バーチャルホストについて、`ServerName` と `DocumentRoot` の値を使用する環境に合わせて書き換えてください。
+
+バーチャルホスト設定の詳細は、Apache 公式ドキュメント（[http://httpd.apache.org/docs/vhosts/](http://httpd.apache.org/docs/vhosts/)）を参照してください。
+
+<a id="chapter-33-heading-42"></a>
+### Apache モジュール（Apache Modules）
+
+Apache ではモジュールを使って基本サーバの機能を拡張します。利用可能なモジュールの一覧や設定の詳細は、[http://httpd.apache.org/docs/current/mod/](http://httpd.apache.org/docs/current/mod/) を参照してください。
+
+FreeBSD では、一部のモジュールは `www/apache24` Port と一緒にコンパイルできます。`/usr/ports/www/apache24` で `make config` を実行すると、どのモジュールが利用可能で、どれが既定で有効になっているかを確認できます。Port に組み込まれていないモジュールでも、FreeBSD Ports Collection を使えば多くのモジュールを簡単にインストールできます。この節では、よく使われる 3 つのモジュールを紹介します。
+
+<a id="chapter-33-heading-43"></a>
+#### SSL サポート（SSL support）
+
+以前は Apache で SSL を利用するために `mod_ssl` という追加モジュールが必要でした。現在は状況が変わり、Apache の標準インストールに SSL サポートが組み込まれています。SSL 対応 Web サイトを有効にする設定例は、`/usr/local/etc/apache24/extra` ディレクトリ内にインストールされる `httpd-ssl.conf` にあります。同じディレクトリには `ssl.conf-sample` というサンプルファイルも置かれています。Apache Web サーバで安全な Web サイトを適切に構築するため、両方のファイルを確認しておくことを推奨します。
+
+SSL の設定が完了したら、次回の Apache 再起動またはリロード時に変更が有効になるよう、メインの `httpd.conf`（原文表記: `http.conf`）で次の行のコメントを解除する必要があります。
+
+```
+#Include etc/apache24/extra/httpd-ssl.conf
+```
+
+> **警告（WARNING）**: SSL バージョン 2 およびバージョン 3 には既知の脆弱性があります。古い SSL オプションの代わりに TLS バージョン 1.2 および 1.3 を有効にすることを強く推奨します。これは `ssl.conf` に次のオプションを設定することで実現できます。
+
+```
+SSLProtocol all -SSLv3 -SSLv2 +TLSv1.2 +TLSv1.3
+SSLProxyProtocol all -SSLv2 -SSLv3 -TLSv1 -TLSv1.1
+```
+
+Web サーバでの SSL 設定を完了するため、次の行のコメントを解除して、Apache の再起動またはリロード時に設定が読み込まれるようにします。
+
+```
+# Secure (SSL/TLS) connections
+Include etc/apache24/extra/httpd-ssl.conf
+```
+
+また、Apache で SSL を完全に機能させるため、`httpd.conf` の次の行のコメントも解除する必要があります。
+
+```
+LoadModule authn_socache_module libexec/apache24/mod_authn_socache.so
+LoadModule socache_shmcb_module libexec/apache24/mod_socache_shmcb.so
+LoadModule ssl_module libexec/apache24/mod_ssl.so
+```
+
+次のステップとして、認証局（CA）から適切な証明書を取得してシステムにインストールします。これによりサイトに信頼の連鎖（chain of trust）が確立され、自己署名証明書による警告が表示されなくなります。
+
+<a id="chapter-33-heading-44"></a>
+#### `mod_perl`
+
+`mod_perl` モジュールを使うと、Perl で Apache モジュールを書けるようになります。さらに、サーバ内に常駐インタプリタが組み込まれるため、外部インタプリタを起動するオーバーヘッドや Perl の起動時間のペナルティを回避できます。
+
+`mod_perl` は `www/mod_perl2` のパッケージまたは Port からインストールできます。このモジュールの利用ドキュメントは [http://perl.apache.org/docs/2.0/index.html](http://perl.apache.org/docs/2.0/index.html) にあります。
+
+<a id="chapter-33-heading-45"></a>
+#### `mod_php`
+
+*PHP: Hypertext Preprocessor*（PHP）は、特に Web 開発に適した汎用スクリプト言語です。HTML 内に埋め込むことができ、C、Java™、Perl の影響を受けた構文により、Web 開発者が動的に生成される Web ページを素早く記述できるよう設計されています。
+
+Apache 向けの PHP サポートや PHP で書かれた各種機能は、対応する Port をインストールすることで追加できます。
+
+サポートされているすべてのバージョンを探すには、`pkg` でパッケージデータベースを検索します。
+
+```shell
+# pkg search php
+```
+
+利用可能なバージョンと追加機能の一覧が表示されます。各コンポーネントは完全にモジュール化されているため、必要な Port をインストールすることで機能が有効になります。Apache 向けに PHP バージョン 7.4 をインストールするには、次のコマンドを実行します。
+
+```shell
+# pkg install mod_php74
+```
+
+依存パッケージのインストールが必要な場合は、あわせてインストールされます。
+
+> **訳注**: `mod_php74` や `php74-*` は固定原文当時のバージョン例です。現在利用可能な PHP バージョンは `pkg search php` で確認してください。
+
+既定では PHP は有効になっていません。有効にするには、`/usr/local/etc/apache24` にある Apache 設定ファイルに次の行を追加する必要があります。
+
+```
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-php
+</FilesMatch>
+<FilesMatch "\.phps$">
+    SetHandler application/x-httpd-php-source
+</FilesMatch>
+```
+
+あわせて、設定ファイル内の `DirectoryIndex` も更新し、変更を反映するために Apache を再起動またはリロードする必要があります。
+
+PHP の多くの拡張機能も `pkg` を使ってインストールできます。たとえば XML や SSL のサポートを追加するには、それぞれの Port をインストールします。
+
+```shell
+# pkg install php74-xml php74-openssl
+```
+
+先ほどと同様、単にモジュールをインストールしただけでも、変更を反映させるには Apache の設定をリロードする必要があります。
+
+設定を再読み込みするグレースフルリスタート（graceful restart）を行うには、次のコマンドを実行します。
+
+```shell
+# apachectl graceful
+```
+
+インストールが完了したあと、導入済みの PHP サポートモジュールやビルド時の環境情報を確認する方法は 2 つあります。1 つ目は、PHP 本体のバイナリをインストールして情報を表示するコマンドを実行する方法です。
+
+```shell
+# pkg install php74
+```
+
+```shell
+# php -i | less
+```
+
+出力量が多いため、`more` や `less` などのページャへ出力を渡して確認する必要があります。
+
+最後に、PHP 全体のグローバル設定を変更したい場合、丁寧なコメント付きのファイルが `/usr/local/etc/php.ini` として使えるよう用意されています。インストール直後の時点ではこのファイルは存在せず、開発環境向けの `php.ini-development` と本番環境向けの `php.ini-production` の 2 種類が用意されているため、導入環境に合わせてひな形として選択してください。
+
+<a id="chapter-33-heading-46"></a>
+#### HTTP2 サポート（HTTP2 Support）
+
+`pkg` で Port をインストールした場合、Apache の HTTP2 プロトコルサポートは既定で含まれています。HTTP の新しいバージョンでは、Web サイトへの接続を単一コネクションにまとめて TCP コネクションの往復回数を減らすなど、従来版から多くの改善が行われています。また、パケットヘッダデータは圧縮され、HTTP2 では既定で暗号化が要求されます。
+
+Apache を HTTP2 のみ使うよう構成すると、Web ブラウザは暗号化された安全な HTTPS 接続を要求します。Apache を両バージョン併用で構成した場合は、接続時に問題が起きた際のフォールバック先として HTTP1.1 が使われます。
+
+この変更には管理者による設定作業が必要ですが、前向きな変更であり、すべての人にとってより安全なインターネットにつながります。なお、この設定変更が必要になるのは、現時点で SSL/TLS を導入していないサイトのみです。
+
+> **注記（NOTE）**: この設定は、TLS サポートを含む前の節の内容を前提としています。この設定へ進む前に、前の節の手順を完了しておくことを推奨します。
+
+まず、`/usr/local/etc/apache24/httpd.conf` で http2 モジュールの行のコメントを外して有効化し、`mpm_prefork` モジュールを `mpm_event` に置き換えます（`mpm_prefork` は HTTP2 に対応していないためです）。
+
+```
+LoadModule http2_module libexec/apache24/mod_http2.so
+LoadModule mpm_event_module libexec/apache24/mod_mpm_event.so
+```
+
+> **注記（NOTE）**: 独立した `mod_http2` Port も利用可能です。これは `apache24` Port に同梱されているモジュールよりも迅速にセキュリティ修正やバグ修正を届けるために用意されています。HTTP2 サポートに必須ではありませんが利用できます。こちらをインストールした場合は、Apache 設定内で `mod_http2.so` の代わりに `mod_h2.so` を指定する必要があります。
+
+Apache で HTTP2 を実装する方法は 2 通りあります。1 つはシステム上のすべてのサイトにグローバルに適用する方法、もう 1 つは各 `VirtualHost` ごとに設定する方法です。HTTP2 をグローバルに有効にするには、`ServerName` ディレクティブの下に次の行を追加します。
+
+```
+Protocols h2 http/1.1
+```
+
+> **注記（NOTE）**: 平文上で HTTP2 を有効にする場合は、`httpd.conf` で `h2 h2c http/1.1`（原文表記: `h2h2chttp/1.1`）を指定します。
+
+ここに `h2c` を含めると平文の HTTP2 データを通過させられるようになりますが、推奨されません。また、ここに `http/1.1` を含めておくことで、システム上で必要になった場合に HTTP1.1 プロトコルへフォールバックできるようになります。
+
+個別の `VirtualHost` で HTTP2 を有効にするには、`httpd.conf` または `httpd-ssl.conf` の `VirtualHost` ディレクティブ内に同じ行を追加します。
+
+`apachectl reload` コマンドで設定を再読み込みし、ホストしているページのいずれかへアクセスしたあと、次のいずれかの方法で設定をテストします。
+
+```shell
+# grep "HTTP/2.0" /var/log/httpd-access.log
+```
+
+すると、次のような出力が得られるはずです。
+
+```
+192.168.1.205 - - [18/Oct/2020:18:34:36 -0400] "GET / HTTP/2.0" 304 -
+192.0.2.205 - - [18/Oct/2020:19:19:57 -0400] "GET / HTTP/2.0" 304 -
+192.0.0.205 - - [18/Oct/2020:19:20:52 -0400] "GET / HTTP/2.0" 304 -
+192.0.2.205 - - [18/Oct/2020:19:23:10 -0400] "GET / HTTP/2.0" 304 -
+```
+
+もう 1 つの方法は Web ブラウザ組み込みのサイトデバッガや `tcpdump` を使うやり方ですが、これらの使い方は本文書の範囲外です。
+
+HTTP2 リバースプロキシ接続は `mod_proxy_http2.so` モジュールを使ってサポートされます。`ProxyPass` や `RewriteRules [P]` 文を設定する際は、接続先に `h2://` を指定してください。
+
+<a id="chapter-33-heading-47"></a>
+### 動的 Web サイト（Dynamic Websites）
+
+`mod_perl` や `mod_php` に加え、動的 Web コンテンツを作成するための他の言語やフレームワークも利用できます。その代表例が Django と Ruby on Rails です。
+
+<a id="chapter-33-heading-48"></a>
+#### Django
+
+Django は BSD ライセンスで提供されているフレームワークで、開発者が高性能で洗練された Web アプリケーションを素早く書けるように設計されています。オブジェクト関係マッパー（ORM）を備えており、データ型を Python オブジェクトとして開発できます。開発者が SQL を一切書かずに済むよう、それらのオブジェクトに対する豊富な動的データベースアクセス API が用意されています。また、アプリケーションのロジックと HTML の表現を分離できる拡張可能なテンプレートシステムも備えています。
+
+Django は `mod_python` と SQL データベースエンジンに依存します。FreeBSD では、`www/py-django` Port をインストールすると `mod_python` が自動的に導入され、PostgreSQL、MySQL、または SQLite データベースに対応します（既定は SQLite）。データベースエンジンを変更するには、`/usr/ports/www/py-django` で `make config` を実行してから Port をインストールしてください。
+
+> **訳注**: `mod_python` に関する記述および以下の `<Location>` 設定例は、固定原文に残っている過去の構成例です。
+
+Django をインストールしたら、組み込み Python インタプリタを使うためにプロジェクトディレクトリと Apache の設定が必要になります。このインタプリタは、サイト上の特定の URL に対してアプリケーションを呼び出すために使われます。
+
+特定の URL へのリクエストを Web アプリケーションへ渡すよう Apache を設定するには、プロジェクトディレクトリへのフルパスを指定して次の内容を `httpd.conf` に追加します。
+
+```
+<Location "/">
+    SetHandler python-program
+    PythonPath "['/dir/to/the/django/packages/'] + sys.path"
+    PythonHandler django.core.handlers.modpython
+    SetEnv DJANGO_SETTINGS_MODULE mysite.settings
+    PythonAutoReload On
+    PythonDebug On
+</Location>
+```
+
+Django の使い方の詳細は [https://docs.djangoproject.com](https://docs.djangoproject.com) を参照してください。
+
+<a id="chapter-33-heading-49"></a>
+#### Ruby on Rails
+
+Ruby on Rails もフルスタックの開発環境を提供するオープンソースの Web フレームワークです。Web 開発者の生産性を高め、強力なアプリケーションを素早く開発できるよう最適化されています。FreeBSD では、`www/rubygem-rails` のパッケージまたは Port を使ってインストールできます。
+
+Ruby on Rails の使い方の詳細は [http://guides.rubyonrails.org](http://guides.rubyonrails.org) を参照してください。
