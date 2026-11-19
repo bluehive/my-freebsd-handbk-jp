@@ -120,3 +120,36 @@ FreeBSD のメーリングリストでは、スパム、ウイルス、その他
 `text/html` に `text/plain` が添付されていない場合は、次のように処理されます。
 
 * HTML からプレーンテキストへの変換が行われます。
+
+<a id="eresources-news"></a>
+## Usenet ニュースグループ（Usenet Newsgroups）
+
+FreeBSD 専用の 2 つのニュースグループに加えて、FreeBSD について議論されている、あるいは FreeBSD ユーザーにとって関連性の高いニュースグループが他にも多数あります。
+
+<a id="appendix-C-heading-08"></a>
+### BSD 関連のニュースグループ（BSD Specific Newsgroups）
+
+* [comp.unix.bsd.freebsd.announce](news:comp.unix.bsd.freebsd.announce)
+* [comp.unix.bsd.freebsd.misc](news:comp.unix.bsd.freebsd.misc)
+* [de.comp.os.unix.bsd](news:de.comp.os.unix.bsd)（ドイツ語）
+* [fr.comp.os.bsd](news:fr.comp.os.bsd)（フランス語）
+
+<a id="appendix-C-heading-09"></a>
+### その他参考になる UNIX® ニュースグループ（Other UNIX® Newsgroups of Interest）
+
+> **訳注**: 原文ではこの見出しの下に説明文はなく、ニュースグループ名の一覧のみが記載されています。
+
+* [comp.unix](news:comp.unix)
+* [comp.unix.questions](news:comp.unix.questions)
+* [comp.unix.admin](news:comp.unix.admin)
+* [comp.unix.programmer](news:comp.unix.programmer)
+* [comp.unix.shell](news:comp.unix.shell)
+* [comp.unix.misc](news:comp.unix.misc)
+* [comp.unix.bsd](news:comp.unix.bsd)
+
+<a id="appendix-C-heading-10"></a>
+### X Window System
+
+> **訳注**: 原文ではこの見出しの下に説明文はなく、ニュースグループ名のみが記載されています。
+
+* [comp.windows.x](news:comp.windows.x)
