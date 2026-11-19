@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Appendix A Obtaining FreeBSD (A-mirrors) only; legacy TOC ID A; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": "A",
+      "slug": "mirrors",
+      "upstream_chapter_number": null,
+      "legacy_toc_id": "A",
+      "upstream_path": "documentation/content/en/books/handbook/mirrors/_index.adoc",
+      "source_path": "handbook/en/appA/A-mirrors.adoc.txt",
+      "translation_path": "handbook/ja/A-mirrors.md",
+      "source_sha256": "d4398bc07c55b1cb0a6b24606f9ff98cb18f1e1787c14582bd14701f6782b6a5",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft setup; translation in progress",
+      "counts": {
+        "headings": 11,
+        "anchors": 12,
+        "code_blocks": 4,
+        "images": 0,
+        "tables": 3
+      }
+    }
+  ]
+}
