@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch18/18-containers.adoc.txt",
       "translation_path": "handbook/ja/17-containers.md",
       "source_sha256": "e666506444b45f33115e8a6de8fc65062ff38388eae3a9dc3cfe718bcb9baf5e",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Pinned upstream source captured; draft translation in progress against pinned commit a39743a3b0535f4498735119317889ea2bdfeb28",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 50 headings, 50 anchors, and 60 code blocks in the pinned source; release attributes ({rel-latest}=15.1, {rel-latest-previous}=15.0) resolved in prose and annotated for verbatim code blocks; internal host-localhost redirection discrepancy and FreeBSD 14 sample output annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 50,
         "anchors": 50,

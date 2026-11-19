@@ -1,7 +1,7 @@
 <a id="containers"></a>
 # 第18章 OCI コンテナ（OCI Containers）
 
-本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/containers/)の「Chapter 18. OCI Containers」（既存 TOC ID 17）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/containers/_index.adoc`）に基づいて日本語へ意訳したものです（現在ドラフト作業中）。
+本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/containers/)の「Chapter 18. OCI Containers」（既存 TOC ID 17）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/containers/_index.adoc`）に基づいて日本語へ意訳したものです。
 
 > **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。掲載されているコマンドや設定例は説明のための例であり、翻訳作業中に実機で実行したものではありません。実行例中の `#` は root ユーザー、`$` は一般ユーザーのプロンプトを示します。また、コード例中の `{rel-latest}` と `{rel-latest-previous}` は原文のリリース属性をそのまま保持しており、固定コミットの `shared/releases.adoc` ではそれぞれ `15.1` と `15.0` に定義されています。実際にコマンドを利用する際は、対象とする FreeBSD のリリース番号へ置き換えてください。
 

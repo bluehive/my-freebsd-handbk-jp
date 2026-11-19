@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 18 OCI Containers（既存TOC ID 17）を意訳
+
+- 公式Chapter 18 [OCI Containers](handbook/ja/17-containers.md)（既存TOC ID 17）の既存ドラフトを固定原文と全文照合して書き直し・補完し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全50見出し・50アンカー・60コード例を意訳・自己校正しました（旧スナップショット `handbook/en/17-containers.adoc.txt` は履歴として未変更のまま保持）。
+- リリース属性（`{rel-latest}`=15.1、`{rel-latest-previous}`=15.0）、`pkg-static bootstrap` の FreeBSD 14 出力例、`localhost` リダイレクトに関する章内記述の差異は原文を保持したまま訳注で区別しています。
+- [作業・検証記録](docs/translation-ch18.md) / [原文ハッシュと状態](docs/translation-ch18.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Chapter 32 Electronic Mail（既存TOC ID 31）を意訳
 
 - 公式Chapter 32 [Electronic Mail](handbook/ja/32-mail.md)（既存TOC ID 31）を追加し、`handbook/TOC.md` と `SOURCE.md` を更新しました。
