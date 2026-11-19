@@ -12,22 +12,28 @@
 - 訳文：`handbook/ja/25-virtualization.md`
 - マニフェスト：`docs/translation-ch25.json`
 
-## 構成（固定原文）
+## 構成と照合結果
 
 - 見出し：58（`#` 1、`##` 8、`###` 35、`####` 14）
 - アンカー：76（見出し58 + 図表等18、すべて原文の明示IDを保持）
-- コード例：126
+- コード例：126（すべて原文のまま保持）
 - 画像：38（`documentation/static/images/books/handbook/virtualization/` の固定コミット版を参照）
-- 表：1
+- 表：1（bhyve マネージャ一覧、全6行）
 
-## 進捗状態
+## 訳注で区別した原文の仕様・注意点
 
-- 状態：ドラフト（翻訳作業中）
+- **VMware Fusion の `ums_load` 例**：原文コードブロック内の `# ums_load=“YES”`（コメントアウトと全角引用符）をそのまま保持し、実際に有効化する際の注意を訳注で補足しました。
+- **QEMU シリアルコンソールの `/boot.loader.conf` 表記**：原文の注記にある `/boot.loader.conf` は `/boot/loader.conf` として訳出し、原文表記を併記しました。
+- **bhyve スナップショットの `WITH_BHYVE_SNAPHOT=yes`**：原文コードブロック内の綴り（`SNAPHOT`）を保持し、訳注で明記しました。
+- **jail 化 bhyve の `nmdm` デバイス名**：`devfs.rules` 例の `nmdmbhyve*` と起動例の `/dev/nmdbbhyve0A`・`/dev/nmdbbhyve0B` の表記差を訳注で補足しました。
+- **Xen DomU の `freebsd.cfg` プール名**：直前の手順で作成した `zroot/xendisk0` に対し、`freebsd.cfg` 例が `/dev/zvol/tank/xendisk0` となっている点を訳注で補足しました。
+- **相互参照**：本リポジトリで自己校正済みの章（`02`, `03`, `04`, `05`, `07`, `16`, `23`, `27`）は相対パス＋明示アンカーへリンクし、未翻訳章およびアンカー未整備のドラフト章（`security`, `firewalls`, `advanced-networking`）は公式 FreeBSD Handbook（英語版）の該当ページへリンクしました。
 
 ## 検証
 
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch25_translation.py`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch25_translation.py --require-complete`
 - `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py`
+- `pandoc --from=gfm --to=json handbook/ja/25-virtualization.md` による GFM 構文解析とブロック数確認（Header 58、Image 38、CodeBlock 126、Table 1）
 - `git diff --check`
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。

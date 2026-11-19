@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch25/25-virtualization.adoc.txt",
       "translation_path": "handbook/ja/25-virtualization.md",
       "source_sha256": "b22724e7efe5f3c3c8d48edc51dc551e1e5f0207048c454b362dff956e600979",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "In progress (draft): source pinned and structure verified; section-by-section interpretive translation underway; runtime and third-party review not performed",
+      "status": "translated",
+      "reviewed_at": "2026-11-19",
+      "review": "Interpretive translation self-checked against all 58 headings, 76 anchors, 126 code blocks, 38 pinned images, 1 table, and all cross-references in the pinned source; source quirks (ums_load smart quotes, /boot.loader.conf typo, WITH_BHYVE_SNAPHOT typo, nmdbbhyve0A/B vs nmdmbhyve*, tank vs zroot in Xen freebsd.cfg) annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 58,
         "anchors": 76,
