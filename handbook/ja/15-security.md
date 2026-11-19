@@ -1353,41 +1353,131 @@ Capsicum はアプリケーションやライブラリの区画化（compartment
 
 この他にも有用なオプションが多数存在し、`lastcomm(1)`、`acct(5)`、`sa(8)` で説明されています。
 
-<a id="security-rctl"></a>
+<a id="security-resourcelimits"></a>
+## リソース制限
 
+FreeBSD におけるリソース制限とは、プロセスやユーザーに対する各種システムリソースの割り当てを制御・管理する仕組みを指します。これらの制限は、単一のプロセスやユーザーが過剰なリソースを消費してパフォーマンス低下やシステム不安定を引き起こすのを防ぐために設計されています。リソース制限により、システム上で稼働しているすべてのプロセスとユーザーの間で公平なリソース配分を保てます。
+
+FreeBSD には、管理者が個々のユーザーやプロセスが使用できるシステムリソース量を制限するための方法がいくつか用意されています。
+
+従来の方法では、`/etc/login.conf` を編集してログインクラスを定義します。この方法も引き続きサポートされていますが、変更を加えるたびに、このファイルを編集し、リソースデータベースを再構築し、必要に応じて `/etc/master.passwd` を変更して、パスワードデータベースを再構築するという複数の手順が必要になります。設定対象のユーザー数によっては、時間がかかることがあります。
+
+`rctl(8)` を使うと、よりきめ細かな方法でリソース制限を制御できます。このコマンドはユーザー単位の制限だけでなく、プロセスや jail に対するリソース制約の設定にも対応しています。
+
+本節では、従来の方法から順に、リソースを制御するための両方の方法を説明します。
+
+<a id="security-resource-limits-types"></a>
+### リソースの種類
+
+FreeBSD では、次のようなさまざまな種類のリソースに対して制限を設定できます。
+
+**表: リソースの種類**
+
+| 種類 | 説明 |
+|---|---|
+| CPU 時間（CPU Time） | プロセスが消費できる CPU 時間を制限します |
+| メモリ（Memory） | プロセスが使用できる物理メモリ量を制御します |
+| オープンファイル数（Open Files） | プロセスが同時に開けるファイル数を制限します |
+| プロセス数（Processes） | ユーザーまたはプロセスが生成できるプロセス数を制御します |
+| ファイルサイズ（File Size） | プロセスが作成できるファイルの最大サイズを制限します |
+| コアダンプ（Core Dumps） | プロセスによるコアダンプファイルの生成を許可するかどうかを制御します |
+| ネットワークリソース（Network Resources） | プロセスが使用できるネットワークリソース（ソケットなど）の量を制限します |
+
+すべての種類の完全な一覧は、`login.conf(5)` および `rctl(8)` を参照してください。
+
+<a id="users-limiting"></a>
+### ログインクラスの設定
+
+従来の方法では、ログインクラスとそこに適用するリソース制限を `/etc/login.conf` で定義します。各ユーザーアカウントにはログインクラスを割り当てることができ、デフォルトのログインクラスは `default` です。各ログインクラスには、一連のログインケーパビリティ（login capability）が関連付けられています。ログインケーパビリティは `name=value` のペアであり、`name` は既知の識別子、`value` は `name` に応じて適切に処理される任意の文字列です。
+
+リソース制限を設定する最初のステップとして、次のコマンドを実行して `/etc/login.conf` を開きます。
+
+```shell
+# ee /etc/login.conf
+```
+
+次に、変更対象となるユーザークラスのセクションを探します。この例ではユーザークラス名を `limited` とし、存在しない場合は新規に作成します。
+
+```
+limited:\
+        :maxproc=50:\
+        :tc=default:
+```
+
+1. ユーザークラスの名前。
+2. `limited` クラスに属するユーザーに対して、最大プロセス数（`maxproc`）を 50 に設定します。
+3. このユーザークラスが `default` クラスからデフォルト設定を継承することを示します。
+
+`/etc/login.conf` ファイルを変更したら、`cap_mkdb(1)` を実行して、FreeBSD がこれらの設定を適用するために使うデータベースを生成します。
+
+```shell
+# cap_mkdb /etc/login.conf
+```
+
+目的のユーザーのクラスを変更するには、次のコマンドを実行して `chpass(1)` を使用します。
+
+```shell
+# chpass username
+```
+
+テキストエディタが開くので、次のように新しい `limited` クラスを設定します。
+
+```
+#Changing user information for username.
+Login: username
+Password: $6$2H.419USdGaiJeqK$6kgcTnDadasdasd3YnlNZsOni5AMymibkAfRCPirc7ZFjjv
+DVsKyXx26daabdfqSdasdsmL/ZMUpdHiO0
+Uid [#]: 1001
+Gid [# or name]: 1001
+Change [month day year]:
+Expire [month day year]:
+Class: limited
+Home directory: /home/username
+Shell: /bin/sh
+Full Name: User &
+Office Location:
+Office Phone:
+Home Phone:
+Other information:
+```
+
+これで、`limited` クラスに割り当てられたユーザーの最大プロセス数の上限が 50 になります。これは `/etc/login.conf` ファイルを使ってリソース制限を設定する一例にすぎません。
+
+`/etc/login.conf` ファイルを変更した後は、変更を有効にするためにユーザーが一度ログアウトして再度ログインする必要がある点に注意してください。また、システム設定ファイルを編集する際、特に特権アクセスを用いる場合は常に慎重に作業してください。
+
+<a id="security-rctl"></a>
 ### リソース制限の有効化と設定
 
-`man rctl(8)` システムは、個々のプロセスおよびユーザーに対してリソース制限を設定・管理する、より細かい方法を提供します。
-ユーザークラスに関係なく、特定のプロセスやユーザーにリソース制限を動的に割り当てることができます。
+`rctl(8)` システムを使うと、個々のプロセスやユーザーに対してよりきめ細かくリソース制限を設定・管理できます。ユーザークラスに関係なく、特定のプロセスやユーザーへ動的にリソース制限を割り当てることが可能です。
 
-`man rctl(8)` を使用する最初の手順は、`/boot/loader.conf` に次の行を追加して有効にし、システムを再起動することです。
+`rctl(8)` を使うための最初のステップは、`/boot/loader.conf` に次の行を追加して有効にし、システムを再起動することです。
 
 ```
 kern.racct.enable=1
 ```
 
-次に、以下のコマンドを実行して `man rctl(8)` サービスを有効化し、起動します。
+続いて、次のコマンドを実行して `rctl(8)` サービスを有効化し、起動します。
 
 ```shell
 # sysrc rctl_enable="YES"
 # service rctl start
 ```
 
-その後、`man rctl(8)` を使用してシステムのルールを設定できます。
+その後、`rctl(8)` を使ってシステムのルールを設定できます。
 
-ルール構文（`man rctl.conf(5)`）は、subject（主体）、subject-id（主体 ID）、resource（リソース）、action（アクション）を使用して制御されます。次のルール例のとおりです。
+ルール構文（`rctl.conf(5)`）は、subject（主体）、subject-id（主体 ID）、resource（リソース）、action（アクション）を使って指定します。次のルール例を参照してください。
 
 ```
 subject:subject-id:resource:action=amount/per
 ```
 
-たとえば、ユーザーが 10 を超えるプロセスを追加できないように制限するには、次のコマンドを実行します。
+たとえば、ユーザーが 10 個を超えるプロセスを作成できないように制限するには、次のコマンドを実行します。
 
 ```shell
 # rctl -a user:username:maxproc:deny=10/user
 ```
 
-適用されたリソース制限を確認するには、`man rctl(8)` コマンドを実行します。
+適用されているリソース制限を確認するには、`rctl(8)` コマンドを実行します。
 
 ```shell
 # rctl
@@ -1399,26 +1489,24 @@ subject:subject-id:resource:action=amount/per
 user:username:maxproc:deny=10
 ```
 
-ルールは、`/etc/rctl.conf` に追加されていれば、再起動後も保持されます。
-形式は、前述のコマンドを含まないルールです。たとえば、前のルールは次のように追加できます。
+ルールを `/etc/rctl.conf` に追加しておくと、再起動後も設定が維持されます。書式は先頭のコマンドを除いたルールそのものです。たとえば、先ほどのルールは次のように追加できます。
 
 ```
 user:username:maxproc:deny=10
 ```
 
 <a id="security-pkg"></a>
+## サードパーティ製ソフトウェアのセキュリティ問題の監視
 
-## サードパーティー製ソフトウェアのセキュリティ問題の監視
+近年、セキュリティの世界では脆弱性評価の扱いが大きく進歩しました。現在利用できるほぼすべてのオペレーティングシステムにサードパーティ製ユーティリティが導入・設定されるようになり、システムへの侵入の脅威は高まっています。
 
-近年、セキュリティの世界では、脆弱性評価の扱いが大きく改善されました。現在利用可能なほとんどすべてのオペレーティングシステムにサードパーティー製ユーティリティがインストールされ設定されるにつれて、システムへの侵入の脅威は増大しています。
+脆弱性評価はセキュリティにおける重要な要素です。FreeBSD はベースシステムについてセキュリティ勧告を公開していますが、すべてのサードパーティ製ユーティリティに対して勧告を出すことは FreeBSD Project の対応能力を超えています。しかし、サードパーティ製ソフトウェアの脆弱性リスクを軽減し、既知のセキュリティ問題を管理者に警告する方法があります。FreeBSD のアドオンユーティリティである `pkg` には、まさにこの目的のためのオプションが備わっています。
 
-脆弱性評価はセキュリティにおける重要な要素です。FreeBSD はベースシステムに関するアドバイザリをリリースしますが、すべてのサードパーティー製ユーティリティについてそれを実行することは、FreeBSD Project の能力を超えています。サードパーティーの脆弱性を軽減し、既知のセキュリティ問題を管理者に警告する方法があります。pkg として知られる FreeBSD のアドオン・ユーティリティには、この目的のためのオプションが明示的に含まれています。
+`pkg` はセキュリティ問題に関するデータベースに問い合わせを行います。このデータベースは FreeBSD セキュリティチームと ports 開発者によって更新・保守されています。
 
-pkg はセキュリティ問題についてデータベースを照会します。このデータベースは、FreeBSD セキュリティチームと ports 開発者によって更新・維持されています。
+インストール時には、`pkg audit` データベースを保守するための `periodic(8)` 設定ファイルが提供され、データベースを最新の状態に保つための自動化された手段も用意されています。
 
-インストールにより、pkg audit データベースを維持するための man periodic(8) 設定ファイルが提供され、それを最新の状態に保つプログラム的な方法も提供されます。
-
-インストール後、いつでも Ports Collection の一部としてサードパーティー製ユーティリティを監査するために、管理者はデータベースを更新し、インストール済みパッケージの既知の脆弱性を表示することができます。
+インストール後、Ports Collection の一部として導入したサードパーティ製ユーティリティを監査したいときはいつでも、次のコマンドを実行してデータベースを更新し、インストール済みパッケージの既知の脆弱性を確認できます。
 
 ```shell
 % pkg audit -F
@@ -1426,7 +1514,7 @@ pkg はセキュリティ問題についてデータベースを照会します�
 
 出力は次のようになります。
 
-```text
+```
 vulnxml file up-to-date
 chromium-116.0.5845.96_1 is vulnerable:
   chromium -- multiple vulnerabilities
@@ -1449,27 +1537,23 @@ samba413-4.13.17_5 is vulnerable:
 2 problem(s) in 2 installed package(s) found.
 ```
 
-表示された URL を Web ブラウザーで開くことにより、管理者はこの脆弱性に関する詳細情報を得ることができます。
+表示された URL を Web ブラウザーで開くことで、管理者はその脆弱性に関する詳しい情報を得られます。
 
-これには、FreeBSD port バージョンで影響を受けるバージョンと、セキュリティアドバイザリを含む可能性のある他の Web サイトが含まれます。
+そこには FreeBSD の port バージョン基準で影響を受けるバージョンや、セキュリティ勧告を掲載している他の Web サイトへの情報も含まれています。
 
 <a id="security-advisories"></a>
-
 ## FreeBSD セキュリティ勧告
 
-高品質なオペレーティングシステムを提供する多くのプロジェクトと同様に、FreeBSD Project にはセキュリティチームがあります。このチームは、各 FreeBSD リリースのサポート終了 (End-of-Life: EoL) 日を決定し、まだ EoL に達していないサポート対象リリースにセキュリティ更新を提供する責任を負っています。
+高品質なオペレーティングシステムを提供する多くの開発元と同様に、FreeBSD Project にもセキュリティチームがあり、各 FreeBSD リリースのサポート終了（End-of-Life: EoL）日を決定し、まだ EoL に達していないサポート対象リリースへセキュリティアップデートを提供する役割を担っています。FreeBSD セキュリティチームやサポート対象リリースの詳細は、[FreeBSD セキュリティページ](https://www.FreeBSD.org/security)で確認できます。
 
-FreeBSD セキュリティチームとサポート対象リリースの詳細については、[FreeBSD セキュリティページ](https://www.FreeBSD.org/security) を参照してください。
+セキュリティチームの業務の 1 つは、FreeBSD オペレーティングシステムで報告されたセキュリティ脆弱性への対応です。脆弱性が確認されると、セキュリティチームは修正に必要な手順を検証してソースコードに修正を反映します。その後、詳細を「セキュリティ勧告（Security Advisory）」として公開します。セキュリティ勧告は [FreeBSD Web サイト](https://www.FreeBSD.org/security/advisories/)で公開されるほか、`freebsd-security-notifications`、`freebsd-security`、`freebsd-announce` の各メーリングリストにも送信されます。
 
-セキュリティチームの任務の 1 つは、FreeBSD オペレーティングシステムで報告されたセキュリティ脆弱性に対応することです。脆弱性が確認されると、セキュリティチームは脆弱性の修正に必要な手順を検証し、修正をソースコードに反映します。その後、詳細を「セキュリティ勧告」(Security Advisory) として公開します。
-
-セキュリティ勧告は [FreeBSD ウェブサイト](https://www.FreeBSD.org/security/advisories/) で公開され、`freebsd-security-notifications`、`freebsd-security`、`freebsd-announce` の各メーリングリストに送信されます。
-
+<a id="chapter-16-heading-53"></a>
 ### セキュリティ勧告の形式
 
 以下は、FreeBSD セキュリティ勧告の例です。
 
-```text
+```
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA512
 
@@ -1565,22 +1649,77 @@ b) Apply the patch.  Execute the following commands as root:
 # cd /usr/src
 # patch < /path/to/patch
 
-c) Recompile the oper
+c) Recompile the operating system using buildworld and installworld as
+described in <URL:https://www.FreeBSD.org/handbook/makeworld.html>.
+
+Restart all affected virtual machines.
+
+VI.  Correction details
+
+This issue is corrected by the corresponding Git commit hash or Subversion
+revision number in the following stable and release branches:
+
+Branch/path                             Hash                     Revision
+- -------------------------------------------------------------------------
+stable/13/                              9fe302d78109    stable/13-n255918
+releng/13.2/                            2bae613e0da3  releng/13.2-n254625
+releng/13.1/                            87702e38a4b4  releng/13.1-n250190
+- -------------------------------------------------------------------------
+
+Run the following command to see which files were modified by a
+particular commit:
+
+# git show --stat <commit hash>
+
+Or visit the following URL, replacing NNNNNN with the hash:
+
+<URL:https://cgit.freebsd.org/src/commit/?id=NNNNNN>
+
+To determine the commit count in a working tree (for comparison against
+nNNNNNN in the table above), run:
+
+# git rev-list --count --first-parent HEAD
+
+VII. References
+
+<URL:https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-3494>
+
+The latest revision of this advisory is available at
+<URL:https://security.FreeBSD.org/advisories/FreeBSD-SA-23:07.bhyve.asc>
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEthUnfoEIffdcgYM7bljekB8AGu8FAmTJdsIACgkQbljekB8A
+Gu8Q1Q/7BFw5Aa0cFxBzbdz+O5NAImj58MvKS6xw61bXcYr12jchyT6ENC7yiR+K
+qCqbe5TssRbtZ1gg/94gSGEXccz5OcJGxW+qozhcdPUh2L2nzBPkMCrclrYJfTtM
+cnmQKjg/wFZLUVr71GEM95ZFaktlZdXyXx9Z8eBzow5rXexpl1TTHQQ2kZZ41K4K
+KFhup91dzGCIj02cqbl+1h5BrXJe3s/oNJt5JKIh/GBh5THQu9n6AywQYl18HtjV
+fMb1qRTAS9WbiEP5QV2eEuOG86ucuhytqnEN5MnXJ2rLSjfb9izs9HzLo3ggy7yb
+hN3tlbfIPjMEwYexieuoyP3rzKkLeYfLXqJU4zKCRnIbBIkMRy4mcFkfcYmI+MhF
+NPh2R9kccemppKXeDhKJurH0vsetr8ti+AwOZ3pgO21+9w+mjE+EfaedIi+JWhip
+hwqeFv03bAQHJdacNYGV47NsJ91CY4ZgWC3ZOzBZ2Y5SDtKFjyc0bf83WTfU9A/0
+drC0z3xaJribah9e6k5d7lmZ7L6aHCbQ70+aayuAEZQLr/N1doB0smNi0IHdrtY0
+JdIqmVX+d1ihVhJ05prC460AS/Kolqiaysun1igxR+ZnctE9Xdo1BlLEbYu2KjT4
+LpWvSuhRMSQaYkJU72SodQc0FM5mqqNN42Vx+X4EutOfvQuRGlI=
+=MlAY
+-----END PGP SIGNATURE-----
 ```
 
+すべてのセキュリティ勧告では、次の形式が用いられています。
 
-
+* 各セキュリティ勧告は Security Officer の PGP 鍵で署名されています。Security Officer の公開鍵は [OpenPGP Keys](https://docs.freebsd.org/en/books/handbook/pgpkeys/#pgpkeys) で確認できます。
+* セキュリティ勧告の名称は常に `FreeBSD-SA-`（FreeBSD Security Advisory の略）で始まり、2 桁の年号（`23:`）、その年の勧告番号（`07.`）、影響を受けるアプリケーションまたはサブシステム名（`bhyve`）が続きます。
+* `Topic` フィールドは脆弱性の概要を示します。
+* `Category` は影響を受けるシステムの部分を示し、`core`、`contrib`、`ports` のいずれかになります。`core` カテゴリは脆弱性が FreeBSD オペレーティングシステムのコアコンポーネントに影響することを意味します。`contrib` カテゴリは BIND など FreeBSD に同梱されているソフトウェアに影響することを意味します。`ports` カテゴリは Ports Collection を通じて提供されるソフトウェアに影響することを示します。
+* `Module` フィールドはコンポーネントの場所を示します。この例では `bhyve` モジュールが影響を受けているため、この脆弱性はオペレーティングシステムに同梱されているアプリケーションに影響します。
+* `Announced` フィールドはセキュリティ勧告が公開された日付を示します。これは、セキュリティチームが問題の存在を確認し、修正が FreeBSD ソースコードリポジトリへコミットされたことを意味します。
+* `Credits` フィールドは、脆弱性に気付いて報告した個人または組織への謝辞を示します。
+* `Affects` フィールドは、どの FreeBSD リリースがこの脆弱性の影響を受けるかを説明します。
+* `Corrected` フィールドは、修正された日時、タイムゾーンオフセット、およびリリースを示します。括弧内の部分は修正がマージされた各ブランチと、そのブランチに対応するリリースのバージョン番号を表します。リリース識別子自体にはバージョン番号と、該当する場合はパッチレベルが含まれます。パッチレベルは文字 `p` に続く数字で表され、パッチの連番を示すため、どのパッチがすでにシステムへ適用済みかを追跡できます。
+* `CVE Name` フィールドは、公開されている [cve.mitre.org](http://cve.mitre.org) のセキュリティ脆弱性データベースに該当番号がある場合に、その勧告番号を記載します。
 * `Background` フィールドは、影響を受けるモジュールの説明を提供します。
-* `Problem Description` フィールドは、脆弱性を説明します。これには、欠陥のあるコードや、ユーティリティが悪意を持って使用される方法に関する情報が含まれます。
-* `Impact` フィールドは、問題がシステムに与える可能性のある影響の種類を説明します。
-* `Workaround` フィールドは、システムに直ちにパッチを適用できないシステム管理者に対して、回避策が利用可能かどうかを示します。
-* `Solution` フィールドは、影響を受けるシステムにパッチを適用するための手順を提供します。これは、システムにパッチを適用して安全に動作させるための、テスト済みで検証済みの段階的な方法です。
-* `Correction Details` フィールドは、修正されたコードを含む各影響を受ける Subversion または Git ブランチをリビジョン番号とともに表示します。
-* `References` フィールドは、脆弱性に関する追加情報のソースを提供します。
-
----
-
-## 翻訳メモ
-
-- 機械支援初訳。コマンド例は原文照合推奨。
-- 用語は `handbook/ja/glossary.md` と揃える。
+* `Problem Description` フィールドは、脆弱性を説明します。これには欠陥のあるコードや、ユーティリティが悪用される方法に関する情報が含まれる場合があります。
+* `Impact` フィールドは、その問題がシステムにどのような影響を与えうるかを説明します。
+* `Workaround` フィールドは、直ちにパッチを適用できないシステム管理者向けに回避策が利用可能かどうかを示します。
+* `Solution` フィールドは、影響を受けるシステムへパッチを適用する手順を提供します。これは、システムへパッチを適用して安全に稼働させるためのテスト済み・検証済みの段階的な方法です。
+* `Correction Details` フィールドは、修正されたコードを含む影響対象の各 Subversion または Git ブランチとリビジョン番号を表示します。
+* `References` フィールドは、脆弱性に関する追加情報の参照元を提供します。
