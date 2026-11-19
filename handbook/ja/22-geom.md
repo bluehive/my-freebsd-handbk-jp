@@ -520,3 +520,266 @@ Enter full pathname of shell or RETURN for /bin/sh:
 新しいドライブをミラーに組み込むと再同期が始まります。ミラーデータを新しいドライブへコピーするこの処理には時間がかかる場合があります。コピー中はミラーの性能が大幅に低下するため、新しいドライブの組み込みはコンピュータへの負荷が低い時間帯に行うのが最善です。
 
 進捗状況は `gmirror status` で監視でき、同期中のドライブと完了率（パーセンテージ）が表示されます。再同期中のステータスは `DEGRADED` となり、処理が完了すると `COMPLETE` に変わります。
+
+<a id="geom-raid3"></a>
+## RAID3 - 専用パリティを用いたバイト単位ストライピング
+
+RAID3 は、専用のパリティディスクを用意して複数のディスクドライブを 1 つのボリュームにまとめる手法です。RAID3 システムでは、データはバイト単位に分割され、専用のパリティディスクとして機能する 1 台を除いたアレイ内のすべてのドライブへ分散して書き込まれます。そのため、RAID3 実装からのディスク読み取りではアレイ内のすべてのディスクへアクセスします。複数のディスクコントローラを使うと性能を向上させられます。RAID3 アレイはドライブ 1 台分の耐障害性を備え、利用可能な容量はアレイ内すべてのドライブの合計容量の `1 - 1/n` 倍（`n` はアレイ内のハードドライブ台数）になります。このような構成は、マルチメディアファイルなど大きめのデータを保存する用途に最も適しています。
+
+RAID3 アレイを構築するには、少なくとも 3 台の物理ハードドライブが必要です。I/O リクエストをインターリーブして複数ディスクへ並列に読み書きするため、各ディスクは同じサイズでなければなりません。また、RAID3 の性質上、ドライブ台数は 3、5、9、17 など、すなわち `2^n + 1` 台である必要があります。
+
+この節では、FreeBSD システム上にソフトウェア RAID3 を作成する方法を説明します。
+
+> **注**: FreeBSD では理論上 RAID3 アレイからの起動も可能ですが、そのような構成は一般的ではなく推奨されません。
+
+<a id="chapter-22-heading-11"></a>
+### 専用 RAID3 アレイの作成
+
+FreeBSD では、RAID3 のサポートは `graid3(8)` GEOM クラスによって実装されています。FreeBSD で専用 RAID3 アレイを作成するには、次の手順を実行します。
+
+1. まず、次のいずれかのコマンドを実行して `geom_raid3.ko` カーネルモジュールを読み込みます。
+
+```shell
+# graid3 load
+```
+
+   または次のように実行します。
+
+```shell
+# kldload geom_raid3
+```
+
+2. 適切なマウントポイントがあることを確認します。次のコマンドは、マウントポイントとして使う新しいディレクトリを作成します。
+
+```shell
+# mkdir /multimedia
+```
+
+3. アレイに追加するディスクのデバイス名を確認し、新しい RAID3 デバイスを作成します。最後に指定したデバイスが専用パリティディスクとして機能します。この例では、未パーティションの 3 台の ATA ドライブを使い、`ada1` と `ada2` をデータ用、`ada3` をパリティ用とします。
+
+```shell
+# graid3 label -v gr0 /dev/ada1 /dev/ada2 /dev/ada3
+Metadata value stored on /dev/ada1.
+Metadata value stored on /dev/ada2.
+Metadata value stored on /dev/ada3.
+Done.
+```
+
+4. 新しく作成した `gr0` デバイスをパーティション分割し、その上に UFS ファイルシステムを作成します。
+
+```shell
+# gpart create -s GPT /dev/raid3/gr0
+# gpart add -t freebsd-ufs /dev/raid3/gr0
+# newfs -j /dev/raid3/gr0p1
+```
+
+   画面に多くの数値が流れたあと、しばらくすると処理が完了します。これでボリュームが作成され、マウントできる状態になります。
+
+```shell
+# mount /dev/raid3/gr0p1 /multimedia/
+```
+
+   これで RAID3 アレイを使用する準備が整いました。
+
+システムを再起動してもこの構成を維持するには、追加の設定が必要です。
+
+1. アレイをマウントする前に `geom_raid3.ko` モジュールを読み込んでおく必要があります。システム初期化時にカーネルモジュールを自動読み込みするため、`/boot/loader.conf` に次の行を追加します。
+
+```
+geom_raid3_load="YES"
+```
+
+2. システム起動時にアレイのファイルシステムを自動マウントするため、次のボリューム情報を `/etc/fstab` に追加します。
+
+```
+/dev/raid3/gr0p1	/multimedia	ufs	rw	2	2
+```
+
+<a id="geom-graid"></a>
+## ソフトウェア RAID デバイス
+
+マザーボードや拡張カードの中には、通常は ROM 程度の簡素なハードウェアを追加することで、RAID アレイからコンピュータを起動できるようにするものがあります。起動後の RAID アレイへのアクセスは、コンピュータのメインプロセッサ上で動作するソフトウェアによって処理されます。この「ハードウェア支援付きソフトウェア RAID」により、特定の OS に依存せず、OS が読み込まれる前から機能する RAID アレイが実現されます。
+
+使用しているハードウェアに応じて、複数の RAID レベルがサポートされます。完全な一覧は `graid(8)` を参照してください。
+
+`graid(8)` には `geom_raid.ko` カーネルモジュールが必要ですが、FreeBSD 9.1 以降では `GENERIC` カーネルに組み込まれています。必要な場合は `graid load` で手動読み込みできます。
+
+<a id="geom-graid-creating"></a>
+### アレイの作成
+
+ソフトウェア RAID デバイスには、コンピュータの起動時に特定のキーを押すことで入れるメニューが用意されていることがよくあります。このメニューを使って RAID アレイを作成・削除できます。`graid(8)` を使えば、コマンドラインから直接アレイを作成することも可能です。
+
+新しいアレイを作成するには `graid label` を使います。この例で使っているマザーボードには Intel ソフトウェア RAID チップセットが搭載されているため、Intel メタデータ形式を指定しています。新しいアレイには `gm0` というラベルを付け、ドライブ `ada0` と `ada1` を使ったミラー（RAID1）として構成します。
+
+> **注意**: ドライブを新しいアレイに組み込むと、ドライブ上の一部の領域が上書きされます。事前に既存データのバックアップを取得してください。
+
+```shell
+# graid label Intel gm0 RAID1 ada0 ada1
+GEOM_RAID: Intel-a29ea104: Array Intel-a29ea104 created.
+GEOM_RAID: Intel-a29ea104: Disk ada0 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:0-ada0 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Disk ada1 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Array started.
+GEOM_RAID: Intel-a29ea104: Volume gm0 state changed from STARTING to OPTIMAL.
+Intel-a29ea104 created
+GEOM_RAID: Intel-a29ea104: Provider raid/r0 for volume gm0 created.
+```
+
+状態を確認すると、新しいミラーが利用可能になっていることが分かります。
+
+```shell
+# graid status
+   Name   Status  Components
+raid/r0  OPTIMAL  ada0 (ACTIVE (ACTIVE))
+                  ada1 (ACTIVE (ACTIVE))
+```
+
+アレイデバイスは `/dev/raid/` 配下に現れます。最初のアレイは `r0` と呼ばれます。追加のアレイが存在する場合は、`r1`、`r2` のように続きます。
+
+こうしたデバイスの BIOS メニューでは、名前に特殊文字を含むアレイを作成できる場合があります。特殊文字による問題を避けるため、アレイには `r0` のような単純な番号付きの名前が付けられます。上の例の `gm0` のような実際のラベルを表示するには、`sysctl(8)` を使用します。
+
+```shell
+# sysctl kern.geom.raid.name_format=1
+```
+
+<a id="geom-graid-volumes"></a>
+### 複数ボリューム
+
+一部のソフトウェア RAID デバイスでは、1 つのアレイ上に複数の*ボリューム*を作成できます。ボリュームはパーティションのように機能し、物理ドライブ上の領域を分割して異なる用途に使えます。たとえば、Intel ソフトウェア RAID デバイスは 2 つのボリュームをサポートしています。次の例では、OS を安全に保存するための 40 G のミラーと、それに続いて高速な一時領域として使う 20 G の RAID0（ストライプ）ボリュームを作成します。
+
+```shell
+# graid label -S 40G Intel gm0 RAID1 ada0 ada1
+# graid add -S 20G gm0 RAID0
+```
+
+ボリュームは `/dev/raid/` 配下に追加の `rX` エントリとして現れます。2 つのボリュームを持つアレイでは `r0` と `r1` が表示されます。
+
+各ソフトウェア RAID デバイスがサポートするボリューム数については `graid(8)` を参照してください。
+
+<a id="geom-graid-converting"></a>
+### 単一ドライブからミラーへの変換
+
+特定の条件を満たしている場合、再フォーマットせずに既存の単一ドライブを `graid(8)` アレイへ変換できます。変換中のデータ損失を防ぐため、既存のドライブは次の最低要件を満たしている必要があります。
+
+* ドライブが MBR パーティション方式でパーティション分割されていること。GPT などドライブ末尾にメタデータを置くパーティション方式は、`graid(8)` のメタデータによって上書きされ破損します。
+* ドライブ末尾に、`graid(8)` のメタデータを格納できるだけの未パーティションかつ未使用の領域があること。このメタデータのサイズは環境により異なりますが、最大のものは 64 M を占めるため、少なくともそれだけの空き領域が推奨されます。
+
+ドライブがこれらの要件を満たしている場合は、まずフルバックアップを取得します。次に、そのドライブを使って 1 台構成のミラーを作成します。
+
+```shell
+# graid label Intel gm0 RAID1 ada0 NONE
+```
+
+`graid(8)` のメタデータがドライブ末尾の未使用領域に書き込まれました。これで、2 台目のドライブをミラーに組み込めます。
+
+```shell
+# graid insert raid/r0 ada1
+```
+
+元のドライブから 2 台目のドライブへのデータコピーがただちに始まります。コピーが完了するまで、ミラーは縮退（degraded）状態で動作します。
+
+<a id="geom-graid-inserting"></a>
+### アレイへの新しいドライブの組み込み
+
+故障したドライブや欠損しているドライブの交換用として、アレイにドライブを組み込むことができます。故障や欠損しているドライブがない場合、新しいドライブはスペアになります。たとえば、正常に動作している 2 台構成のミラーに新しいドライブを組み込むと、3 台構成のミラーではなく、スペアドライブ 1 台を備えた 2 台構成のミラーになります。
+
+このミラーアレイの例では、新しく組み込んだドライブへのデータコピーがただちに始まります。新しいドライブ上の既存データはすべて上書きされます。
+
+```shell
+# graid insert raid/r0 ada1
+GEOM_RAID: Intel-a29ea104: Disk ada1 state changed from NONE to ACTIVE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 state changed from NONE to NEW.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 state changed from NEW to REBUILD.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-ada1 rebuild start at 0.
+```
+
+<a id="geom-graid-removing"></a>
+### アレイからのドライブの削除
+
+個々のドライブをアレイから恒久的に削除し、そのメタデータを消去できます。
+
+```shell
+# graid remove raid/r0 ada1
+GEOM_RAID: Intel-a29ea104: Disk ada1 state changed from ACTIVE to OFFLINE.
+GEOM_RAID: Intel-a29ea104: Subdisk gm0:1-[unknown] state changed from ACTIVE to NONE.
+GEOM_RAID: Intel-a29ea104: Volume gm0 state changed from OPTIMAL to DEGRADED.
+```
+
+<a id="geom-graid-stopping"></a>
+### アレイの停止
+
+ドライブからメタデータを削除せずにアレイを停止できます。停止したアレイは、システム起動時に再び開始されます。
+
+```shell
+# graid stop raid/r0
+```
+
+<a id="geom-graid-status"></a>
+### アレイの状態確認
+
+アレイの状態はいつでも確認できます。上の例でミラーにドライブを追加した直後は、元のドライブから新しいドライブへデータがコピーされている状態です。
+
+```shell
+# graid status
+   Name    Status  Components
+raid/r0  DEGRADED  ada0 (ACTIVE (ACTIVE))
+                   ada1 (ACTIVE (REBUILD 28%))
+```
+
+`RAID0` や `CONCAT` のような一部のアレイ種別では、ディスクが故障すると通常の状態報告に表示されない場合があります。部分的に故障したこうしたアレイを確認するには、`-ga` を付けます。
+
+```shell
+# graid status -ga
+          Name  Status  Components
+Intel-e2d07d9a  BROKEN  ada6 (ACTIVE (ACTIVE))
+```
+
+<a id="geom-graid-deleting"></a>
+### アレイの削除
+
+アレイは、その中のすべてのボリュームを削除することで破棄されます。残っていた最後のボリュームが削除されると、アレイが停止し、ドライブからメタデータが削除されます。
+
+```shell
+# graid delete raid/r0
+```
+
+<a id="geom-graid-unexpected"></a>
+### 予期しないアレイの削除
+
+以前の使用履歴やメーカーでのテストにより、ドライブに意図せず `graid(8)` のメタデータが残っている場合があります。`graid(8)` はこれらのドライブを検出してアレイを作成し、個々のドライブへのアクセスを妨げることがあります。不要なメタデータを削除するには、次の手順を実行します。
+
+1. システムを起動します。ブートメニューでローダプロンプトを開く `2` を選択し、次のように入力します。
+
+```shell
+OK set kern.geom.raid.enable=0
+OK boot
+```
+
+   これで `graid(8)` を無効にした状態でシステムが起動します。
+
+2. 該当するドライブ上のすべてのデータをバックアップします。
+3. 回避策として、`/boot/loader.conf` に次の行を追加すると `graid(8)` によるアレイ検出を無効にできます。
+
+```
+kern.geom.raid.enable=0
+```
+
+   該当するドライブから `graid(8)` のメタデータを恒久的に削除するには、FreeBSD のインストール CD-ROM またはメモリイメージから起動して `Shell` を選択します。`status` を使ってアレイ名（通常は `raid/r0`）を確認します。
+
+```shell
+# graid status
+   Name   Status  Components
+raid/r0  OPTIMAL  ada0 (ACTIVE (ACTIVE))
+                  ada1 (ACTIVE (ACTIVE))
+```
+
+   名前を指定してボリュームを削除します。
+
+```shell
+# graid delete raid/r0
+```
+
+   複数のボリュームが表示されている場合は、各ボリュームに対して同じ手順を繰り返します。最後のアレイが削除されると、ボリュームは破棄されます。
+
+   再起動してデータを確認し、必要に応じてバックアップから復元します。メタデータを削除したあとは、`/boot/loader.conf` の `kern.geom.raid.enable=0` エントリも削除できます。
