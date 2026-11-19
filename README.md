@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Appendix B Bibliography（既存TOC ID B）を意訳
+
+- 公式Appendix B [Bibliography](handbook/ja/B-bibliography.md)（既存TOC ID B）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全5見出し・5アンカー・全25文献を意訳・自己校正しました。
+- 原文の書名・URL・ISBN/ISSN はそのまま保持しています。
+- [作業記録](docs/translation-appB.md) / [原文ハッシュと状態](docs/translation-appB.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Chapter 29 USB Device Mode / USB OTG（既存TOC ID 28）を意訳
 
 - 公式Chapter 29 [USB Device Mode / USB OTG](handbook/ja/29-usb-device-mode.md)（既存TOC ID 28）を追加し、`handbook/TOC.md` を更新しました。
