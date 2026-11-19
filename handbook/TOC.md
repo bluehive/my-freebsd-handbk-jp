@@ -33,7 +33,7 @@
 | 24 | Virtualization（公式Chapter 25） | [25-virtualization.md](ja/25-virtualization.md) | **自己校正済（意訳）** | 2026-11-19 原文58見出し・76アンカー・126コード例・38画像・1表を照合。実機検証は未実施 |
 | 25 | Localization（公式Chapter 26） | [26-l10n.md](ja/26-l10n.md) | **自己校正済（意訳）** | 2026-11-04 原文13見出し・27コード例を照合。実機検証は未実施 |
 | 26 | Updating and Upgrading（公式Chapter 27） | [27-cutting-edge.md](ja/27-cutting-edge.md) | **自己校正済（意訳）** | 2026-11-04 原文45見出し・78コード例を照合。実機検証は未実施 |
-| 27 | DTrace | — | 未着手 | |
+| 27 | DTrace（公式Chapter 28） | [28-dtrace.md](ja/28-dtrace.md) | **ドラフト** | 2026-11-20 原文固定・翻訳作業中。実機検証・第三者専門校閲は未実施 |
 | 28 | USB Device Mode | — | 未着手 | |
 | 29 | Serial Communications（公式Chapter 30） | [30-serialcomms.md](ja/30-serialcomms.md) | **自己校正済（意訳）** | 2026-11-20 原文28見出し・33アンカー・37コード例・5表を照合。実機検証・第三者専門校閲は未実施 |
 | 30 | PPP | — | 未着手 | |
