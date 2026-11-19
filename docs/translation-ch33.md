@@ -45,7 +45,7 @@
 - `autofs(5)` 節の本文中の `/host/foobar/usr` と、直前の例・既定の `/net` マウントポイントの違いを訳注で補足しました。
 - NIS 節の旧章番号に基づく表番号（表 28.1〜28.3）、`pw useradd smith` 表記、および `login.conf` の `passwd_format=des` の例を訳注で区別しました。
 - DHCP 節の `config-network-setup` への相互参照は、上流で独立した `network` 章へ移設されており本リポジトリでは未翻訳のため、公式英語版へリンクし訳注を付けました。
-- Apache 節の `mod_php74` / `php74-*`、`mod_python` の記述、`h2h2chttp/1.1` 表記、および Samba 節の `samba_enable` 表記を訳注で補足しました。
+- Apache 節の `mod_php74` / `php74-*`、`mod_python` の記述、`h2h2chttp/1.1` 表記、`report` 表記、および Samba 節の `samba_enable` 表記を訳注で補足しました。
 
 ## 検証
 
@@ -55,3 +55,7 @@
 - `git diff --check`
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
+
+## 改訂記録
+
+- 2026-11-19: PR #10 レビュー指摘に基づき、第33章の6点（DES 表現、Apache 節の `ServerAdmin` エスケープ記号残骸および `report` 表記の訳注、Samba 節の `passdb backend` / `tdbsam` 表現および `samba_enable` 訳注の補足、NTP 節の 1000 秒超過表現）を修正し、検査を再実行しました。
