@@ -88,3 +88,7 @@
 - 公式Chapter 33：`documentation/content/en/books/handbook/network-servers/_index.adoc`（124644バイト）。
 - 原文保存先：`handbook/en/ch33/33-network-servers.adoc.txt`（SHA-256: `bd0c56b2ef912bf049cceb1d7ed1718047e195677591e92573e7c9cdade5621a`）。
 - 出典・進捗は [マニフェスト](docs/translation-ch33.json)と[作業記録](docs/translation-ch33.md)に保存しています。既存TOCのID 32に対応し、新しいファイル名は公式章番号の33を使用しています。
+
+## 公式Chapter 34 Firewalls の意訳用スナップショット
+
+2026-11-19に、公式Chapter 34 Firewalls（`documentation/content/en/books/handbook/firewalls/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch34/34-firewalls.adoc.txt`（123801バイト、SHA-256: `59d166966e604c5564548036577be575aa27922f9a8a516761e16aa83cd5229a`）、出典・進捗は [マニフェスト](docs/translation-ch34.json) と [作業記録](docs/translation-ch34.md) に保存しています。既存TOCのID 33に対応します。
