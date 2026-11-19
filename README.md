@@ -36,9 +36,11 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
-### 2026-11-19 — 公式Chapter 35 Advanced Networking（既存TOC ID 34）の意訳に着手（ドラフト）
+### 2026-11-19 — 公式Chapter 35 Advanced Networking（既存TOC ID 34）を意訳
 
-- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から原文（`advanced-networking/_index.adoc`、103789バイト）を固定し、[35-advanced-networking.md](handbook/ja/35-advanced-networking.md) の翻訳に着手しました。
+- 公式の章番号に従い、[Advanced Networking](handbook/ja/35-advanced-networking.md) を追加し、`handbook/TOC.md` の既存 TOC ID 34 へ対応付けました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から原文（`advanced-networking/_index.adoc`、103789バイト）を固定し、全45見出し・49アンカー・130コード例・2画像・1表を意訳・自己校正しました。
+- リリース属性 `{rel121-current}` は `shared/releases.adoc` に従い FreeBSD 12.1 として解決し、訳注で補足しています。
 - [作業・検証記録](docs/translation-ch35.md) / [原文ハッシュと状態](docs/translation-ch35.json)。FreeBSD実機検証と第三者専門校閲は未実施。
 
 ### 2026-11-19 — 公式Chapter 34 Firewalls を意訳

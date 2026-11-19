@@ -14,20 +14,24 @@
 
 ## 構成と照合結果
 
-- 見出し：45
+- 見出し：45（`#` 1、`##` 11、`###` 25、`####` 7、`#####` 1）
 - アンカー：49（見出し45 + 非見出し4：`routeflags`, `networking-lacp-aggregation-cisco`, `networking-lagg-failover`, `networking-lagg-wired-and-wireless`）
-- コード例：130
-- 画像：2（`static-routes.png`, `pxe-nfs.png`）
-- 表：1
+- コード例：130（すべて原文のまま保持。注記ブロック内のコードブロックは共通検査器の仕様に合わせてトップレベルへ配置）
+- 画像：2（`static-routes.png`, `pxe-nfs.png` — 固定コミットの `documentation/static/images/books/handbook/advanced-networking/` を参照し HTTP 200 を確認）
+- 表：1（`routeflags`）
 
-## 進捗状況（ドラフト）
+原文の AsciiDoc ヘッダ・共有 `include::` は翻訳対象外とし、本文の全節を意訳・自己校正しました。
 
-- 状態：ドラフト（翻訳・自己校正中）
+## 訳注で区別した原文の仕様・注意点
+
+- **リリース属性 `{rel121-current}`**：同じ固定コミットの `shared/releases.adoc`（`handbook/en/through-ch14/releases.adoc.txt`）に従い `12.1`（FreeBSD 12.1）として解決し、より新しいリリースでも `kld_list` によるカーネルモジュール読み込みが有効である旨を訳注で補足しました。
+- **相互参照**：本リポジトリで自己校正済みの章（`04-ports.md#ports`, `09-kernelconfig.md#kernelconfig`, `14-boot.md#boot`, `27-cutting-edge.md#makeworld`）は相対パス＋明示アンカーへリンクし、未翻訳章（`network`）は公式 FreeBSD Handbook（英語版）へリンクしました。また、章内の `crossref:advanced-networking[_debugging_pxe_problems,...]` は、原文見出しに明示アンカーがないため共通検査器の規則に従い `#chapter-35-heading-42` へリンクしています。
 
 ## 検証
 
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch35_translation.py`
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch35_translation.py --require-complete`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py --require-complete`
+- `pandoc --from=gfm --to=json handbook/ja/35-advanced-networking.md` による GFM 構文解析とブロック数確認（Header 45 / CodeBlock 130 / Table 1 / Image 2）
 - `git diff --check`
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
