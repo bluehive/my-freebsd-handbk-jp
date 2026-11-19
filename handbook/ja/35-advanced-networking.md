@@ -1439,3 +1439,234 @@ BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge2" = Hex-STRING: 80 00
 % snmpset -v 2c -c private bridge1.example.com
 BEGEMOT-BRIDGE-MIB::begemotBridgeDefaultBridgeIf.0 s bridge2
 ```
+
+<a id="network-aggregation"></a>
+## リンクアグリゲーションとフェイルオーバー（Link Aggregation and Failover）
+
+FreeBSD には `lagg(4)` インタフェースが用意されており、複数のネットワークインタフェースを 1 つの仮想インタフェースに束ねて、フェイルオーバーやリンクアグリゲーションを実現できます。
+フェイルオーバーでは、束ねられたネットワークインタフェースのうち少なくとも 1 つでリンクが確立されている限り、トラフィックを流し続けることができます。
+リンクアグリゲーションは LACP をサポートするスイッチで最も効果を発揮します。LACP は個々のリンク障害に対応しつつ、双方向にトラフィックを分散するためです。
+
+`lagg` インタフェースがサポートするアグリゲーションプロトコルによって、送信トラフィックにどのポートを使うか、また特定のポートで受信トラフィックを受け入れるかどうかが決まります。
+`lagg(4)` は次のプロトコルをサポートしています。
+
+* **`failover`**: このモードでは、マスターポートのみを通じてトラフィックを送受信します。マスターポートが利用できなくなると、次のアクティブなポートが使用されます。仮想インタフェースに最初に追加されたインタフェースがマスターポートとなり、それ以降に追加されたインタフェースはすべてフェイルオーバー用デバイスとして使われます。非マスターポートへフェイルオーバーした場合でも、元のポートが再び利用可能になるとマスターに戻ります。
+* **`loadbalance`**: 静的な設定を提供し、対向機器とのアグリゲーションネゴシエーションやリンク監視のためのフレーム交換を行いません。スイッチが LACP をサポートしている場合は、代わりに LACP を使用すべきです。
+* **`lacp`**: IEEE® 802.3ad Link Aggregation Control Protocol（LACP）は、対向機器とネゴシエーションを行って、集約可能なリンク群を 1 つ以上の Link Aggregated Group（LAG）にまとめます。各 LAG は同じ速度で全二重動作に設定されたポートで構成され、合計速度が最大の LAG 内のポート間でトラフィックが分散されます。通常はすべてのポートを含む LAG が 1 つだけ存在します。物理的な接続状態が変化した場合、LACP は迅速に新しい構成へ収束します。
+  LACP はプロトコルヘッダのハッシュ情報に基づいてアクティブなポート間で送信トラフィックを分散し、どのアクティブなポートからでも受信トラフィックを受け入れます。ハッシュにはイーサネットの送信元・宛先アドレスに加え、利用可能であれば VLAN タグ、および IPv4 または IPv6 の送信元・宛先アドレスが含まれます。
+* **`roundrobin`**: このモードでは、ラウンドロビンスケジューラを使ってすべてのアクティブなポートへ送信トラフィックを分散し、どのアクティブなポートからでも受信トラフィックを受け入れます。このモードはイーサネットフレームの順序保証に違反するため、注意して使用する必要があります。
+* **`broadcast`**: このモードでは、`lagg` インタフェースに設定されたすべてのポートへ送信トラフィックを送出し、どのポートでもフレームを受信します。
+
+<a id="chapter-35-heading-38"></a>
+### 設定例（Configuration Examples）
+
+この節では、Cisco® スイッチと FreeBSD システムで LACP 負荷分散を設定する方法を示します。
+続いて、2 つのイーサネットインタフェースをフェイルオーバーモードで設定する方法と、イーサネットと無線インタフェースの間でフェイルオーバーモードを設定する方法を説明します。
+
+<a id="networking-lacp-aggregation-cisco"></a>
+**例 1. Cisco® スイッチとの LACP アグリゲーション（LACP Aggregation with a Cisco® Switch）**
+
+この例では、FreeBSD マシン上の 2 つの `fxp(4)` イーサネットインタフェースを Cisco® スイッチの最初の 2 つのイーサネットポートに接続し、負荷分散と耐障害性を備えた 1 本のリンクとして構成します。
+さらにインタフェースを追加してスループットと耐障害性を高めることも可能です。
+例に示されている Cisco® のポート名、イーサネットデバイス名、チャネルグループ番号、IP アドレスは、実際の環境に合わせて置き換えてください。
+
+イーサネットリンクではフレーム順序の維持が必須であるため、2 台の端末間のトラフィックは常に同じ物理リンクを通過し、最大速度は 1 本のインタフェースの速度に制限されます。
+送信アルゴリズムは、可能な限り多くの情報を用いて異なるトラフィックフローを識別し、利用可能なインタフェース全体へフローを分散しようとします。
+
+Cisco® スイッチ側で、`FastEthernet0/1` と `FastEthernet0/2` インタフェースをチャネルグループ `1` に追加します。
+
+```shell
+interface FastEthernet0/1
+ channel-group 1 mode active
+ channel-protocol lacp
+!
+interface FastEthernet0/2
+ channel-group 1 mode active
+ channel-protocol lacp
+```
+
+FreeBSD システム側では、物理インタフェース `fxp0` と `fxp1` を使って `lagg(4)` インタフェースを作成し、IP アドレス `10.0.0.3/24` を設定して有効化します。
+
+```shell
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto lacp laggport fxp0 laggport fxp1 10.0.0.3/24
+```
+
+次に、仮想インタフェースの状態を確認します。
+
+```shell
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        inet 10.0.0.3 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet autoselect
+        status: active
+        laggproto lacp
+        laggport: fxp1 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+        laggport: fxp0 flags=1c<ACTIVE,COLLECTING,DISTRIBUTING>
+```
+
+`ACTIVE` と表示されているポートは、対向スイッチとのネゴシエーションが完了した LAG の一部です。
+トラフィックはこれらのアクティブなポートを通じて送受信されます。
+LAG 識別子を表示するには、上記のコマンドに `-v` を追加してください。
+
+Cisco® スイッチ側でポートの状態を確認するには次のようにします。
+
+```shell
+switch# show lacp neighbor
+Flags:  S - Device is requesting Slow LACPDUs
+        F - Device is requesting Fast LACPDUs
+        A - Device is in Active mode       P - Device is in Passive mode
+
+Channel group 1 neighbors
+
+Partner's information:
+
+                  LACP port                        Oper    Port     Port
+Port      Flags   Priority  Dev ID         Age     Key     Number   State
+Fa0/1     SA      32768     0005.5d71.8db8  29s    0x146   0x3      0x3D
+Fa0/2     SA      32768     0005.5d71.8db8  29s    0x146   0x4      0x3D
+```
+
+さらに詳しい情報を表示するには `show lacp neighbor detail` を実行します。
+
+再起動後もこの設定を維持するには、FreeBSD システムの `/etc/rc.conf` に次のエントリを追加します。
+
+```
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="laggproto lacp laggport fxp0 laggport fxp1 10.0.0.3/24"
+```
+
+<a id="networking-lagg-failover"></a>
+**例 2. フェイルオーバーモード（Failover Mode）**
+
+フェイルオーバーモードを使用すると、マスターインタフェースでリンクが失われた場合にセカンダリインタフェースへ切り替えることができます。
+フェイルオーバーを設定するには、配下の物理インタフェースが有効（up）になっていることを確認したうえで、`lagg(4)` インタフェースを作成します。
+この例では、`fxp0` をマスターインタフェース、`fxp1` をセカンダリインタフェースとし、仮想インタフェースに IP アドレス `10.0.0.15/24` を割り当てます。
+
+```shell
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport fxp0 laggport fxp1 10.0.0.15/24
+```
+
+仮想インタフェースは次のように表示されるはずです。
+
+```shell
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether 00:05:5d:71:8d:b8
+        inet 10.0.0.15 netmask 0xffffff00 broadcast 10.0.0.255
+        media: Ethernet autoselect
+        status: active
+        laggproto failover
+        laggport: fxp1 flags=0<>
+        laggport: fxp0 flags=5<MASTER,ACTIVE>
+```
+
+トラフィックは `fxp0` 上で送受信されます。
+`fxp0` のリンクが失われると、`fxp1` がアクティブなリンクになります。
+マスターインタフェースのリンクが復旧すると、再びマスターがアクティブなリンクに戻ります。
+
+再起動後もこの設定を維持するには、`/etc/rc.conf` に次のエントリを追加します。
+
+```
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="laggproto failover laggport fxp0 laggport fxp1 10.0.0.15/24"
+```
+
+<a id="networking-lagg-wired-and-wireless"></a>
+**例 3. イーサネットと無線インタフェース間のフェイルオーバーモード（Failover Mode Between Ethernet and Wireless Interfaces）**
+
+ノート PC のユーザーにとっては、通常、有線イーサネット接続が利用できないときにのみ使われるセカンダリとして無線デバイスを設定するのが望ましいでしょう。
+`lagg(4)` を使えば、性能面とセキュリティ面の両方から有線イーサネット接続を優先しつつ、必要に応じて無線接続経由でデータ通信を継続できるフェイルオーバーを構成できます。
+
+これは、有線イーサネットインタフェースの MAC アドレスを無線インタフェースの MAC アドレスで上書きすることによって実現します。
+
+> **注記**: 理論上は、有線イーサネットと無線のどちらの MAC アドレスを変更してもう一方に合わせることも可能です。しかし、広く使われている無線インタフェースの中には MAC アドレスの上書きに対応していないものがあります。そのため、この目的では有線イーサネット側の MAC アドレスを上書きすることを推奨します。
+
+> **注記**: 無線インタフェース用のドライバが `GENERIC` カーネルまたはカスタムカーネルに組み込まれておらず、コンピュータで FreeBSD 12.1 が動作している場合は、`/boot/loader.conf` に対応する `.ko` を読み込むための `*driver_load="YES"*` を追加して再起動してください。より良い別の方法として、`/etc/rc.conf` の `kld_list` にドライバを追加して再起動する方法もあります（詳細は `rc.conf(5)` を参照してください）。これを行わないと、`lagg(4)` インタフェースを設定する時点でまだドライバが読み込まれていない状態になるため、この手順が必要です。
+>
+> **訳注**: 原文では FreeBSD のバージョン属性 `{rel121-current}`（固定原文の `shared/releases.adoc` における値は `12.1`）が参照されています。より新しい FreeBSD リリースでも、`kld_list` によるカーネルモジュールの読み込みは同様に有効です。
+
+この例では、有線イーサネットインタフェースの `re0` をマスターとし、無線インタフェースの `wlan0` をフェイルオーバー先とします。
+`wlan0` インタフェースは物理無線インタフェース `ath0` から作成されており、有線イーサネットインタフェースには無線インタフェースの MAC アドレスを設定します。
+まず、無線インタフェースを有効化します（`FR` はお住まいの地域の 2 文字の国コードに置き換えてください）が、この時点では IP アドレスを設定しません。
+`wlan0` はシステム上の実際の無線インタフェース名に合わせて置き換えてください。
+
+```shell
+# ifconfig wlan0 create wlandev ath0 country FR ssid my_router up
+```
+
+次のようにして無線インタフェースの MAC アドレスを確認します。
+
+```shell
+# ifconfig wlan0
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether b8:ee:65:5b:32:59
+	groups: wlan
+	ssid Bbox-A3BD2403 channel 6 (2437 MHz 11g ht/20) bssid 00:37:b7:56:4b:60
+	regdomain ETSI country FR indoor ecm authmode WPA2/802.11i privacy ON
+	deftxkey UNDEF AES-CCM 2:128-bit txpower 30 bmiss 7 scanvalid 60
+	protmode CTS ampdulimit 64k ampdudensity 8 shortgi -stbctx stbcrx
+	-ldpc wme burst roaming MANUAL
+	media: IEEE 802.11 Wireless Ethernet MCS mode 11ng
+	status: associated
+	nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
+```
+
+`ether` 行に、指定したインタフェースの MAC アドレスが表示されます。
+次に、有線イーサネットインタフェースの MAC アドレスを同じ値へ変更します。
+
+```shell
+# ifconfig re0 ether b8:ee:65:5b:32:59
+```
+
+`re0` インタフェースが有効（up）になっていることを確認したうえで、`re0` をマスター、`wlan0` をフェイルオーバー先として `lagg(4)` インタフェースを作成します。
+
+```shell
+# ifconfig re0 up
+# ifconfig lagg0 create
+# ifconfig lagg0 up laggproto failover laggport re0 laggport wlan0
+```
+
+仮想インタフェースは次のように表示されるはずです。
+
+```shell
+# ifconfig lagg0
+lagg0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        options=8<VLAN_MTU>
+        ether b8:ee:65:5b:32:59
+        laggproto failover lagghash l2,l3,l4
+        laggport: re0 flags=5<MASTER,ACTIVE>
+        laggport: wlan0 flags=0<>
+        groups: lagg
+        media: Ethernet autoselect
+        status: active
+```
+
+その後、DHCP クライアントを起動して IP アドレスを取得します。
+
+```shell
+# dhclient lagg0
+```
+
+再起動後もこの設定を維持するには、`/etc/rc.conf` に次のエントリを追加します。
+
+```
+ifconfig_re0="ether b8:ee:65:5b:32:59"
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA"
+create_args_wlan0="country FR"
+cloned_interfaces="lagg0"
+ifconfig_lagg0="up laggproto failover laggport re0 laggport wlan0 DHCP"
+```
