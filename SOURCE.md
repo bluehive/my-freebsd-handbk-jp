@@ -100,3 +100,7 @@
 ## 公式Chapter 25（Virtualization）の意訳用スナップショット
 
 2026-11-19に、公式Chapter 25 Virtualization（`documentation/content/en/books/handbook/virtualization/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch25/25-virtualization.adoc.txt`（100586バイト、SHA-256: `b22724e7efe5f3c3c8d48edc51dc551e1e5f0207048c454b362dff956e600979`）、出典・進捗は [マニフェスト](docs/translation-ch25.json)と[作業記録](docs/translation-ch25.md)に保存しています。既存TOCのID 24に対応します。画像は同じ固定コミットの `documentation/static/images/books/handbook/virtualization/` を参照します。
+
+## 公式Chapter 21（Storage）の意訳用スナップショット
+
+2026-11-19に、公式Chapter 21 Storage（`documentation/content/en/books/handbook/disks/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch21/21-disks.adoc.txt`（97404バイト、SHA-256: `cc2047bb41f820515868d31b13119b8cc7d38a431428877dbaf13bf83a837d0b`）、出典・進捗は [マニフェスト](docs/translation-ch21.json)と[作業記録](docs/translation-ch21.md)に保存しています。既存TOCのID 20に対応します。

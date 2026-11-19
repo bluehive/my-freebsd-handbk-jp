@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-19 — 公式Chapter 21 Storage（既存TOC ID 20）を意訳
+
+- 公式Chapter 21 [Storage](handbook/ja/21-disks.md)（既存TOC ID 20）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全50見出し・51アンカー・153コード例・全相互参照を意訳・自己校正しました。
+- 原文のコマンド例（`ssh -c blowfish`、`carp-hast-switch` スクリプト等）は保持し、仕様上の注意点を訳注で区別しています。
+- [作業記録](docs/translation-ch21.md) / [原文ハッシュと状態](docs/translation-ch21.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-19 — 公式Chapter 25 Virtualization（仮想化）を意訳
 
 - [仮想化（Virtualization）](handbook/ja/25-virtualization.md)を追加し、`handbook/TOC.md` の既存 TOC ID 24 へ対応付けました。
