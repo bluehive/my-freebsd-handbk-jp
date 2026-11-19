@@ -1,0 +1,36 @@
+name: Handbook Chapter 29 USB Device Mode
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/ch29/**'
+      - 'handbook/ja/29-usb-device-mode.md'
+      - 'docs/translation-ch29.json'
+      - 'scripts/check_ch29_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch29-translation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/ch29/**'
+      - 'handbook/ja/29-usb-device-mode.md'
+      - 'docs/translation-ch29.json'
+      - 'scripts/check_ch29_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch29-translation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-ch29:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check Chapter 29 USB Device Mode translation and pinned source
+        run: python3 scripts/check_ch29_translation.py
