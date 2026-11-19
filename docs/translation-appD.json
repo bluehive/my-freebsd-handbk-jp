@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Appendix D OpenPGP Keys (D-pgpkeys) only; legacy TOC ID D; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": "D",
+      "slug": "pgpkeys",
+      "upstream_chapter_number": null,
+      "legacy_toc_id": "D",
+      "upstream_path": "documentation/content/en/books/handbook/pgpkeys/_index.adoc",
+      "source_path": "handbook/en/appD/D-pgpkeys.adoc.txt",
+      "translation_path": "handbook/ja/D-pgpkeys.md",
+      "source_sha256": "7d6200e0f9eb409416afa210d4fbd6516dc916666c5026ba7528be2449fb070f",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Pinned upstream source and draft scaffolding added; translation pending",
+      "counts": {
+        "headings": 6,
+        "anchors": 6,
+        "code_blocks": 0,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}
