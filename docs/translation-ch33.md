@@ -27,7 +27,7 @@
 - [x] 原文固定・マニフェスト・検査器・CI（ドラフト設定）・初期訳文作成
 - [x] `#network-servers` / `#network-servers-synopsis`（章タイトル・概要）
 - [x] `#network-inetd`（inetd スーパーサーバ）
-- [ ] `#network-nfs`（Network File System (NFS)）
+- [x] `#network-nfs`（Network File System (NFS)）
 - [ ] `#network-nis`（Network Information System (NIS)）
 - [ ] `#network-ldap`（Lightweight Directory Access Protocol (LDAP)）
 - [ ] `#network-dhcp`（Dynamic Host Configuration Protocol (DHCP)）
