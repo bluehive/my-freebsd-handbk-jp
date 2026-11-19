@@ -44,7 +44,7 @@
 | 34 | Advanced Networking（公式Chapter 35） | [35-advanced-networking.md](ja/35-advanced-networking.md) | **自己校正済（意訳）** | 2026-11-19 原文45見出し・49アンカー・130コード例・2画像・1表を照合。実機検証は未実施 |
 | A | Obtaining FreeBSD（公式Appendix A） | [A-mirrors.md](ja/A-mirrors.md) | **自己校正済（意訳）** | 2026-11-20 原文11見出し・12アンカー・4コード例・3表を照合。実機検証・第三者専門校閲は未実施 |
 | B | Bibliography（公式Appendix B） | [B-bibliography.md](ja/B-bibliography.md) | **自己校正済（意訳）** | 2026-11-20 原文5見出し・5アンカー・全25文献を照合。実機検証・第三者専門校閲は未実施 |
-| C | Resources on the Internet（公式Appendix C） | [C-eresources.md](ja/C-eresources.md) | **ドラフト** | 2026-11-20 原文固定・翻訳作業中 |
+| C | Resources on the Internet（公式Appendix C） | [C-eresources.md](ja/C-eresources.md) | **自己校正済（意訳）** | 2026-11-20 原文10見出し・11アンカーを照合。実機検証・第三者専門校閲は未実施 |
 | D | OpenPGP Keys（公式Appendix D） | [D-pgpkeys.md](ja/D-pgpkeys.md) | **自己校正済（意訳）** | 2026-11-20 原文6見出し・6アンカーを照合（共有includeの鍵本体は翻訳対象外）。実機検証・第三者専門校閲は未実施 |
 | G | Glossary | [glossary.md](ja/glossary.md) | ドラフト（種） | |
 

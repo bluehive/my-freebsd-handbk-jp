@@ -1,9 +1,9 @@
 <a id="eresources"></a>
-# 付録C インターネット上の情報源（Resources on the Internet）（ドラフト）
+# 付録C インターネット上の情報源（Resources on the Internet）
 
 本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/eresources/)の「Appendix C. Resources on the Internet」（既存 TOC ID C）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/eresources/_index.adoc`）に基づいて日本語へ意訳したものです。
 
-> **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。本ファイルは翻訳作業中のドラフトです。
+> **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::`（`shared/authors.adoc`、`shared/mirrors.adoc`、`shared/releases.adoc`、`attributes`、`teams.adoc`、`mailing-lists.adoc`、`urls.adoc`、`asciidoctor.adoc`）は翻訳対象外とし、本文の節のみを意訳しています。
 
 FreeBSD の開発は非常に速いペースで進んでいるため、最新動向を把握する手段として印刷媒体を使うのは現実的ではありません。
 開発状況を追うには、印刷物に代わる電子的な情報源が最も適しています。
@@ -38,7 +38,7 @@ FreeBSD のさまざまなトピックに応じた多種多様なリストが用
 
 技術系のリストでは、スレッドの内容も技術的な議論にとどめるべきです。
 
-FreeBSD のすべてのユーザーおよび開発者は、[FreeBSD アナウンスメント・メーリングリスト（freebsd-announce）](https://lists.FreeBSD.org/subscription/freebsd-announce)を購読しておくことを推奨します。
+FreeBSD のすべてのユーザーおよび開発者は、[FreeBSD アナウンスメント・メーリングリスト（freebsd-announce）](https://lists.FreeBSD.org/subscription/freebsd-announce)を購読しておくべきです。
 
 > **注**: FreeBSD メーリングリストの動作をテストしたい場合は、[FreeBSD テスト・メーリングリスト（freebsd-test）](https://lists.FreeBSD.org/subscription/freebsd-test)宛てに送信してください。他のメーリングリストへテストメッセージを送信しないでください。
 
@@ -59,7 +59,7 @@ FreeBSD のすべてのユーザーおよび開発者は、[FreeBSD アナウン
 
 FreeBSD が提供するアーカイブには、次の特徴があります。
 
-* リンクをクリッカブルなリンクとしては表示しない
+* リンクをリンクとして表示しない
 * インライン画像を表示しない
 * HTML メールの HTML コンテンツを表示しない
 
