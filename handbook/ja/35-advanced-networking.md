@@ -707,3 +707,460 @@ if_urndis_load="YES"
 if_cdce_load="YES"
 if_ipheth_load="YES"
 ```
+
+<a id="network-bluetooth"></a>
+## Bluetooth
+
+Bluetooth は、2.4 GHz の免許不要帯域で動作し、通信範囲が約 10 メートルのパーソナルネットワークを構築するための無線技術です。
+通常、携帯電話や携帯端末、ノートパソコンなどのポータブルデバイス間でアドホックにネットワークを形成します。
+Wi-Fi 無線技術とは異なり、Bluetooth には FTP のようなファイルサーバ、ファイル送信（プッシュ）、音声伝送、シリアル回線エミュレーションといった上位のサービスプロファイルが用意されています。
+
+この節では、FreeBSD システムで USB Bluetooth ドングルを使用する方法を説明し、続けて各種 Bluetooth プロトコルとユーティリティを紹介します。
+
+<a id="chapter-35-heading-21"></a>
+### Bluetooth サポートの読み込み（Loading Bluetooth Support）
+
+FreeBSD の Bluetooth スタックは `netgraph(4)` フレームワークを用いて実装されています。
+幅広い種類の Bluetooth USB ドングルが `ng_ubt(4)` でサポートされています。
+Broadcom BCM2033 ベースの Bluetooth デバイスは `ubtbcmfw(4)` および `ng_ubt(4)` ドライバでサポートされています。
+3Com Bluetooth PC Card 3CRWB60-A は `ng_bt3c(4)` ドライバでサポートされています。
+シリアルおよび UART ベースの Bluetooth デバイスは `ng_h4(4)` および `hcseriald(8)` でサポートされています。
+
+デバイスを接続する前に、上記のどのドライバを使用するかを特定し、そのドライバを読み込みます。
+たとえば、`ng_ubt(4)` ドライバを使用するデバイスであれば次のようにします。
+
+```shell
+# kldload ng_ubt
+```
+
+システム起動時から Bluetooth デバイスを接続しておく場合は、`/boot/loader.conf` にドライバを追記することで起動時にモジュールを読み込めます。
+
+```
+ng_ubt_load="YES"
+```
+
+ドライバを読み込んだら、USB ドングルを差し込みます。
+ドライバの読み込みに成功していれば、コンソールおよび `/var/log/messages` に次のような出力が表示されます。
+
+```shell
+ubt0: vendor 0x0a12 product 0x0001, rev 1.10/5.25, addr 2
+ubt0: Interface 0 endpoints: interrupt=0x81, bulk-in=0x82, bulk-out=0x2
+ubt0: Interface 1 (alt.config 5) endpoints: isoc-in=0x83, isoc-out=0x3,
+      wMaxPacketSize=49, nframes=6, buffer size=294
+```
+
+Bluetooth スタックの起動と停止には起動スクリプトを使用します。デバイスを取り外す前にはスタックを停止しておくのが望ましいです。
+Bluetooth スタックの起動には、`hcsecd(8)` の起動が必要になる場合があります。
+スタックを起動すると、次のような出力が表示されます。
+
+```shell
+# service bluetooth start ubt0
+BD_ADDR: 00:02:72:00:d4:1a
+Features: 0xff 0xff 0xf 00 00 00 00 00
+<3-Slot> <5-Slot> <Encryption> <Slot offset>
+<Timing accuracy> <Switch> <Hold mode> <Sniff mode>
+<Park mode> <RSSI> <Channel quality> <SCO link>
+<HV2 packets> <HV3 packets> <u-law log> <A-law log> <CVSD>
+<Paging scheme> <Power control> <Transparent SCO data>
+Max. ACL packet size: 192 bytes
+Number of ACL packets: 8
+Max. SCO packet size: 64 bytes
+Number of SCO packets: 8
+```
+
+<a id="chapter-35-heading-22"></a>
+### 他の Bluetooth デバイスの検出（Finding Other Bluetooth Devices）
+
+Host Controller Interface（HCI）は、Bluetooth ベースバンド機能へアクセスするための統一的な手段を提供します。
+FreeBSD では、各 Bluetooth デバイスに対して netgraph HCI ノードが作成されます。
+詳細は `ng_hci(4)` を参照してください。
+
+最も一般的な作業の 1 つは、電波の届く範囲内にある Bluetooth デバイスの検出です。
+この操作は **照会（inquiry）** と呼ばれます。
+inquiry やその他の HCI 関連操作は `hccontrol(8)` を使って行います。
+以下の例は、通信範囲内にある Bluetooth デバイスを探す方法を示しています。
+数秒以内にデバイスの一覧が表示されるはずです。
+なお、リモートデバイスは**検出可能（discoverable）**モードに設定されている場合にのみ inquiry に応答します。
+
+```shell
+% hccontrol -n ubt0hci inquiry
+Inquiry result, num_responses=1
+Inquiry result #0
+       BD_ADDR: 00:80:37:29:19:a4
+       Page Scan Rep. Mode: 0x1
+       Page Scan Period Mode: 00
+       Page Scan Mode: 00
+       Class: 52:02:04
+       Clock offset: 0x78ef
+Inquiry complete. Status: No error [00]
+```
+
+`BD_ADDR` はネットワークカードの MAC アドレスに似た、Bluetooth デバイス固有のアドレスです。
+このアドレスはデバイスとの今後の通信に必要であり、`BD_ADDR` に対して人間が読みやすい名前を割り当てることもできます。
+既知の Bluetooth ホストに関する情報は `/etc/bluetooth/hosts` に記述されます。
+次の例は、リモートデバイスに割り当てられている人間が読みやすい名前を取得する方法を示しています。
+
+```shell
+% hccontrol -n ubt0hci remote_name_request 00:80:37:29:19:a4
+BD_ADDR: 00:80:37:29:19:a4
+Name: Pav's T39
+```
+
+リモート側の Bluetooth デバイスから inquiry を実行すると、このコンピュータは `"your.host.name (ubt0)"` として検出されます。
+ローカルデバイスに割り当てられた名前はいつでも変更できます。
+
+リモートデバイスには `/etc/bluetooth/hosts` でエイリアスを割り当てることができます。
+`/etc/bluetooth/hosts` ファイルの詳細は `bluetooth.hosts(5)` を参照してください。
+
+Bluetooth システムは、2 台の Bluetooth 機器間のポイントツーポイント接続、または複数の Bluetooth デバイス間で共有されるポイントツーマルチポイント接続を提供します。
+次の例は、リモートデバイスへの接続を作成する方法を示しています。
+
+```shell
+% hccontrol -n ubt0hci create_connection BT_ADDR
+```
+
+`create_connection` は `BT_ADDR` に加えて `/etc/bluetooth/hosts` に定義されたホストエイリアスも受け付けます。
+
+次の例は、ローカルデバイスのアクティブなベースバンド接続の一覧を取得する方法を示しています。
+
+```shell
+% hccontrol -n ubt0hci read_connection_list
+Remote BD_ADDR    Handle Type Mode Role Encrypt Pending Queue State
+00:80:37:29:19:a4     41  ACL    0 MAST    NONE       0     0 OPEN
+```
+
+**接続ハンドル（connection handle）**はベースバンド接続を切断する必要があるときに使いますが、通常は手動で切断する必要はありません。
+スタックが非アクティブなベースバンド接続を自動的に終了します。
+
+```shell
+# hccontrol -n ubt0hci disconnect 41
+Connection handle: 41
+Reason: Connection terminated by local host [0x16]
+```
+
+利用可能な HCI コマンドの完全な一覧を表示するには `hccontrol help` を実行してください。
+ほとんどの HCI コマンドはスーパーユーザー権限を必要としません。
+
+<a id="chapter-35-heading-23"></a>
+### デバイスのペアリング（Device Pairing）
+
+既定では、Bluetooth 通信は認証されておらず、どのデバイスも他のどのデバイスとも通信できます。
+携帯電話などの Bluetooth デバイスは、特定のサービスを提供する際に認証を要求する場合があります。
+Bluetooth 認証は通常、最大 16 文字の ASCII 文字列である **PIN コード**を使って行われます。
+ユーザーは双方のデバイスに同じ PIN コードを入力する必要があります。
+ユーザーが PIN コードを入力すると、双方のデバイスが**リンクキー（link key）**を生成します。
+その後、リンクキーはデバイス内または永続ストレージに保存されます。
+次回からは、双方のデバイスが前回生成したリンクキーを使用します。
+この手順を**ペアリング（pairing）**と呼びます。
+どちらかのデバイスでリンクキーが失われた場合は、ペアリングをやり直す必要がある点に注意してください。
+
+Bluetooth の認証要求を処理するのは `hcsecd(8)` デーモンです。
+既定の設定ファイルは `/etc/bluetooth/hcsecd.conf` です。
+PIN コードを `1234` に設定した携帯電話向けのセクション例を次に示します。
+
+```
+device {
+        bdaddr  00:80:37:29:19:a4;
+        name    "Pav's T39";
+        key     nokey;
+        pin     "1234";
+      }
+```
+
+PIN コードの唯一の制限は長さです。
+Bluetooth ヘッドセットなどの一部のデバイスには、固定の PIN コードが内蔵されている場合があります。
+`-d` スイッチを付けると `hcsecd(8)` がフォアグラウンドに留まるため、何が起きているかを簡単に確認できます。
+リモートデバイスをペアリング待機状態に設定し、リモートデバイスへの Bluetooth 接続を開始してください。
+リモートデバイス側でペアリングが受け入れられたことが表示され、PIN コードの入力が求められます。
+`hcsecd.conf` に記述したのと同じ PIN コードを入力します。
+これでコンピュータとリモートデバイスのペアリングが完了しました。
+あるいは、リモートデバイス側からペアリングを開始することもできます。
+
+システム起動時に `hcsecd(8)` を自動起動するよう設定するには、`/etc/rc.conf` に次の行を追加します。
+
+```
+hcsecd_enable="YES"
+```
+
+以下は `hcsecd(8)` デーモンの出力例です。
+
+```
+hcsecd[16484]: Got Link_Key_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', link key doesn't exist
+hcsecd[16484]: Sending Link_Key_Negative_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Got PIN_Code_Request event from 'ubt0hci', remote bdaddr 0:80:37:29:19:a4
+hcsecd[16484]: Found matching entry, remote bdaddr 0:80:37:29:19:a4, name 'Pav's T39', PIN code exists
+hcsecd[16484]: Sending PIN_Code_Reply to 'ubt0hci' for remote bdaddr 0:80:37:29:19:a4
+```
+
+<a id="chapter-35-heading-24"></a>
+### PPP プロファイルによるネットワークアクセス（Network Access with PPP Profiles）
+
+Dial-Up Networking（DUN）プロファイルを使うと、携帯電話を無線モデムとして設定し、ダイヤルアップインターネットアクセスサーバへ接続できます。
+また、コンピュータ側が携帯電話からのデータ着信を受け付けるように設定することもできます。
+
+PPP プロファイルによるネットワークアクセスは、単一または複数の Bluetooth デバイスへ LAN アクセスを提供するために利用できます。
+さらに、シリアルケーブルエミュレーション上の PPP ネットワークを用いて PC 間接続を提供することも可能です。
+
+FreeBSD では、これらのプロファイルは `ppp(8)` と、Bluetooth 接続を PPP が利用できる形式へ変換するラッパー `rfcomm_pppd(8)` によって実装されています。
+プロファイルを使用する前に、`/etc/ppp/ppp.conf` に新しい PPP ラベルを作成しておく必要があります。
+設定例については `rfcomm_pppd(8)` を参照してください。
+
+次の例では、`rfcomm_pppd(8)` を使って `BD_ADDR` が `00:80:37:29:19:a4` のリモートデバイスに対し、DUN RFCOMM チャネル上で接続を開きます。
+
+```shell
+# rfcomm_pppd -a 00:80:37:29:19:a4 -c -C dun -l rfcomm-dialup
+```
+
+実際のチャネル番号は、SDP プロトコルを使ってリモートデバイスから取得されます。
+RFCOMM チャネルを手動で指定することもでき、その場合は `rfcomm_pppd(8)` による SDP 問い合わせは行われません。
+リモートデバイス上の RFCOMM チャネルを調べるには `sdpcontrol(8)` を使用します。
+
+PPP LAN サービスでネットワークアクセスを提供するには、`sdpd(8)` が起動していることと、LAN クライアント用の新しいエントリを `/etc/ppp/ppp.conf` に作成しておくことが必要です。
+設定例については `rfcomm_pppd(8)` を参照してください。
+最後に、有効な RFCOMM チャネル番号で RFCOMM PPP サーバを起動します。
+RFCOMM PPP サーバは、ローカルの SDP デーモンへ Bluetooth LAN サービスを自動的に登録します。
+以下の例は RFCOMM PPP サーバを起動する方法を示しています。
+
+```shell
+# rfcomm_pppd -s -C 7 -l rfcomm-server
+```
+
+<a id="chapter-35-heading-25"></a>
+### Bluetooth プロトコル（Bluetooth Protocols）
+
+この節では、各種 Bluetooth プロトコルとその機能、および関連するユーティリティの概要を説明します。
+
+<a id="chapter-35-heading-26"></a>
+#### Logical Link Control and Adaptation Protocol（L2CAP）
+
+Logical Link Control and Adaptation Protocol（L2CAP）は、上位層プロトコルに対してコネクション型およびコネクションレス型のデータサービスを提供します。
+L2CAP により、上位プロトコルやアプリケーションは最大 64 キロバイト長の L2CAP データパケットを送受信できます。
+
+L2CAP は**チャネル（channel）**の概念に基づいています。
+チャネルとはベースバンド接続上の論理的な接続であり、各チャネルは多対 1 の関係で単一のプロトコルに結び付けられます。
+複数のチャネルを同じプロトコルに結び付けることはできますが、1 つのチャネルを複数のプロトコルに結び付けることはできません。
+あるチャネルで受信された各 L2CAP パケットは、対応する上位プロトコルへ渡されます。
+複数のチャネルで同じベースバンド接続を共有することも可能です。
+
+FreeBSD では、Bluetooth デバイスごとに netgraph L2CAP ノードが作成されます。
+このノードは通常、下流の Bluetooth HCI ノードと上流の Bluetooth ソケットノードに接続されます。
+L2CAP ノードの既定の名前は `"devicel2cap"` です。
+詳細は `ng_l2cap(4)` を参照してください。
+
+便利なコマンドとして、他のデバイスへ ping を送れる `l2ping(8)` があります。
+一部の Bluetooth 実装では送信したデータをすべて返さないことがあるため、次の例で `0 bytes` と表示されるのは正常です。
+
+```shell
+# l2ping -a 00:80:37:29:19:a4
+0 bytes from 0:80:37:29:19:a4 seq_no=0 time=48.633 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=1 time=37.551 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=2 time=28.324 ms result=0
+0 bytes from 0:80:37:29:19:a4 seq_no=3 time=46.150 ms result=0
+```
+
+`l2control(8)` ユーティリティは、L2CAP ノードに対するさまざまな操作を実行するために使用します。
+次の例は、ローカルデバイスの論理接続（チャネル）一覧とベースバンド接続一覧を取得する方法を示しています。
+
+```shell
+% l2control -a 00:02:72:00:d4:1a read_channel_list
+L2CAP channels:
+Remote BD_ADDR     SCID/ DCID   PSM  IMTU/ OMTU State
+00:07:e0:00:0b:ca    66/   64     3   132/  672 OPEN
+% l2control -a 00:02:72:00:d4:1a read_connection_list
+L2CAP connections:
+Remote BD_ADDR    Handle Flags Pending State
+00:07:e0:00:0b:ca     41 O           0 OPEN
+```
+
+もう 1 つの診断ツールが `btsockstat(1)` です。
+これは `netstat(1)` に似ていますが、Bluetooth ネットワーク関連のデータ構造を対象としています。
+以下の例では、上の `l2control(8)` と同じ論理接続が表示されています。
+
+```shell
+% btsockstat
+Active L2CAP sockets
+PCB      Recv-Q Send-Q Local address/PSM       Foreign address   CID   State
+c2afe900      0      0 00:02:72:00:d4:1a/3     00:07:e0:00:0b:ca 66    OPEN
+Active RFCOMM sessions
+L2PCB    PCB      Flag MTU   Out-Q DLCs State
+c2afe900 c2b53380 1    127   0     Yes  OPEN
+Active RFCOMM sockets
+PCB      Recv-Q Send-Q Local address     Foreign address   Chan DLCI State
+c2e8bc80      0    250 00:02:72:00:d4:1a 00:07:e0:00:0b:ca 3    6    OPEN
+```
+
+<a id="chapter-35-heading-27"></a>
+#### Radio Frequency Communication（RFCOMM）
+
+RFCOMM プロトコルは、L2CAP プロトコル上でシリアルポートのエミュレーションを提供します。
+RFCOMM はシンプルなトランスポートプロトコルであり、RS-232（EIA/TIA-232-E）シリアルポートの 9 本の回路をエミュレートするための仕組みを備えています。
+2 台の Bluetooth デバイス間で最大 60 個の同時接続（RFCOMM チャネル）をサポートします。
+
+RFCOMM における完全な通信経路は、通信の両端で動作する 2 つのアプリケーションと、その間を結ぶ通信セグメントで構成されます。
+RFCOMM は、各アプリケーションが動作しているデバイス上のシリアルポートを利用するようなアプリケーションを想定しています。
+通信セグメントは、あるデバイスから別のデバイスへの直接接続 Bluetooth リンクです。
+
+RFCOMM が関与するのは、直接接続の場合はデバイス間の接続のみ、ネットワーク接続の場合はデバイスとモデム間の接続のみです。
+RFCOMM は、片側で Bluetooth 無線技術を介して通信し、もう片側で有線インタフェースを提供するモジュールなど、他の構成もサポートできます。
+
+FreeBSD では、RFCOMM は Bluetooth ソケット層で実装されています。
+
+<a id="chapter-35-heading-28"></a>
+#### Service Discovery Protocol（SDP）
+
+Service Discovery Protocol（SDP）は、クライアントアプリケーションがサーバアプリケーションの提供するサービスの存在や、そのサービスの属性を検出するための手段を提供します。
+サービスの属性には、提供されるサービスの種類やクラス、およびそのサービスを利用するために必要な機構やプロトコル情報が含まれます。
+
+SDP では、SDP サーバと SDP クライアントの間で通信が行われます。
+サーバは、自身に関連付けられたサービスの特性を記述したサービスレコードの一覧を保持します。
+各サービスレコードには、単一のサービスに関する情報が含まれます。
+クライアントは SDP リクエストを発行することで、SDP サーバが保持するサービスレコードから情報を取得できます。
+クライアントまたはそれに関連するアプリケーションがサービスの利用を決定した場合、実際にサービスを使うためにはサービス提供元に対して別の接続を開く必要があります。
+SDP はサービスとその属性を発見するための仕組みを提供しますが、それらのサービス自体を利用する仕組みは提供しません。
+
+通常、SDP クライアントはサービスの望ましい特性を指定して検索を行います。
+しかし、サービスに関する事前情報なしに、SDP サーバのサービスレコードにどのような種類のサービスが記述されているかを知りたい場合もあります。
+提供されているサービスを総当たりで探すこの処理は、**ブラウジング（browsing）**と呼ばれます。
+
+Bluetooth SDP サーバの `sdpd(8)` とコマンドラインクライアントの `sdpcontrol(8)` は、FreeBSD の標準インストールに含まれています。
+次の例は、SDP ブラウズ問い合わせを実行する方法を示しています。
+
+```shell
+% sdpcontrol -a 00:01:03:fc:6e:ec browse
+Record Handle: 00000000
+Service Class ID List:
+        Service Discovery Server (0x1000)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+                Protocol specific parameter #1: u/int/uuid16 1
+                Protocol specific parameter #2: u/int/uuid16 1
+
+Record Handle: 0x00000001
+Service Class ID List:
+        Browse Group Descriptor (0x1001)
+
+Record Handle: 0x00000002
+Service Class ID List:
+        LAN Access Using PPP (0x1102)
+Protocol Descriptor List:
+        L2CAP (0x0100)
+        RFCOMM (0x0003)
+                Protocol specific parameter #1: u/int8/bool 1
+Bluetooth Profile Descriptor List:
+        LAN Access Using PPP (0x1102) ver. 1.0
+```
+
+各サービスには、RFCOMM チャネルなどの属性リストが含まれている点に注意してください。
+サービスによっては、これらの属性の一部を控えておく必要があります。
+一部の Bluetooth 実装はサービスブラウジングに対応しておらず、空の一覧を返すことがあります。
+その場合は、特定のサービスを指定して検索することが可能です。
+以下の例は、OBEX Object Push（OPUSH）サービスを検索する方法を示しています。
+
+```shell
+% sdpcontrol -a 00:01:03:fc:6e:ec search OPUSH
+```
+
+FreeBSD 上で Bluetooth クライアントに対してサービスを提供するには、`sdpd(8)` サーバを使用します。
+`/etc/rc.conf` に次の行を追加できます。
+
+```
+sdpd_enable="YES"
+```
+
+その後、次のコマンドで `sdpd(8)` デーモンを起動できます。
+
+```shell
+# service sdpd start
+```
+
+リモートクライアントへ Bluetooth サービスを提供したいローカルサーバアプリケーションは、ローカルの SDP デーモンにそのサービスを登録します。
+そのようなアプリケーションの一例が `rfcomm_pppd(8)` です。
+起動すると、ローカルの SDP デーモンに Bluetooth LAN サービスを自動的に登録します。
+
+ローカルの SDP サーバに登録されているサービスの一覧は、ローカル制御チャネル経由で SDP ブラウズ問い合わせを発行することで取得できます。
+
+```shell
+# sdpcontrol -l browse
+```
+
+<a id="chapter-35-heading-29"></a>
+#### OBEX Object Push（OPUSH）
+
+Object Exchange（OBEX）は、モバイルデバイス間で簡単なファイル転送を行うために広く使われているプロトコルです。
+主な用途は赤外線通信であり、ノート PC や PDA 間での一般的なファイル転送や、携帯電話と Personal Information Manager（PIM）アプリケーションを備えた他のデバイス間での名刺・予定表エントリの送信に使われます。
+
+OBEX サーバおよびクライアントは `obexapp` によって実装されており、`comms/obexapp` パッケージまたは port からインストールできます。
+
+OBEX クライアントは、OBEX サーバへオブジェクトを送信（push）したり、サーバから取得（pull）したりするために使用します。
+オブジェクトの例としては、名刺や予定などがあります。
+OBEX クライアントは SDP 経由でリモートデバイスから RFCOMM チャネル番号を取得できます。
+これは、RFCOMM チャネル番号の代わりにサービス名を指定することで行えます。
+サポートされているサービス名は `IrMC`、`FTRN`、`OPUSH` です。
+RFCOMM チャネルを数値として直接指定することもできます。
+以下は、携帯電話からデバイス情報オブジェクトを取得（pull）し、新しいオブジェクトである名刺を電話のディレクトリへ送信（push）する OBEX セッションの例です。
+
+```shell
+% obexapp -a 00:80:37:29:19:a4 -C IrMC
+obex> get telecom/devinfo.txt devinfo-t39.txt
+Success, response: OK, Success (0x20)
+obex> put new.vcf
+Success, response: OK, Success (0x20)
+obex> di
+Success, response: OK, Success (0x20)
+```
+
+OPUSH サービスを提供するには、`sdpd(8)` が起動していることと、受信したすべてのオブジェクトを格納するルートフォルダを作成しておくことが必要です。
+ルートフォルダの既定パスは `/var/spool/obex` です。
+最後に、有効な RFCOMM チャネル番号で OBEX サーバを起動します。
+OBEX サーバはローカルの SDP デーモンに OPUSH サービスを自動的に登録します。
+以下の例は OBEX サーバを起動する方法を示しています。
+
+```shell
+# obexapp -s -C 10
+```
+
+<a id="chapter-35-heading-30"></a>
+#### Serial Port Profile（SPP）
+
+Serial Port Profile（SPP）を使用すると、Bluetooth デバイスでシリアルケーブルエミュレーションを実行できます。
+このプロファイルにより、仮想シリアルポートの抽象化を通じて、従来のアプリケーションがケーブルの代わりに Bluetooth を利用できるようになります。
+
+FreeBSD では `rfcomm_sppd(1)` が SPP を実装しており、仮想シリアルポートの抽象化として擬似端末（pseudo tty）が使用されます。
+以下の例は、リモートデバイスのシリアルポートサービスへ接続する方法を示しています。
+`rfcomm_sppd(1)` は SDP 経由でリモートデバイスから RFCOMM チャネルを取得できるため、必ずしもチャネルを指定する必要はありません。
+これを上書きしたい場合は、コマンドラインで RFCOMM チャネルを指定してください。
+
+```shell
+# rfcomm_sppd -a 00:07:E0:00:0B:CA -t
+rfcomm_sppd[94692]: Starting on /dev/pts/6...
+/dev/pts/6
+```
+
+接続できたら、その擬似端末をシリアルポートとして使用できます。
+
+```shell
+# cu -l /dev/pts/6
+```
+
+擬似端末のパスは標準出力に出力されるため、ラッパースクリプトから読み取って利用することもできます。
+
+```
+PTS=`rfcomm_sppd -a 00:07:E0:00:0B:CA -t`
+cu -l $PTS
+```
+
+<a id="chapter-35-heading-31"></a>
+### トラブルシューティング（Troubleshooting）
+
+既定では、FreeBSD は新しい接続を受け入れる際にロールスイッチ（role switch）を試みてマスター（master）になろうとします。
+ロールスイッチに対応していない一部の古い Bluetooth デバイスでは、接続できなくなることがあります。
+ロールスイッチは新しい接続が確立される際に行われるため、リモートデバイスがロールスイッチに対応しているかどうかを事前に問い合わせることはできません。
+ただし、ローカル側でロールスイッチを無効化する HCI オプションが用意されています。
+
+```shell
+# hccontrol -n ubt0hci write_node_role_switch 0
+```
+
+Bluetooth パケットを表示するには、`comms/hcidump` パッケージまたは port からインストールできるサードパーティ製パッケージ `hcidump` を使用します。
+このユーティリティは `tcpdump(1)` に似ており、Bluetooth パケットの内容を端末に表示したり、ファイルへダンプしたりするために使用できます。
