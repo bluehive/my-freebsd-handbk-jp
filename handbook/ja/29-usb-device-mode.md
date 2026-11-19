@@ -110,3 +110,22 @@ USB デバイスモードのシリアルポートを提供するように設定�
 ### Microsoft Windows 10 から USB デバイスモードのシリアルポートへ接続する
 
 USB デバイスモードのシリアルポートを提供するように設定したボードへ接続するには、ノート PC などの USB ホストをボードの USB OTG ポートまたは USB クライアントポートに接続します。接続を開くには、PuTTY などのシリアル端末プログラムが必要です。Windows で使用されている COM ポート名を確認するには、デバイス マネージャー（Device Manager）を起動して「ポート (COM と LPT)」（Ports (COM & LPT)）を展開します。「USB シリアル デバイス (COM4)」（USB Serial Device (COM4)）のような名前が表示されます。PuTTY など好みのシリアル端末プログラムを起動し、PuTTY のダイアログで「Connection type」を「Serial」に設定し、「Serial line」入力欄にデバイス マネージャーで確認した `COMx` を入力して「Open」をクリックします。
+
+<a id="usb-device-mode-network"></a>
+## USB デバイスモードのネットワークインターフェース
+
+仮想ネットワークインターフェース機能は、テンプレート番号 1、8、10 で提供されます。なお、これらはいずれも Microsoft Windows では動作しません。その他のホスト OS では、3 つのテンプレートすべてが動作します。利用には `usb_template(4)` と `if_cdce(4)` の両方のカーネルモジュールがロードされている必要があります。
+
+起動時に必要なモジュールがロードされ、正しいテンプレートが設定されるように、次の行を `/boot/loader.conf` に追加します（ファイルが存在しない場合は作成します）。
+
+```
+if_cdce_load="YES"
+hw.usb.template=1
+```
+
+再起動せずにモジュールをロードしてテンプレートを設定するには、次のように実行します。
+
+```shell
+# kldload if_cdce
+# sysctl hw.usb.template=1
+```
