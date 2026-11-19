@@ -460,3 +460,250 @@ wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
       bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
       wme burst roaming MANUAL
 ```
+
+<a id="wireless-ad-hoc-mode"></a>
+## 無線アドホックモード（Wireless Ad-hoc Mode）
+
+IBSS モード（アドホックモードとも呼ばれます）は、ピアツーピア（1 対 1）の接続向けに設計されています。
+たとえば、マシン `A` と `B` の間でアドホックネットワークを確立するには、2 つの IP アドレスと 1 つの SSID を決めます。
+
+マシン `A` 側で次のように設定します。
+
+```shell
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 Mhz 11g) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+```
+
+`adhoc` パラメータは、このインタフェースが IBSS モードで動作していることを示しています。
+
+これでマシン `B` から `A` を検出できるはずです。
+
+```shell
+# ifconfig wlan0 create wlandev ath0 wlanmode adhoc
+# ifconfig wlan0 up scan
+  SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+  freebsdap       02:11:95:c3:0d:ac    2   54M -64:-96  100 IS   WME
+```
+
+出力内の `I` は、`A` がアドホックモードで動作していることを示しています。
+続いて、マシン `B` に別の IP アドレスを設定します。
+
+```shell
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:d5:43:62
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <adhoc>
+	  status: running
+	  ssid freebsdap channel 2 (2417 Mhz 11g) bssid 02:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst
+```
+
+これで `A` と `B` の双方が情報をやり取りできる状態になりました。
+
+<a id="network-wireless-ap"></a>
+### FreeBSD ホストアクセスポイント（FreeBSD Host Access Points）
+
+FreeBSD はアクセスポイント（AP）として動作させることができるため、ハードウェア AP を別途購入したりアドホックネットワークを運用したりする必要がなくなります。
+これは特に、FreeBSD マシンをインターネットなど別ネットワークへのゲートウェイとして動作させている場合に便利です。
+
+<a id="network-wireless-ap-basic"></a>
+#### 基本設定（Basic Settings）
+
+FreeBSD マシンを AP として設定する前に、使用する無線カードおよびセキュリティプロトコルに対応した適切なネットワークサポートをカーネルに組み込んでおく必要があります。
+詳細は [基本設定（Basic Settings）](#network-wireless-ap-basic) を参照してください。
+
+> **注記**: Windows® ドライバ用の NDIS ドライバラッパーは現在 AP 動作に対応していません。AP モードに対応しているのは FreeBSD ネイティブの無線ドライバのみです。
+
+無線ネットワークサポートを読み込んだら、その無線デバイスがホストベースアクセスポイントモード（hostap モードとも呼ばれます）に対応しているか確認します。
+
+```shell
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 list caps
+drivercaps=6f85edc1<STA,FF,TURBOP,IBSS,HOSTAP,AHDEMO,TXPMGT,SHSLOT,SHPREAMBLE,MONITOR,MBSS,WPA1,WPA2,BURST,WME,WDS,BGSCAN,TXFRAG>
+cryptocaps=1f<WEP,TKIP,AES,AES_CCM,TKIPMIC>
+```
+
+この出力にはカードの機能（capabilities）が表示されます。
+`HOSTAP` という語があれば、この無線カードが AP として動作できることが確認できます。
+また、WEP、TKIP、AES といった対応暗号方式も一覧表示されており、AP で使用できるセキュリティプロトコルを把握できます。
+
+無線デバイスを hostap モードに設定できるのはネットワーク擬似デバイスの作成時のみであるため、すでに作成済みのデバイスがある場合は先に破棄する必要があります。
+
+```shell
+# ifconfig wlan0 destroy
+```
+
+その後、他のパラメータを設定する前に適切なオプションを付けて再作成します。
+
+```shell
+# ifconfig wlan0 create wlandev ath0 wlanmode hostap
+# ifconfig wlan0 inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1
+```
+
+`ifconfig(8)` を再度実行して `wlan0` インタフェースの状態を確認します。
+
+```shell
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:c3:0d:ac
+	  inet 192.168.0.1 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet autoselect mode 11g <hostap>
+	  status: running
+	  ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 scanvalid 60
+	  protmode CTS wme burst dtimperiod 1 -dfs
+```
+
+`hostap` パラメータは、インタフェースがホストベースアクセスポイントモードで動作していることを示しています。
+
+起動時にこのインタフェース設定を自動的に行うには、`/etc/rc.conf` に次の行を追加します。
+
+```
+wlans_ath0="wlan0"
+create_args_wlan0="wlanmode hostap"
+ifconfig_wlan0="inet 192.168.0.1 netmask 255.255.255.0 ssid freebsdap mode 11g channel 1"
+```
+
+<a id="chapter-35-heading-16"></a>
+#### 認証・暗号化なしのホストベースアクセスポイント（Host-based Access Point Without Authentication or Encryption）
+
+認証や暗号化なしで AP を運用することは推奨されませんが、AP が正しく動作しているかを確かめる手軽な方法になります。
+この構成は、クライアント側の問題をデバッグする際にも重要です。
+
+AP の設定が終わったら、別の無線マシンからスキャンを実行して AP を検索します。
+
+```shell
+# ifconfig wlan0 create wlandev ath0
+# ifconfig wlan0 up scan
+SSID/MESH ID    BSSID              CHAN RATE   S:N     INT CAPS
+freebsdap       00:11:95:c3:0d:ac    1   54M -66:-96  100 ES   WME
+```
+
+クライアントマシンが AP を検出したら、その AP へ接続（associate）できます。
+
+```shell
+# ifconfig wlan0 inet 192.168.0.2 netmask 255.255.255.0 ssid freebsdap
+# ifconfig wlan0
+  wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	  ether 00:11:95:d5:43:62
+	  inet 192.168.0.2 netmask 0xffffff00 broadcast 192.168.0.255
+	  media: IEEE 802.11 Wireless Ethernet OFDM/54Mbps mode 11g
+	  status: associated
+	  ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+	  country US ecm authmode OPEN privacy OFF txpower 21.5 bmiss 7
+	  scanvalid 60 bgscan bgscanintvl 300 bgscanidle 250 roam:rssi 7
+	  roam:rate 5 protmode CTS wme burst
+```
+
+<a id="network-wireless-ap-wpa"></a>
+#### WPA2 ホストベースアクセスポイント（WPA2 Host-based Access Point）
+
+この節では、WPA2 セキュリティプロトコルを用いて FreeBSD アクセスポイントを構築する方法を取り上げます。
+WPA の詳細や WPA ベースの無線クライアントの設定については、[EAP-TLS を用いた WPA（WPA with EAP-TLS）](#network-wireless-wpa-eap-tls) を参照してください。
+
+WPA2 を有効にした AP でのクライアント認証と鍵管理には、`hostapd(8)` デーモンを使用します。
+
+以下の設定作業は、AP として動作する FreeBSD マシン上で行います。
+AP が正しく動作することを確認したら、`/etc/rc.conf` に次の行を追加して起動時に `hostapd(8)` を自動起動できます。
+
+```
+hostapd_enable="YES"
+```
+
+`hostapd(8)` を設定する前に、まず [基本設定（Basic Settings）](#network-wireless-ap-basic) で紹介した基本設定を済ませておいてください。
+
+<a id="chapter-35-heading-18"></a>
+##### WPA2-PSK
+
+WPA2-PSK は、バックエンド認証サーバを利用できない、あるいは利用する必要がない小規模ネットワーク向けの方式です。
+
+設定は `/etc/hostapd.conf` で行います。
+
+```
+interface=wlan0
+debug=1
+ctrl_interface=/var/run/hostapd
+ctrl_interface_group=wheel
+ssid=freebsdap
+wpa=2
+wpa_passphrase=freebsdmall
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=CCMP
+```
+
+1. アクセスポイントに使用する無線インタフェースです。
+2. `hostapd(8)` 実行時の出力詳細度（verbosity）レベルです。値 `1` は最小限のレベルを表します。
+3. `hostapd_cli(8)` などの外部プログラムと通信するためのドメインソケットファイルを `hostapd(8)` が格納するディレクトリのパス名です。この例では既定値を使用しています。
+4. 制御インタフェースファイルへのアクセスを許可するグループです。
+5. 無線スキャン時に表示される無線ネットワーク名（SSID）です。
+6. WPA を有効化し、必須とする WPA 認証プロトコルを指定します。値 `2` は AP を WPA2 用に設定するもので、これが推奨されます。旧式の WPA が必要な場合にのみ `1` を指定してください。
+7. WPA 認証用の ASCII パスフレーズです。
+8. 使用する鍵管理プロトコルです。この例では WPA-PSK を設定しています。
+9. アクセスポイントが受け入れる暗号化アルゴリズムです。この例では CCMP（AES）暗号のみを受け入れます。CCMP は TKIP の後継であり、可能な限り CCMP の使用が強く推奨されます。TKIP は CCMP に対応していない端末が存在する場合にのみ許可してください。
+
+次の手順として、`hostapd(8)` を起動します。
+
+```shell
+# service hostapd forcestart
+```
+
+```shell
+# ifconfig wlan0
+wlan0: flags=8943<UP,BROADCAST,RUNNING,PROMISC,SIMPLEX,MULTICAST> metric 0 mtu 1500
+	ether 04:f0:21:16:8e:10
+	inet6 fe80::6f0:21ff:fe16:8e10%wlan0 prefixlen 64 scopeid 0x9
+	nd6 options=21<PERFORMNUD,AUTO_LINKLOCAL>
+	media: IEEE 802.11 Wireless Ethernet autoselect mode 11na <hostap>
+	status: running
+	ssid No5ignal channel 36 (5180 MHz 11a ht/40+) bssid 04:f0:21:16:8e:10
+	country US ecm authmode WPA2/802.11i privacy MIXED deftxkey 2
+	AES-CCM 2:128-bit AES-CCM 3:128-bit txpower 17 mcastrate 6 mgmtrate 6
+	scanvalid 60 ampdulimit 64k ampdudensity 8 shortgi wme burst
+	dtimperiod 1 -dfs
+	groups: wlan
+```
+
+AP が稼働したら、クライアントはその AP へ接続できます。
+詳細は [基本設定（Basic Settings）](#network-wireless-ap-basic) を参照してください。
+AP に接続している端末の一覧は `ifconfig wlan0 list sta`（`wlan0` の部分は実際のインタフェース名に置き換えてください）で確認できます。
+
+<a id="network-usb-tethering"></a>
+## USB テザリング（USB Tethering）
+
+多くの携帯電話には、USB 経由でデータ通信接続を共有する機能（一般に「テザリング」と呼ばれます）が備わっています。
+この機能では、RNDIS、CDC、または Apple® iPhone®/iPad® 独自プロトコルのいずれかが使用されます。
+
+* Android™ デバイスでは通常 `urndis(4)` ドライバを使用します。
+* Apple® デバイスでは `ipheth(4)` ドライバを使用します。
+* 古いデバイスでは `cdce(4)` ドライバがよく使われます。
+
+デバイスを接続する前に、適切なドライバをカーネルへ読み込みます。
+
+```shell
+# kldload if_urndis
+# kldload if_cdce
+# kldload if_ipheth
+```
+
+デバイスを接続すると、`ue0` が通常のネットワークデバイスと同様に利用できるようになります。
+デバイス側で「USB テザリング」オプションが有効になっていることを確認してください。
+
+この変更を永続化して起動時にドライバをモジュールとして読み込むには、`/boot/loader.conf` に次の行のうち適切なものを記述します。
+
+```shell
+if_urndis_load="YES"
+if_cdce_load="YES"
+if_ipheth_load="YES"
+```
