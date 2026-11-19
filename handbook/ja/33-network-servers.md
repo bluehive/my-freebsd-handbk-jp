@@ -885,3 +885,373 @@ NIS ドメインで使用している形式に合わせるためホスト側の�
 ```
 
 > **注記（NOTE）**: 既存のユーザーアカウントのパスワード形式は、ログイン機能データベースを再構築した*あと*で各ユーザーがパスワードを変更するまで更新されません。
+
+<a id="network-ldap"></a>
+## Lightweight Directory Access Protocol（LDAP）
+
+Lightweight Directory Access Protocol（LDAP）は、分散ディレクトリ情報サービスを使ってオブジェクトの参照、変更、認証を行うためのアプリケーション層プロトコルです。複数階層の均質な情報を格納する電話帳や台帳のようなものだと考えるとわかりやすいでしょう。Active Directory や OpenLDAP のネットワークで利用されており、ユーザーは 1 つのアカウントを使って複数階層の社内情報へアクセスできます。たとえば、メール認証、社員連絡先の取得、社内 Web サイトの認証をすべて LDAP サーバのデータベース上の単一ユーザーアカウントで賄うことができます。
+
+この節では、FreeBSD システム上で LDAP サーバを構成するためのクイックスタートガイドを提供します。管理者がすでに設計計画（格納する情報の種類、その情報の用途、どのユーザーにアクセス権を与えるか、不正アクセスからどう保護するか）を策定済みであることを前提としています。
+
+<a id="chapter-33-heading-28"></a>
+### LDAP の用語と構造（LDAP Terminology and Structure）
+
+LDAP では、設定を始める前に理解しておくべきいくつかの用語があります。すべてのディレクトリエントリは*属性（attributes）*の集まりで構成されます。これらの属性セットにはそれぞれ、*識別名（Distinguished Name: DN）*と呼ばれる一意の識別子が含まれます。DN は通常、コモンネームや*相対識別名（Relative Distinguished Name: RDN）*など、他のいくつかの属性を組み合わせて作られます。ディレクトリに絶対パスと相対パスがあるのと同様に、DN を絶対パス、RDN を相対パスとみなすことができます。
+
+LDAP エントリの例を次に示します。この例では、指定したユーザーアカウント（`uid`）、組織単位（`ou`）、組織（`o`）に一致するエントリを検索しています。
+
+```shell
+% ldapsearch -xb "uid=trhodes,ou=users,o=example.com"
+# extended LDIF
+#
+# LDAPv3
+# base <uid=trhodes,ou=users,o=example.com> with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# trhodes, users, example.com
+dn: uid=trhodes,ou=users,o=example.com
+mail: trhodes@example.com
+cn: Tom Rhodes
+uid: trhodes
+telephoneNumber: (123) 456-7890
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+```
+
+このエントリ例では、`dn`、`mail`、`cn`、`uid`、`telephoneNumber` の各属性の値が示されています。ここでは `cn` 属性が RDN になります。
+
+LDAP とその用語についての詳細は、[OpenLDAP Admin Guide](http://www.openldap.org/doc/admin24/intro.html) を参照してください。
+
+<a id="ldap-config"></a>
+### LDAP サーバの設定（Configuring an LDAP Server）
+
+FreeBSD には組み込みの LDAP サーバは含まれていません。まず、`net/openldap-server` のパッケージまたは Port をインストールして設定を始めます。
+
+```shell
+# pkg install openldap-server
+```
+
+[パッケージ](https://docs.freebsd.org/en/articles/linux-users/#software)では、あらかじめ多くの既定オプションが有効になっています。有効なオプションは `pkg info openldap-server` で確認してください。たとえば SQL サポートが必要など既定オプションで不十分な場合は、適切な [Ports の利用方法](04-ports.md#ports-using) に従って Port から再コンパイルすることを検討してください。
+
+インストールすると、データを格納するための `/var/db/openldap-data` ディレクトリが作成されます。証明書を格納するディレクトリは手動で作成する必要があります。
+
+```shell
+# mkdir /usr/local/etc/openldap/private
+```
+
+次の段階では認証局（Certificate Authority）を設定します。以下のコマンドは `/usr/local/etc/openldap/private` ディレクトリ内で実行する必要があります。ファイルのパーミッションを厳しく制限し、一般ユーザーがこれらのファイルへアクセスできないようにするため、この点は重要です。証明書やパラメータの詳細は [OpenSSL](https://docs.freebsd.org/en/books/handbook/security/#openssl) を参照してください。認証局を作成するには、次のコマンドを実行してプロンプトに従って入力します。
+
+```shell
+# openssl req -days 365 -nodes -new -x509 -keyout ca.key -out ../ca.crt
+```
+
+プロンプトへの入力内容は、`Common Name` を*除き*一般的な値で構いません。`Common Name` はシステムのホスト名とは*異なる*値にする必要があります。自己署名証明書にする場合は、ホスト名の先頭に認証局（Certificate Authority）を表す `CA` を付けてください。
+
+次の作業は、証明書署名要求（CSR）と秘密鍵の作成です。次のコマンドを実行してプロンプトに入力します。
+
+```shell
+# openssl req -days 365 -nodes -new -keyout server.key -out server.csr
+```
+
+証明書生成の過程では、`Common Name` 属性を正しく設定してください。有効な証明書として使用するには、証明書署名要求に認証局で署名する必要があります。
+
+```shell
+# openssl x509 -req -days 365 -in server.csr -out ../server.crt -CA ../ca.crt -CAkey ca.key -CAcreateserial
+```
+
+証明書生成の最後の工程は、クライアント証明書の生成と署名です。
+
+```shell
+# openssl req -days 365 -nodes -new -keyout client.key -out client.csr
+# openssl x509 -req -days 3650 -in client.csr -out ../client.crt -CA ../ca.crt -CAkey ca.key
+```
+
+プロンプトが表示された際は、先ほどと同じ `Common Name` 属性を使用してください。完了したら、ここまでのコマンドによって合計 8 個の新しいファイルが生成されていることを確認します。
+
+OpenLDAP サーバを動かすデーモンは `slapd` です。設定は `slapd.ldif` を通じて行います（古い `slapd.conf` は OpenLDAP によって非推奨となりました）。
+
+`slapd.ldif` の[設定例](http://www.openldap.org/doc/admin24/slapdconf2.html)はオンラインで公開されているほか、`/usr/local/etc/openldap/slapd.ldif.sample` にもあります。各オプションは `slapd-config(5)` に記載されています。`slapd.ldif` の各セクションは、他の LDAP 属性セットと同様に DN によって一意に識別されます。`dn:` 行から目的のセクション末尾までの間に空行を入れないよう注意してください。次の例では、安全な通信路を実装するために TLS を使用します。最初のセクションはグローバル設定を表します。
+
+```
+#
+# See slapd-config(5) for details on configuration options.
+# This file should NOT be world readable.
+#
+dn: cn=config
+objectClass: olcGlobal
+cn: config
+#
+#
+# Define global ACLs to disable default read access.
+#
+olcArgsFile: /var/run/openldap/slapd.args
+olcPidFile: /var/run/openldap/slapd.pid
+olcTLSCertificateFile: /usr/local/etc/openldap/server.crt
+olcTLSCertificateKeyFile: /usr/local/etc/openldap/private/server.key
+olcTLSCACertificateFile: /usr/local/etc/openldap/ca.crt
+#olcTLSCipherSuite: HIGH
+olcTLSProtocolMin: 3.1
+olcTLSVerifyClient: never
+```
+
+ここには認証局証明書、サーバ証明書、サーバ秘密鍵ファイルを指定する必要があります。暗号スイートの選択はクライアント側に任せ、`olcTLSCipherSuite` オプションは省略することが推奨されます（`openssl` 以外の TLS クライアントと非互換になるため）。`olcTLSProtocolMin` オプションはサーバが要求する最小セキュリティレベルを指定するもので、設定が推奨されます。サーバ側の検証は必須ですが、クライアント証明書検証は必須ではないため `olcTLSVerifyClient: never` としています。
+
+2 つ目のセクションはバックエンドモジュールに関する設定で、次のように構成できます。
+
+```
+#
+# Load dynamic backend modules:
+#
+dn: cn=module,cn=config
+objectClass: olcModuleList
+cn: module
+olcModulepath:	/usr/local/libexec/openldap
+olcModuleload:	back_mdb.la
+#olcModuleload:	back_bdb.la
+#olcModuleload:	back_hdb.la
+#olcModuleload:	back_ldap.la
+#olcModuleload:	back_passwd.la
+#olcModuleload:	back_shell.la
+```
+
+3 つ目のセクションは、データベースが使用する必須の `ldif` スキーマを読み込むためのもので、これらは不可欠です。
+
+```
+dn: cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: schema
+
+include: file:///usr/local/etc/openldap/schema/core.ldif
+include: file:///usr/local/etc/openldap/schema/cosine.ldif
+include: file:///usr/local/etc/openldap/schema/inetorgperson.ldif
+include: file:///usr/local/etc/openldap/schema/nis.ldif
+```
+
+続いて、フロントエンドの設定セクションです。
+
+```
+# Frontend settings
+#
+dn: olcDatabase={-1}frontend,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcFrontendConfig
+olcDatabase: {-1}frontend
+olcAccess: to * by * read
+#
+# Sample global access control policy:
+#	Root DSE: allow anyone to read it
+#	Subschema (sub)entry DSE: allow anyone to read it
+#	Other DSEs:
+#		Allow self write access
+#		Allow authenticated users read access
+#		Allow anonymous users to authenticate
+#
+#olcAccess: to dn.base="" by * read
+#olcAccess: to dn.base="cn=Subschema" by * read
+#olcAccess: to *
+#	by self write
+#	by users read
+#	by anonymous auth
+#
+# if no access controls are present, the default policy
+# allows anyone and everyone to read anything but restricts
+# updates to rootdn.  (e.g., "access to * by * read")
+#
+# rootdn can always read and write EVERYTHING!
+#
+olcPasswordHash: {SSHA}
+# {SSHA} is already the default for olcPasswordHash
+```
+
+もう 1 つのセクションは*設定バックエンド（configuration backend）*用であり、あとからグローバルなスーパーユーザーとして OpenLDAP サーバ設定へアクセスするための唯一の手掛かりになります。
+
+```
+dn: olcDatabase={0}config,cn=config
+objectClass: olcDatabaseConfig
+olcDatabase: {0}config
+olcAccess: to * by * none
+olcRootPW: {SSHA}iae+lrQZILpiUdf16Z9KmDmSwT77Dj4U
+```
+
+既定の管理者ユーザー名は `cn=config` です。シェルで `slappasswd` を実行してパスワードを決め、そのハッシュ値を `olcRootPW` に指定してください。`slapd.ldif` をインポートする前にこのオプションを指定しておかないと、あとから誰も*グローバル設定*セクションを変更できなくなります。
+
+最後のセクションはデータベースバックエンドに関する設定です。
+
+```
+#######################################################################
+# LMDB database definitions
+#######################################################################
+#
+dn: olcDatabase=mdb,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcMdbConfig
+olcDatabase: mdb
+olcDbMaxSize: 1073741824
+olcSuffix: dc=domain,dc=example
+olcRootDN: cn=mdbadmin,dc=domain,dc=example
+# Cleartext passwords, especially for the rootdn, should
+# be avoided.  See slappasswd(8) and slapd-config(5) for details.
+# Use of strong authentication encouraged.
+olcRootPW: {SSHA}X2wHvIWDk6G76CQyCMS1vDCvtICWgn0+
+# The database directory MUST exist prior to running slapd AND
+# should only be accessible by the slapd and slap tools.
+# Mode 700 recommended.
+olcDbDirectory:	/var/db/openldap-data
+# Indices to maintain
+olcDbIndex: objectClass eq
+```
+
+このデータベースが LDAP ディレクトリの*実際の内容*を保持します。`mdb` 以外の種類も利用できます。ここでは（グローバル管理者とは別の）このデータベース専用のスーパーユーザーを、`olcRootDN` に（任意の）ユーザー名、`olcRootPW` にパスワードハッシュを指定して設定します。先ほどと同様に `slappasswd` を使用できます。
+
+[このリポジトリ](http://www.openldap.org/devel/gitweb.cgi?p=openldap.git;a=tree;f=tests/data/regressions/its8444;h=8a5e808e63b0de3d2bdaf2cf34fecca8577ca7fd;hb=HEAD) には `slapd.ldif` の 4 つの例が収録されています。既存の `slapd.conf` を `slapd.ldif` へ変換するには、[こちらのページ](http://www.openldap.org/doc/admin24/slapdconf2.html)を参照してください（ただし、不要なオプションが混入する場合がある点に注意してください）。
+
+設定が完了したら、`slapd.ldif` を空のディレクトリに配置する必要があります。次のようにディレクトリを作成することを推奨します。
+
+```shell
+# mkdir /usr/local/etc/openldap/slapd.d/
+```
+
+設定データベースをインポートします。
+
+```shell
+# /usr/local/sbin/slapadd -n0 -F /usr/local/etc/openldap/slapd.d/ -l /usr/local/etc/openldap/slapd.ldif
+```
+
+`slapd` デーモンを起動します。
+
+```shell
+# /usr/local/libexec/slapd -F /usr/local/etc/openldap/slapd.d/
+```
+
+`slapd(8)` に記載されているとおり、デバッグには `-d` オプションを使用できます。サーバが起動して動作していることを確認するには、次のように実行します。
+
+```shell
+# ldapsearch -x -b '' -s base '(objectclass=*)' namingContexts
+# extended LDIF
+#
+# LDAPv3
+# base <> with scope baseObject
+# filter: (objectclass=*)
+# requesting: namingContexts
+#
+
+#
+dn:
+namingContexts: dc=domain,dc=example
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 2
+# numEntries: 1
+```
+
+まだサーバ証明書が信頼された状態になっていません。これまでに信頼設定を行っていない場合は、次の手順に従ってください。OpenSSL パッケージまたは Port をインストールします。
+
+```shell
+# pkg install openssl
+```
+
+`ca.crt` が保存されているディレクトリ（この例では `/usr/local/etc/openldap`）で次を実行します。
+
+```shell
+# c_rehash .
+```
+
+これで、CA 証明書とサーバ証明書の双方がそれぞれの役割として正しく認識されるようになります。これを確認するには、`server.crt` があるディレクトリから次のコマンドを実行します。
+
+```shell
+# openssl verify -verbose -CApath . server.crt
+```
+
+すでに `slapd` が動作していた場合は再起動してください。`/usr/local/etc/rc.d/slapd` に記載されているとおり、起動時に `slapd` を正しく動作させるには `/etc/rc.conf` に次の行を追加する必要があります。
+
+```
+slapd_enable="YES"
+slapd_flags='-h "ldapi://%2fvar%2frun%2fopenldap%2fldapi/ ldap://0.0.0.0/"'
+slapd_sockets="/var/run/openldap/ldapi"
+slapd_cn_config="YES"
+```
+
+`slapd` は起動時のデバッグ出力を行いません。問題調査には `/var/log/debug.log`、`dmesg -a`、`/var/log/messages` を確認してください。
+
+次の例では、まだ空の状態の `domain.example` LDAP データベースに、グループ `team` とユーザー `john` を追加します。まず `domain.ldif` ファイルを作成します。
+
+```shell
+# cat domain.ldif
+dn: dc=domain,dc=example
+objectClass: dcObject
+objectClass: organization
+o: domain.example
+dc: domain
+
+dn: ou=groups,dc=domain,dc=example
+objectClass: top
+objectClass: organizationalunit
+ou: groups
+
+dn: ou=users,dc=domain,dc=example
+objectClass: top
+objectClass: organizationalunit
+ou: users
+
+dn: cn=team,ou=groups,dc=domain,dc=example
+objectClass: top
+objectClass: posixGroup
+cn: team
+gidNumber: 10001
+
+dn: uid=john,ou=users,dc=domain,dc=example
+objectClass: top
+objectClass: account
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: John McUser
+uid: john
+uidNumber: 10001
+gidNumber: 10001
+homeDirectory: /home/john/
+loginShell: /usr/bin/bash
+userPassword: secret
+```
+
+詳細は OpenLDAP のドキュメントを参照してください。`userPassword` 内の平文パスワード `secret` は、`slappasswd` を使ってハッシュ値に置き換えてください。`loginShell` に指定したパスは、`john` にログインを許可するすべてのシステム上に存在している必要があります。最後に、`mdb` 管理者を使ってデータベースを更新します。
+
+```shell
+# ldapadd -W -D "cn=mdbadmin,dc=domain,dc=example" -f domain.ldif
+```
+
+*グローバル設定*セクションへの変更は、グローバルスーパーユーザーのみが実行できます。たとえば、最初に `olcTLSCipherSuite: HIGH:MEDIUM:SSLv3` オプションを指定していて、いま削除したいとします。まず、次の内容を含むファイルを作成します。
+
+```shell
+# cat global_mod
+dn: cn=config
+changetype: modify
+delete: olcTLSCipherSuite
+```
+
+続いて、変更を適用します。
+
+```shell
+# ldapmodify -f global_mod -x -D "cn=config" -W
+```
+
+パスワードの入力を求められたら、*設定バックエンド*の節で決めたパスワードを入力します。ユーザー名は不要です。ここでの `cn=config` は、変更対象データベースセクションの DN を表しています。あるいは、データベースの 1 行だけを削除するには `ldapmodify` を、エントリ全体を削除するには `ldapdelete` を使用できます。
+
+何か問題が起きた場合や、グローバルスーパーユーザーが設定バックエンドへアクセスできなくなった場合は、設定全体を削除して書き直すことも可能です。
+
+```shell
+# rm -rf /usr/local/etc/openldap/slapd.d/
+```
+
+そのあとで `slapd.ldif` を編集し、再度インポートできます。ただし、この手順は他に解決策がない場合にのみ行ってください。
+
+以上はサーバ側のみの設定です。同じマシン上に、これとは独立した設定を持つ LDAP クライアントを同居させることもできます。

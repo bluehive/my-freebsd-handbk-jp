@@ -29,7 +29,7 @@
 - [x] `#network-inetd`（inetd スーパーサーバ）
 - [x] `#network-nfs`（Network File System (NFS)）
 - [x] `#network-nis`（Network Information System (NIS)）
-- [ ] `#network-ldap`（Lightweight Directory Access Protocol (LDAP)）
+- [x] `#network-ldap`（Lightweight Directory Access Protocol (LDAP)）
 - [ ] `#network-dhcp`（Dynamic Host Configuration Protocol (DHCP)）
 - [ ] `#network-dns`（Domain Name System (DNS)）
 - [ ] `#network-zeroconf`（Zeroconf）
