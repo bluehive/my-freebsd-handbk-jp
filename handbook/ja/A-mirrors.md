@@ -1,7 +1,7 @@
 <a id="appendix-A-heading-01"></a>
-# 付録A FreeBSDの入手（Obtaining FreeBSD）【ドラフト】
+# 付録A FreeBSDの入手（Obtaining FreeBSD）
 
-本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/mirrors/)の「Appendix A. Obtaining FreeBSD」（既存 TOC ID A）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/mirrors/_index.adoc`）に基づいて日本語へ意訳しているドラフトです。
+本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/mirrors/)の「Appendix A. Obtaining FreeBSD」（既存 TOC ID A）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/mirrors/_index.adoc`）に基づいて日本語へ意訳したものです。
 
 > **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::`（`shared/authors.adoc`、`shared/mirrors.adoc`、`shared/releases.adoc`、`attributes`、`teams.adoc`、`mailing-lists.adoc`、`urls.adoc`、`asciidoctor.adoc`）は翻訳対象外とし、本文の節のみを意訳しています。掲載されているコマンド例は説明のための例であり、翻訳作業中に実機で実行したものではありません。実行例中の `#` は root ユーザーのプロンプトを示します。
 

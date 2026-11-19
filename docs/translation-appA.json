@@ -13,9 +13,9 @@
       "source_path": "handbook/en/appA/A-mirrors.adoc.txt",
       "translation_path": "handbook/ja/A-mirrors.md",
       "source_sha256": "d4398bc07c55b1cb0a6b24606f9ff98cb18f1e1787c14582bd14701f6782b6a5",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft setup; translation in progress",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 11 headings, 12 anchors, 4 code blocks, 3 tables (including 50 community mirror entries, 185 protocol links, 26 contact emails resolved from pinned shared/mirrors.adoc, and 6 SSH host key fingerprints), and all cross-references in the pinned source; runtime and third-party review not performed",
       "counts": {
         "headings": 11,
         "anchors": 12,
