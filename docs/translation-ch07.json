@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Chapter 7 Network (07-network) only; no legacy TOC ID; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 7,
+      "slug": "network",
+      "upstream_chapter_number": 7,
+      "legacy_toc_id": null,
+      "upstream_path": "documentation/content/en/books/handbook/network/_index.adoc",
+      "source_path": "handbook/en/ch07/07-network.adoc.txt",
+      "translation_path": "handbook/ja/07-network.md",
+      "source_sha256": "1184065b01b76c506140ac2dcfd2f5e1b947fef8b2c12f9c94fbea9c0c2bd1f7",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft in progress; pinned source snapshot and verification scaffold initialized; runtime and third-party review not performed",
+      "counts": {
+        "headings": 29,
+        "anchors": 30,
+        "code_blocks": 57,
+        "images": 0,
+        "tables": 2
+      }
+    }
+  ]
+}

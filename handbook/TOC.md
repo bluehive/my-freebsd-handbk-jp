@@ -13,6 +13,7 @@
 | 04 | Packages and Ports | [04-ports.md](ja/04-ports.md) | **自己校正済（意訳）** | 2026-11-04 原文34見出し・73コード例を照合。実機検証は未実施 |
 | 05 | X Window System | [05-x11.md](ja/05-x11.md) | **自己校正済（意訳）** | 2026-11-04 原文21見出し・47コード例を照合。実機検証は未実施 |
 | 06 | Wayland | [06-wayland.md](ja/06-wayland.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・47コード例を照合。実機検証は未実施 |
+| — | Network（公式Chapter 7） | [07-network.md](ja/07-network.md) | **ドラフト** | 2026-11-20 既存TOCに行がなかったため追加。既存の 07-desktop.md 等は旧TOC番号（公式Chapter 8 以降）。翻訳作業中 |
 | 07 | Desktop Applications | [07-desktop.md](ja/07-desktop.md) | **自己校正済（意訳）** | 2026-11-04 原文62見出し・70コード例を照合。実機検証は未実施 |
 | 08 | Multimedia | [08-multimedia.md](ja/08-multimedia.md) | **自己校正済（意訳）** | 2026-11-04 原文25見出し・49コード例を照合。実機検証は未実施 |
 | 09 | Kernel Configuration | [09-kernelconfig.md](ja/09-kernelconfig.md) | **自己校正済（意訳）** | 2026-11-04 原文7見出し・17コード例を照合。実機検証は未実施 |

@@ -136,3 +136,7 @@
 ## 公式Appendix D（OpenPGP Keys）の意訳用スナップショット
 
 2026-11-20に、公式Appendix D OpenPGP Keys（`documentation/content/en/books/handbook/pgpkeys/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/appD/D-pgpkeys.adoc.txt`（2083バイト、SHA-256: `7d6200e0f9eb409416afa210d4fbd6516dc916666c5026ba7528be2449fb070f`）、出典・進捗は [マニフェスト](docs/translation-appD.json)と[作業記録](docs/translation-appD.md)に保存しています。既存TOCのID Dに対応します。見出しの属性解決には同じ固定コミットの `shared/en/teams.adoc` および `shared/en/urls.adoc` を参照し、共有インクルードの公開鍵ファイル本体（`documentation/static/pgpkeys/*.key`）は翻訳対象外として転記・改変せず参照のみを記載しています。
+
+## 公式Chapter 7（Network）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 7 Network（`documentation/content/en/books/handbook/network/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch07/07-network.adoc.txt`（33774バイト、SHA-256: `1184065b01b76c506140ac2dcfd2f5e1b947fef8b2c12f9c94fbea9c0c2bd1f7`）、出典・進捗は [マニフェスト](docs/translation-ch07.json)と[作業記録](docs/translation-ch07.md)に保存しています。既存TOCには行がなかったため追加しており、既存の `07-desktop.md` 以降は旧TOC番号（公式Chapter 8以降）です。
