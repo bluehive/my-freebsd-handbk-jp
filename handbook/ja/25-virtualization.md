@@ -1624,3 +1624,395 @@ MK_BHYVE_SNAPSHOT=yes
 
 異なる CPU アーキテクチャ上でゲストスナップショットを復元することはできません。
 一般に、スナップショットを作成したシステムと同一でないシステム上で復元を試みると失敗する可能性が高いです。
+
+<a id="virtualization-bhyve-jailed"></a>
+### bhyve の jail 化
+
+セキュリティを強化し、仮想マシンをホストオペレーティングシステムから分離するため、bhyve を jail 内で実行することができます。
+jail とそのセキュリティ上の利点についての詳しい説明は、[Jails](16-jails.md#jails) を参照してください。
+
+<a id="virtualization-bhyve-jailed-creation"></a>
+#### bhyve 用 jail の作成
+
+まず、jail 環境を作成します。UFS ファイルシステムを使用している場合は、次のように実行するだけです。
+
+```shell
+# mkdir -p /jails/bhyve
+```
+
+[ZFS ファイルシステム](23-zfs.md#zfs)を使用している場合は、次のコマンドを実行します。
+
+```shell
+# zfs create zroot/jails
+# zfs create zroot/jails/bhyve
+```
+
+次に、仮想マシン `bhyvevm0` 用の ZFS zvol を作成します。
+
+```shell
+# zfs create zroot/vms
+# zfs create -V 20G -o volmode=dev zroot/vms/bhyvevm0
+```
+
+ZFS を使用しない場合は、次のコマンドで jail のディレクトリ構造内にディスクイメージファイルを直接作成します。
+
+```shell
+# mkdir /jails/bhyve/vms
+# truncate -s 20G /jails/bhyve/vms/bhyvevm0
+```
+
+FreeBSD のイメージ（できればホストと同じかそれより古いバージョン）をダウンロードし、jail ディレクトリへ展開します。
+
+```shell
+# cd /jails
+# fetch -o base.txz http://ftp.freebsd.org/pub/FreeBSD/releases/amd64/13.2-RELEASE/base.txz
+# tar -C /jails/bhyve -xvf base.txz
+```
+
+> **注記**: ホストより新しいバージョンの FreeBSD を jail 内で実行することはサポートされていません（たとえば、13.2-RELEASE ホスト内の jail で 14.0-RELEASE を実行する場合）。
+
+次に、`/etc/devfs.rules` に devfs ルールセットを追加します。
+
+```
+[devfsrules_jail_bhyve=100]
+add include $devfsrules_hide_all
+add include $devfsrules_unhide_login
+add path 'urandom' unhide
+add path 'random' unhide
+add path 'crypto' unhide
+add path 'shm' unhide
+add path 'zero' unhide
+add path 'null' unhide
+add path 'mem' unhide
+add path 'vmm' unhide
+add path 'vmm/*' unhide
+add path 'vmm.io' unhide
+add path 'vmm.io/*' unhide
+add path 'vmmctl' unhide
+add path 'nmdmbhyve*' unhide
+add path 'zvol' unhide
+add path 'zvol/zroot' unhide
+add path 'zvol/zroot/vms' unhide
+add path 'zvol/zroot/vms/bhyvevm0' unhide
+add path 'zvol/zroot/vms/bhyvevm1' unhide
+add path 'tap10*' unhide
+```
+
+> **注記**: `/etc/devfs.rules` ファイル内に数値 ID `100` を持つ別の devfs ルールがすでにある場合は、上記リストの ID をまだ使われていない別の番号に置き換えてください。
+
+> **注記**: ZFS ファイルシステムを使用しない場合は、`/etc/devfs.rules` の関連する zvol ルールを省略してください。
+
+```
+add path 'zvol' unhide
+add path 'zvol/zroot' unhide
+add path 'zvol/zroot/vms' unhide
+add path 'zvol/zroot/vms/bhyvevm0' unhide
+add path 'zvol/zroot/vms/bhyvevm1' unhide
+```
+
+これらのルールにより、bhyve は次の動作を行います。
+
+* `bhyvevm0` と `bhyvevm1` というディスクボリュームを持つ仮想マシンを作成する
+* `tap10` というプレフィックスを持つ `tap` ネットワークインターフェースを使用する。
+  つまり、有効なインターフェース名は `tap10`、`tap100`、`tap101`、…、`tap109`、`tap1000` などのようになります。
+
+  使用可能な `tap` インターフェース名の一部だけにアクセスを制限することで、jail（およびその中の bhyve）からホストや他の jail の `tap` インターフェースが見えないようにできます。
+* 「bhyve」をプレフィックスに持つ `nmdm` デバイス（すなわち `/dev/nmdmbhyve0`）を使用する
+
+これらのルールは、必要に応じて異なるゲスト名やインターフェース名に合わせて拡張・変更できます。
+
+> **注記**: ホスト上と 1 つ以上の jail 内の両方で bhyve を使用する予定がある場合は、`tap` や `nmdm` のインターフェース名が共有環境で動作することを忘れないでください。
+> たとえば、`/dev/nmdmbhyve0` はホスト上の bhyve か jail 内の bhyve のどちらか一方でのみ使用してください。
+
+変更を読み込むために devfs を再起動します。
+
+```shell
+# service devfs restart
+```
+
+次に、`/etc/jail.conf` または `/etc/jail.conf.d` に新しい jail の定義を追加します。
+インターフェース番号 `$if` と IP アドレスは環境に合わせて置き換えてください。
+
+**例: ファイアウォールによる NAT またはルーティング通信の使用**
+
+```
+bhyve {
+        $if = 0;
+        exec.prestart = "/sbin/ifconfig epair${if} create up";
+        exec.prestart += "/sbin/ifconfig epair${if}a up";
+        exec.prestart += "/sbin/ifconfig epair${if}a name ${name}0";
+        exec.prestart += "/sbin/ifconfig epair${if}b name jail${if}";
+        exec.prestart += "/sbin/ifconfig ${name}0 inet 192.168.168.1/27";
+        exec.prestart += "/sbin/sysctl net.inet.ip.forwarding=1";
+
+        exec.clean;
+
+        host.hostname = "the-hostname-here";
+        vnet;
+        vnet.interface = "jail${if}";
+        path = "/jails/${name}";
+        persist;
+        securelevel = 3;
+        devfs_ruleset = 100;
+        mount.devfs;
+
+        allow.vmm;
+
+        exec.start += "/bin/sh /etc/rc";
+        exec.stop = "/bin/sh /etc/rc.shutdown";
+
+        exec.poststop += "/sbin/ifconfig ${name}0 destroy";
+}
+```
+
+この例では、jail のトラフィックを NAT するために `pf` や `ipfw` などのファイアウォールを使用することを前提としています。
+これを実装するための利用可能なオプションの詳細は、[Firewalls](https://docs.freebsd.org/en/books/handbook/firewalls/#firewalls) 章を参照してください。
+
+**例: ブリッジネットワーク接続の使用**
+
+```
+bhyve {
+        $if = 0;
+        exec.prestart = "/sbin/ifconfig epair${if} create up";
+        exec.prestart += "/sbin/ifconfig epair${if}a up";
+        exec.prestart += "/sbin/ifconfig epair${if}a name ${name}0";
+        exec.prestart += "/sbin/ifconfig epair${if}b name jail${if}";
+        exec.prestart += "/sbin/ifconfig bridge0 addm ${name}0";
+        exec.prestart += "/sbin/sysctl net.inet.ip.forwarding=1";
+
+        exec.clean;
+
+        host.hostname = "the-hostname-here";
+        vnet;
+        vnet.interface = "jail${if}";
+        path = "/jails/${name}";
+        persist;
+        securelevel = 3;
+        devfs_ruleset = 100;
+        mount.devfs;
+
+        allow.vmm;
+
+        exec.start += "/bin/sh /etc/rc";
+        exec.stop = "/bin/sh /etc/rc.shutdown";
+
+        exec.poststop += "/sbin/ifconfig ${name}0 destroy";
+}
+```
+
+> **注記**: 先ほど `/etc/devfs.rules` の devfs ルールセット ID `100` を固有の番号に置き換えた場合は、`jail.conf`（原文表記 `jails.conf`）側の数値 ID も忘れずに置き換えてください。
+
+<a id="virtualization-bhyve-jailed-config"></a>
+#### jail の設定
+
+jail を初めて起動し、追加の設定作業を行うには次のように入力します。
+
+```shell
+# cp /etc/resolv.conf /jails/bhyve/etc
+# service jail onestart bhyve
+# jexec bhyve
+# sysrc ifconfig_jail0="inet 192.168.168.2/27"
+# sysrc defaultrouter="192.168.168.1"
+# sysrc sendmail_enable=NONE
+# sysrc cloned_interfaces="tap100"
+# exit
+```
+
+jail を有効化して再起動します。
+
+```shell
+# sysrc jail_enable=YES
+# service jail restart bhyve
+```
+
+その後、jail 内で仮想マシンを作成します。
+FreeBSD ゲストの場合は、まずインストール ISO をダウンロードします。
+
+```shell
+# jexec bhyve
+# cd /vms
+# fetch -o freebsd.iso https://download.freebsd.org/releases/ISO-IMAGES/14.0/FreeBSD-14.0-RELEASE-amd64-bootonly.iso
+```
+
+<a id="virtualization-bhyve-jailed-createvm"></a>
+#### jail 内での仮想マシンの作成
+
+仮想マシンを作成するには、まず `bhyvectl` を使って初期化します。
+
+```shell
+# jexec bhyve
+# bhyvectl --create --vm=bhyvevm0
+```
+
+> **注記**: jail から仮想マシンを起動する際には、`bhyvectl` で事前にゲストを作成しておく必要がある場合があります。
+> この手順を省略すると、`bhyve` の起動時に次のエラーメッセージが出ることがあります。
+>
+> `vm_open: vm-name could not be opened. No such file or directory`
+
+最後に、好みの方法でゲストを起動します。
+
+**例: `vmrun.sh` と ZFS による起動**
+
+ZFS ファイルシステム上で `vmrun.sh` を使用する例です。
+
+```shell
+# jexec bhyve
+# sh /usr/share/examples/bhyve/vmrun.sh -c 1 -m 1024M \
+     -t tap100 -d /dev/zvol/zroot/vms/bhyvevm0 -i -I /vms/FreeBSD-14.0-RELEASE-amd64-bootonly.iso bhyvevm0
+```
+
+**例: `vmrun.sh` と UFS による起動**
+
+UFS ファイルシステム上で `vmrun.sh` を使用する例です。
+
+```shell
+# jexec bhyve
+# sh /usr/share/examples/bhyve/vmrun.sh -c 1 -m 1024M \
+     -t tap100 -d /vms/bhyvevm0 -i -I /vms/FreeBSD-14.0-RELEASE-amd64-bootonly.iso bhyvevm0
+```
+
+**例: ZFS を使った UEFI ゲスト向け bhyve の起動**
+
+UEFI ゲストを使用したい場合は、先に jail 内に必要なファームウェアパッケージ `sysutils/bhyve-firmware` をインストールしておく必要があります。
+
+```shell
+# pkg -j bhyve install bhyve-firmware
+```
+
+その後、`bhyve` を直接実行します。
+
+```shell
+# bhyve -A -c 4 -D -H -m 2G \
+        -s 0,hostbridge \
+        -s 1,lpc \
+        -s 2,virtio-net,tap100 \
+        -s 3,virtio-blk,/dev/zvol/zroot/vms/bhyvevm0 \
+	-s 4,ahci-cd,/vms/FreeBSD-14.0-RELEASE-amd64-bootonly.iso \
+        -s 31,fbuf,tcp=127.0.0.1:5900,w=1024,h=800,tablet \
+        -l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI.fd \
+        -l com1,/dev/nmdbbhyve0A \
+        bhyvevm0
+```
+
+これにより、VNC 経由に加えて `/dev/nmdbbhyve0B` のシリアルコンソールからも仮想マシン `bhyvevm0` に接続できるようになります。
+
+> **訳注**: 原文のこの例では `/dev/nmdbbhyve0A`・`/dev/nmdbbhyve0B` と記載されていますが、前述の `devfs.rules` の例では `nmdmbhyve*` となっている点に注意してください（名称を揃える必要があります）。
+
+<a id="virtualization-bhyve-nmdm"></a>
+### 仮想マシンコンソール
+
+コンソールの切り離し（detach）や再接続（reattach）ができるように、`sysutils/tmux` や `sysutils/screen` などのセッション管理ツールの中で bhyve コンソールを実行すると便利です。
+また、bhyve のコンソールを `cu` でアクセス可能なヌルモデム（null modem）デバイスにすることもできます。
+これを行うには、`nmdm` カーネルモジュールを読み込み、`-l com1,stdio` を `-l com1,/dev/nmdm0A` に置き換えます。
+`/dev/nmdm` デバイスは必要に応じて自動的に作成され、それぞれがヌルモデムケーブルの両端に対応するペア（`/dev/nmdm0A` と `/dev/nmdm0B`）になっています。
+詳細は `nmdm(4)` を参照してください。
+
+```shell
+# kldload nmdm
+# bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,tap0 -s 3:0,virtio-blk,./linux.img \
+    -l com1,/dev/nmdm0A -c 4 -m 1024M linuxguest
+# cu -l /dev/nmdm0B
+Connected
+
+Ubuntu 13.10 handbook ttyS0
+
+handbook login:
+```
+
+コンソールから切断するには、改行（つまり `RETURN` を押す）に続けてチルダ（`~`）、最後にドット（`.`）を入力します。
+切断されるのは接続だけであり、ログインセッション自体は有効なまま残る点に注意してください。
+そのため、同じコンソールへ別のユーザーが接続すると、最初に認証することなく有効なセッションを利用できてしまう可能性があります。
+セキュリティ上の理由から、切断する前にログアウトすることが推奨されます。
+
+`nmdm` デバイスパス内の番号は仮想マシンごとに一意でなければならず、bhyve が起動する前に他のプロセスで使用されていてはなりません。
+番号は任意に選ぶことができ、連続した連番から取る必要はありません。
+デバイスノードのペア（つまり `/dev/nmdm0a` と `/dev/nmdm0b`）は bhyve がコンソールを接続する際に動的に作成され、シャットダウン時に破棄されます。
+仮想マシンを起動するスクリプトを作成する際は、すべての仮想マシンに一意の `nmdm` デバイスが割り当てられるよう注意してください。
+
+<a id="virtualization-bhyve-managing"></a>
+### 仮想マシンの管理
+
+仮想マシンごとに `/dev/vmm` にデバイスノードが作成されます。
+これにより、管理者は実行中の仮想マシンの一覧を簡単に確認できます。
+
+```shell
+# ls -al /dev/vmm
+total 1
+dr-xr-xr-x   2 root  wheel    512 Mar 17 12:19 ./
+dr-xr-xr-x  14 root  wheel    512 Mar 17 06:38 ../
+crw-------   1 root  wheel  0x1a2 Mar 17 12:20 guestname
+crw-------   1 root  wheel  0x19f Mar 17 12:19 linuxguest
+crw-------   1 root  wheel  0x1a1 Mar 17 12:19 otherguest
+```
+
+指定した仮想マシンは `bhyvectl` を使って破棄できます。
+
+```shell
+# bhyvectl --destroy --vm=guestname
+```
+
+この方法で仮想マシンを破棄すると、即座に強制終了されます。未保存のデータはすべて失われ、開いているファイルやファイルシステムが破損するおそれがあります。
+仮想マシンを正常にシャットダウンするには、代わりにその bhyve プロセスへ `TERM` シグナルを送ります。これによりゲストに対して ACPI シャットダウンイベントが発行されます。
+
+```shell
+# ps ax | grep bhyve
+17424  -  SC      56:48.27 bhyve: guestvm (bhyve)
+# kill 17424
+```
+
+<a id="virtualization-tools-utilities"></a>
+### ツールとユーティリティ
+
+bhyve 仮想マシンの構築や管理を簡単にするため、Ports には多数のユーティリティやアプリケーションが用意されています。
+
+**bhyve マネージャ**
+
+| 名前 | ライセンス | パッケージ | ドキュメント |
+|---|---|---|---|
+| vm-bhyve | BSD-2 | `sysutils/vm-bhyve` | [Documentation](https://github.com/freebsd/vm-bhyve) |
+| CBSD | BSD-2 | `sysutils/cbsd` | [Documentation](https://github.com/cbsd/cbsd/tree/develop/share/docs) |
+| Virt-Manager | LGPL-3 | `deskutils/virt-manager` | [Documentation](https://virt-manager.org/) |
+| Bhyve RC Script | Unknown | `sysutils/bhyve-rc` | [Documentation](https://www.freshports.org/sysutils/bhyve-rc/) |
+| bmd | BSD-2 | `sysutils/bmd` | [Documentation](https://github.com/yuichiro-naito/bmd) |
+| vmstated | BSD-2 | `sysutils/vmstated` | [Documentation](https://github.com/christian-moerz/vmstated) |
+
+<a id="virtualization-bhyve-onboot"></a>
+### 永続的な設定
+
+起動時に bhyve ゲストを自動起動するようにシステムを設定するには、いくつかの設定ファイルを変更する必要があります。
+
+1. `/etc/sysctl.conf`
+
+   ネットワークバックエンドとして `tap` インターフェースを使用する場合、使用する各 `tap` インターフェースを手動で UP にするか、単に次の sysctl を設定します。
+
+   ```
+   net.link.tap.up_on_open=1
+   ```
+
+2. `/etc/rc.conf`
+
+   仮想マシンの `tap` デバイスを `bridge` 経由でネットワークに接続するには、デバイス設定を `/etc/rc.conf` に永続化する必要があります。
+   さらに、`kld_list` 設定変数を通じて、bhyve に必要な `vmm` カーネルモジュールと `nmdm` デバイス用の `nmdm` カーネルモジュールを読み込みます。
+   `ifconfig_bridge0` を設定する際は、`<ipaddr>/<netmask>` を物理インターフェース（この例では `igb0`）の実際の IP アドレスに置き換え、物理デバイスからは IP 設定を削除してください。
+
+   ```shell
+   # sysrc cloned_interfaces+="bridge0 tap0"
+   # sysrc ifconfig_bridge0="inet <ipaddr>/<netmask> addm igb0 addm tap0"
+   # sysrc kld_list+="nmdm vmm"
+   # sysrc ifconfig_igb0="up"
+   ```
+
+<a id="virtualization-bhyve-onboot-bridgenet"></a>
+**例: ブリッジデバイスへの IP 設定**
+
+IP `10.10.10.1`、ネットマスク `255.255.255.0` でネットワークに接続された _igb0_ インターフェースを持つホストの場合は、次のコマンドを実行します。
+
+```shell
+# sysrc ifconfig_igb0="up"
+# sysrc ifconfig_bridge0="inet 10.10.10.1/24 addm igb0 addm tap0"
+# sysrc kld_list+="nmdm vmm"
+# sysrc cloned_interfaces+="bridge0 tap0"
+```
+
+> **警告**: システムの IP アドレス設定を変更すると、現在のリモート接続（SSH など）が切断され、ロックアウトされる可能性があります。
+> システムへのアクセスを維持する対策を講じるか、ローカルの端末セッションにログインした状態で変更を行ってください。
