@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Chapter 31 PPP (31-ppp-and-slip) only; legacy TOC ID 30; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 31,
+      "slug": "ppp-and-slip",
+      "upstream_chapter_number": 31,
+      "legacy_toc_id": 30,
+      "upstream_path": "documentation/content/en/books/handbook/ppp-and-slip/_index.adoc",
+      "source_path": "handbook/en/ch31/31-ppp-and-slip.adoc.txt",
+      "translation_path": "handbook/ja/31-ppp-and-slip.md",
+      "source_sha256": "fafc8c3b0608f5741f8d552d25cb397bd6203b0d20addb3474caa5a34fd13941",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft in progress; source pinned and structure prepared",
+      "counts": {
+        "headings": 20,
+        "anchors": 20,
+        "code_blocks": 61,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}
