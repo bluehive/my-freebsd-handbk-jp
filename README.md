@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 31 PPP（既存TOC ID 30）を意訳
+
+- 公式Chapter 31 [PPP](handbook/ja/31-ppp-and-slip.md)（既存TOC ID 30）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全20見出し・20アンカー・61コード例・全相互参照を意訳・自己校正しました。
+- 原文のコマンド・出力例および表記（`115,200 kbps`、認証完了時の `Ppp ON example>` 重複、`sendmail` 記述の文末欠落）は保持したうえで訳注で区別しています。
+- [作業記録](docs/translation-ch31.md) / [原文ハッシュと状態](docs/translation-ch31.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Chapter 7 Network（既存TOC ID なし）を意訳
 
 - 公式Chapter 7 [Network](handbook/ja/07-network.md)（既存TOC ID なし）を追加し、`handbook/TOC.md` に新規行を追加しました（既存の `07-desktop.md` 等は旧TOC番号のまま維持）。

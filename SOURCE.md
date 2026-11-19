@@ -143,4 +143,4 @@
 
 ## 公式Chapter 31（PPP）の意訳用スナップショット
 
-2026-11-20に、公式Chapter 31 PPP（`documentation/content/en/books/handbook/ppp-and-slip/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch31/31-ppp-and-slip.adoc.txt`（31380バイト、SHA-256: `fafc8c3b0608f5741f8d552d25cb397bd6203b0d20addb3474caa5a34fd13941`）、出典・進捗は [マニフェスト](docs/translation-ch31.json)と[作業記録](docs/translation-ch31.md)に保存しています。既存TOCのID 30に対応します。
+2026-11-20に、公式Chapter 31 PPP（`documentation/content/en/books/handbook/ppp-and-slip/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch31/31-ppp-and-slip.adoc.txt`（31380バイト、SHA-256: `fafc8c3b0608f5741f8d552d25cb397bd6203b0d20addb3474caa5a34fd13941`）、出典・進捗は [マニフェスト](docs/translation-ch31.json)と[作業記録](docs/translation-ch31.md)に保存しています。既存TOCのID 30に対応します。第31章の速度単位およびプロンプト変化の訳注では、[FreeBSD 15.0 ppp(8)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.sbin/ppp/ppp.8) を参照しています。
