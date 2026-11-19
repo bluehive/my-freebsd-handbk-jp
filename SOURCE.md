@@ -92,3 +92,7 @@
 ## 公式Chapter 34 Firewalls の意訳用スナップショット
 
 2026-11-19に、公式Chapter 34 Firewalls（`documentation/content/en/books/handbook/firewalls/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch34/34-firewalls.adoc.txt`（123801バイト、SHA-256: `59d166966e604c5564548036577be575aa27922f9a8a516761e16aa83cd5229a`）、出典・進捗は [マニフェスト](docs/translation-ch34.json) と [作業記録](docs/translation-ch34.md) に保存しています。既存TOCのID 33に対応します。
+
+## 公式Chapter 35 Advanced Networking の意訳用スナップショット
+
+2026-11-19に、公式Chapter 35 Advanced Networking（`documentation/content/en/books/handbook/advanced-networking/_index.adoc`、既存TOC ID 34）を、`freebsd/freebsd-doc` の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch35/35-advanced-networking.adoc.txt`（103789バイト、SHA-256: `609f4547d7051f01f6681be04505d75b7b7f1c663fa07de1dd4457fd4bea1125`）、出典・SHA-256・進捗は [マニフェスト](docs/translation-ch35.json)と[作業記録](docs/translation-ch35.md)に保存しています。画像は同じ上流コミットの `documentation/static/images/books/handbook/advanced-networking/` を参照します。

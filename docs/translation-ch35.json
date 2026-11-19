@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-19",
+  "scope": "Official Chapter 35 Advanced Networking (legacy TOC ID 34) only; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 35,
+      "slug": "advanced-networking",
+      "upstream_chapter_number": 35,
+      "legacy_toc_id": 34,
+      "upstream_path": "documentation/content/en/books/handbook/advanced-networking/_index.adoc",
+      "source_path": "handbook/en/ch35/35-advanced-networking.adoc.txt",
+      "translation_path": "handbook/ja/35-advanced-networking.md",
+      "source_sha256": "609f4547d7051f01f6681be04505d75b7b7f1c663fa07de1dd4457fd4bea1125",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft in progress; pinned source retrieved and structural manifest initialized; runtime and third-party review not performed",
+      "counts": {
+        "headings": 45,
+        "anchors": 49,
+        "code_blocks": 130,
+        "images": 2,
+        "tables": 1
+      }
+    }
+  ]
+}
