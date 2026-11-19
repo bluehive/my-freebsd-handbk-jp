@@ -1255,3 +1255,136 @@ delete: olcTLSCipherSuite
 そのあとで `slapd.ldif` を編集し、再度インポートできます。ただし、この手順は他に解決策がない場合にのみ行ってください。
 
 以上はサーバ側のみの設定です。同じマシン上に、これとは独立した設定を持つ LDAP クライアントを同居させることもできます。
+
+<a id="network-dhcp"></a>
+## Dynamic Host Configuration Protocol（DHCP）
+
+Dynamic Host Configuration Protocol（DHCP）は、システムがネットワークへ接続する際に、そのネットワークで通信するために必要なアドレス情報を自動割り当てするためのプロトコルです。FreeBSD には OpenBSD 版の `dhclient` が含まれており、クライアント側でアドレス情報を取得する際に使用されます。FreeBSD 標準では DHCP サーバはインストールされませんが、FreeBSD Ports Collection にはいくつかの DHCP サーバが収録されています。DHCP プロトコルの詳細な仕様は [RFC 2131](http://www.freesoft.org/CIE/RFC/2131/) に記載されています。また、[isc.org/downloads/dhcp/](http://www.isc.org/downloads/dhcp/) にも関連資料があります。
+
+この節では、組み込みの DHCP クライアントの使い方を説明したあと、DHCP サーバのインストールと設定方法を解説します。
+
+> **注記（NOTE）**: FreeBSD では、DHCP サーバと DHCP クライアントの両方で `bpf(4)` デバイスが必要です。このデバイスは FreeBSD に標準で含まれる `GENERIC` カーネルに組み込まれています。カスタムカーネルを構築する場合は、DHCP を利用するならこのデバイスを残しておく必要があります。
+>
+> なお、`bpf` を有効にすると、特権ユーザーがそのシステム上でネットワークパケットスニファを実行できるようになる点にも留意してください。
+
+<a id="chapter-33-heading-31"></a>
+### DHCP クライアントの設定（Configuring a DHCP Client）
+
+DHCP クライアントのサポートは FreeBSD インストーラに組み込まれているため、新規インストールしたシステムが既存の DHCP サーバからネットワークのアドレス情報を自動取得するように設定するのは簡単です。ネットワーク設定の例については、[アカウント、タイムゾーン、サービス、ハードニング](02-bsdinstall.md#bsdinstall-post)を参照してください。
+
+クライアントマシン上で `dhclient` が実行されると、設定情報を求める要求のブロードキャストを開始します。既定では、この要求には UDP ポート 68 が使われます。サーバは UDP ポート 67 で応答し、IP アドレスに加えてサブネットマスク、デフォルトゲートウェイ、DNS サーバアドレスなどの関連ネットワーク情報をクライアントへ渡します。この情報は DHCP「リース（lease）」の形で提供され、設定可能な有効期限を持ちます。これにより、ネットワークから切り離されたクライアントの古い IP アドレスを自動的に再利用できるようになります。DHCP クライアントはサーバから非常に多くの種類の情報を取得できます。網羅的な一覧は `dhcp-options(5)` を参照してください。
+
+既定では、FreeBSD システムの起動時に DHCP クライアントはバックグラウンド、すなわち*非同期（asynchronously）*で動作します。DHCP の処理が完了するのを待たずに他の起動スクリプトが実行されるため、システム起動が高速になります。
+
+バックグラウンドの DHCP は、DHCP サーバがクライアントの要求へ素早く応答する環境ではうまく機能します。しかし、環境によっては DHCP の完了に長い時間がかかる場合があります。DHCP によるネットワークアドレス情報の割り当てが終わる前にネットワークサービスが起動しようとすると、それらのサービスは失敗してしまいます。DHCP を*同期（synchronous）*モードで使うと、DHCP の設定が完了するまで起動処理を一時停止するため、この問題を防げます。
+
+バックグラウンド（非同期）モードを設定するには、`/etc/rc.conf` に次の行を記述します。
+
+```
+ifconfig_fxp0="DHCP"
+```
+
+インストール時に DHCP を使うよう設定した場合は、この行がすでに存在していることがあります。これらの例における *fxp0* は、[ネットワークインターフェイスカードの設定](13-config.md#config-network-setup)で説明されているとおり、動的設定を行いたいインターフェイス名に置き換えてください。
+
+代わりに同期モードを使い、DHCP が完了するまで起動時に待機させるには、`"SYNCDHCP"` を指定します。
+
+```
+ifconfig_fxp0="SYNCDHCP"
+```
+
+このほかにもクライアント用オプションがあります。詳細は `rc.conf(5)` で `dhclient` を検索してください。
+
+DHCP クライアントは次のファイルを使用します。
+
+* `/etc/dhclient.conf`
+
+  `dhclient` が使用する設定ファイルです。通常はほとんどのクライアントにとって既定値が適切なため、コメントのみが書かれています。この設定ファイルについては `dhclient.conf(5)` で解説されています。
+
+* `/sbin/dhclient`
+
+  コマンド自体の詳細は `dhclient(8)` を参照してください。
+
+* `/sbin/dhclient-script`
+
+  FreeBSD 固有の DHCP クライアント設定スクリプトです。`dhclient-script(8)` で解説されていますが、通常はユーザーが変更しなくても正しく動作します。
+
+* `/var/db/dhclient.leases.interface`
+
+  DHCP クライアントは有効なリースのデータベースをこのファイルにログ形式で保持します。詳細は `dhclient.leases(5)` を参照してください。
+
+<a id="network-dhcp-server"></a>
+### DHCP サーバのインストールと設定（Installing and Configuring a DHCP Server）
+
+この節では、Internet Systems Consortium（ISC）による DHCP サーバ実装を使って FreeBSD システムを DHCP サーバとして構成する方法を説明します。この実装とドキュメントは、`net/isc-dhcp44-server` のパッケージまたは Port を使ってインストールできます。
+
+`net/isc-dhcp44-server` をインストールすると、サンプル設定ファイルが配置されます。`/usr/local/etc/dhcpd.conf.example` を `/usr/local/etc/dhcpd.conf` へコピーし、コピーした新しいファイルを編集してください。
+
+設定ファイルは、DHCP クライアントへ提供する情報を定義するサブネット宣言およびホスト宣言で構成されます。たとえば、次の記述では各項目を設定しています。
+
+```
+option domain-name "example.org";
+option domain-name-servers ns1.example.org;
+option subnet-mask 255.255.255.0;
+
+default-lease-time 600;
+max-lease-time 72400;
+ddns-update-style none;
+
+subnet 10.254.239.0 netmask 255.255.255.224 {
+  range 10.254.239.10 10.254.239.20;
+  option routers rtr-239-0-1.example.org, rtr-239-0-2.example.org;
+}
+
+host fantasia {
+  hardware ethernet 08:00:07:26:c0:a5;
+  fixed-address fantasia.fugue.com;
+}
+```
+
+1. `option domain-name`: クライアントへ提供する既定の検索ドメインを指定します。詳細は `resolv.conf(5)` を参照してください。
+2. `option domain-name-servers`: クライアントが使用すべき DNS サーバをカンマ区切りで指定します。例のように完全修飾ドメイン名（FQDN）で指定することも、IP アドレスで指定することもできます。
+3. `option subnet-mask`: クライアントへ提供するサブネットマスクです。
+4. `default-lease-time`: 既定のリース有効期限（秒単位）です。クライアント側の設定でこの値を上書きすることもできます。
+5. `max-lease-time`: リースに許可される最大期間（秒単位）です。クライアントがこれより長いリースを要求した場合でもリース自体は発行されますが、有効期限は `max-lease-time` までに制限されます。
+6. `ddns-update-style`: 既定値の `none` は動的 DNS 更新を無効にします。これを `interim` に変更すると、DHCP サーバがリースを払い出すたびに DNS サーバを更新し、ネットワーク内のどのコンピュータにどの IP アドレスが割り当てられているかを DNS サーバ側が把握できるようになります。DNS サーバ側で動的 DNS に対応した設定を行っていない限り、既定値から変更しないでください。
+7. `range`: DHCP クライアントへの割り当て用に予約された利用可能 IP アドレスのプールを作成します。アドレス範囲は、前の行で指定したネットワークまたはサブネットに対して有効な範囲でなければなりません。
+8. `option routers`: 開き括弧 `{` の前で指定したネットワークまたはサブネットに対して有効なデフォルトゲートウェイを宣言します。
+9. `hardware ethernet`: クライアントが要求を送ってきた際に DHCP サーバが識別できるよう、クライアントのハードウェア MAC アドレスを指定します。
+10. `fixed-address`: このホストに常に同じ IP アドレスを割り当てるよう指定します。DHCP サーバはリース情報を返す前にホスト名を名前解決するため、ホスト名での指定が正しい書き方です。
+
+この設定ファイルは他にも多くのオプションに対応しています。詳細や設定例は、サーバとともにインストールされる `dhcpd.conf(5)` を参照してください。
+
+`dhcpd.conf` の設定が終わったら、`/etc/rc.conf` で DHCP サーバを有効にします。
+
+```
+dhcpd_enable="YES"
+dhcpd_ifaces="dc0"
+```
+
+`dc0` の部分は、DHCP サーバがクライアントからの要求を待ち受けるインターフェイス名（複数の場合は空白区切り）に置き換えてください。
+
+次のコマンドを実行してサーバを起動します。
+
+```shell
+# service isc-dhcpd start
+```
+
+今後サーバの設定を変更した際は、その都度 `service(8)` を使って `dhcpd` サービスを停止してから再起動する必要があります。
+
+DHCP サーバは次のファイルを使用します。マニュアルページはサーバソフトウェアと一緒にインストールされます。
+
+* `/usr/local/sbin/dhcpd`
+
+  `dhcpd` サーバの詳細は `dhcpd(8)` を参照してください。
+
+* `/usr/local/etc/dhcpd.conf`
+
+  サーバ設定ファイルであり、クライアントへ提供するすべての情報と、サーバ自身の動作に関する情報を記述します。この設定ファイルについては `dhcpd.conf(5)` で解説されています。
+
+* `/var/db/dhcpd.leases`
+
+  DHCP サーバは発行済みリースのデータベースをこのファイルにログ形式で保持します。より詳しい説明は `dhcpd.leases(5)` を参照してください。
+
+* `/usr/local/sbin/dhcrelay`
+
+  このデーモンは、1 つの DHCP サーバがクライアントからの要求を別ネットワーク上の別の DHCP サーバへ転送する高度な環境で使用します。この機能が必要な場合は、`net/isc-dhcp44-relay` のパッケージまたは Port をインストールしてください。インストールされる `dhcrelay(8)` に詳細が記載されています。
