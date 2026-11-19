@@ -1,8 +1,6 @@
 <a id="dtrace"></a>
 # 第28章 DTrace
 
-> **ドラフト**: 本ファイルは翻訳作業中のドラフトです。全節の翻訳および自己校正が完了するまで仮の状態です。
-
 本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/dtrace/)の「Chapter 28. DTrace」（既存 TOC ID 27）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/dtrace/_index.adoc`）に基づいて日本語へ意訳したものです。
 
 > **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。掲載されているコマンドや設定例は説明のための例であり、翻訳作業中に実機で実行したものではありません。実行例中の `#` は root ユーザーのプロンプトを示します。
@@ -160,7 +158,7 @@ kernel                                                    874   0.4%
 0xc10981a5                                             213781  99.6%
 ```
 
-`procsystime` スクリプトは、指定したプロセス `ID`（`PID`）またはプロセス名について、システムコールの経過時間使用量を計測して表示します。次の例では、新しく `/bin/csh` のインスタンスを起動しました。その後、`procsystime` を実行して待機させた状態で、別の `csh` インスタンス上でいくつかコマンドを入力しました。このテストの結果は次のとおりです。
+`procsystime` スクリプトは、指定したプロセス `ID`（`PID`）またはプロセス名について、システムコールの時間使用量を計測して表示します。次の例では、新しく `/bin/csh` のインスタンスを起動しました。その後、`procsystime` を実行して待機させた状態で、別の `csh` インスタンス上でいくつかコマンドを入力しました。このテストの結果は次のとおりです。
 
 ```shell
 # ./procsystime -n csh
