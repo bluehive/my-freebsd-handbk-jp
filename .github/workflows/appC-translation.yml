@@ -1,0 +1,34 @@
+name: Handbook Appendix C Resources on the Internet
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/appC/**'
+      - 'handbook/ja/C-eresources.md'
+      - 'docs/translation-appC.json'
+      - 'scripts/check_appC_translation.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/appC-translation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/appC/**'
+      - 'handbook/ja/C-eresources.md'
+      - 'docs/translation-appC.json'
+      - 'scripts/check_appC_translation.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/appC-translation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-appC:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check Appendix C Resources on the Internet translation and pinned source
+        run: python3 scripts/check_appC_translation.py
