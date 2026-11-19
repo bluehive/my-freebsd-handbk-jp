@@ -7,7 +7,7 @@
 - 上流：`freebsd/freebsd-doc`
 - 固定コミット：`a39743a3b0535f4498735119317889ea2bdfeb28`（第1〜14章、第19〜21章、第23〜27章、第33〜35章、Preface と同じ）
 - 取得日：2026-11-19（日本時間）
-- 原文：`documentation/content/en/books/handbook/security/_index.adoc`（2517行、94868バイト）
+- 原文：`documentation/content/en/books/handbook/security/_index.adoc`（2183行、94868バイト）
 - 保存先：`handbook/en/ch16/16-security.adoc.txt`（SHA-256: `ffdcea842b969971bc80f65443abb850d21eacc059c15296aff8bbb8b2862404`）
 - 訳文：`handbook/ja/15-security.md`（既存の初訳ドラフトのパスを維持して全面改稿・照合）
 - マニフェスト：`docs/translation-ch16.json`
@@ -17,7 +17,7 @@
 - 旧スナップショット `handbook/en/15-security.adoc.txt` は履歴として変更・削除せず残しています。
 - 固定原文 `handbook/en/ch16/16-security.adoc.txt` との差分は次のとおりです。
   1. 固定原文には YAML front matter（`title: Chapter 16. Security` 等）および AsciiDoc ヘッダ属性・共有 `include::` が含まれる一方、旧スナップショットでは先頭ヘッダが省略されています。
-  2. 旧スナップショットのコードブロック内から、`login.conf` 例の `:passwd_format=sha512:\`・`:passwd_format=blf:\` および `limited:\` 例の `:maxproc=50:\ <1>`・`:tc=default: <2>` の計4行が欠落していました。固定原文ではこれらがすべて揃っています。
+  2. 旧スナップショットのコードブロック内から、`login.conf` 例の `:passwd_format=sha512:\`・`:passwd_format=blf:\` および `limited:\` 例の `:maxproc=50:\ <.>`・`:tc=default: <.>` の計4行が欠落していました。固定原文ではこれらがすべて揃っています。
 
 ## 構成と照合結果
 
