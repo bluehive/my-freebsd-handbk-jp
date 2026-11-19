@@ -214,3 +214,116 @@ www.example.org
 このファイルを作成または編集したら、`service sendmail restart` で Sendmail を再起動してください。
 
 これにより、ユーザーがこのシステム上にアカウントを持っている限り、このリストに含まれるいずれのホストからこのシステム経由で送信されたメールも成功するようになります。こうして、インターネットからのスパム中継（リレー）を許してしまうことなく、ユーザーがリモートからこのシステム経由でメールを送信できるようになります。
+
+<a id="mail-changingmta"></a>
+## メール転送エージェント（MTA）の変更
+
+FreeBSD 14.0 以降は `dma(8)` がデフォルト MTA であり、14.0 より前は `sendmail(8)` がデフォルト MTA です。ただし、システム管理者はシステムの MTA を変更できます。FreeBSD の Ports Collection の `mail` カテゴリには、代替 MTA が数多く用意されています。
+
+> **警告**: デフォルトの送信メールサービスを無効化する場合は、必ず別のメール配送システムへ置き換えてください。そうしないと、`periodic(8)` のようなシステム機能が実行結果をメールで配信できなくなります。システムの多くの箇所は、正常に動作する MTA の存在を前提としています。無効化後もアプリケーションがデフォルトのバイナリを使ってメール送信を試み続けると、メールが非アクティブなキューに入ったまま配送されなくなるおそれがあります。
+
+<a id="replace-sendmail-dma"></a>
+### Sendmail を他の MTA へ置き換える
+
+`sendmail(8)` を完全に無効化するには、次のコマンドを実行します。
+
+```shell
+# sysrc sendmail_enable="NO"
+# sysrc sendmail_submit_enable="NO"
+# sysrc sendmail_outbound_enable="NO"
+# sysrc sendmail_msp_queue_enable="NO"
+```
+
+`sendmail(8)` の受信メールサービスだけを無効化する場合は、次のコマンドを実行します。
+
+```shell
+# sysrc sendmail_enable="NO"
+```
+
+続いて、`sendmail(8)` サービスを停止します。
+
+```shell
+# service sendmail onestop
+```
+
+`sendmail(8)` は広く普及しているため、すでにインストール・設定済みであることを前提とするソフトウェアも存在し、追加の設定が必要です。`/etc/periodic.conf` を確認し、次の設定値が `NO` になっていることを確かめてください。ファイルが存在しない場合は、次の内容で作成します。
+
+```
+daily_clean_hoststat_enable="NO"
+daily_status_mail_rejects_enable="NO"
+daily_status_include_submit_mailq="NO"
+daily_submit_queuerun="NO"
+```
+
+次の手順として別の MTA をインストールします。この例では `dma(8)` を使用します。前述のとおり、FreeBSD 14.0 以降では `dma(8)` がデフォルト MTA のため、Ports からインストールする必要があるのはそれ以前のバージョンを使っている場合のみです。
+
+インストールするには、次のコマンドを実行します。
+
+```shell
+# pkg install dma
+```
+
+[DragonFly Mail Agent（DMA）の設定](#configuring-dragonfly-mail-agent)の手順に従って設定を行います。
+
+その後、`/etc/mail/mailer.conf` 内のすべてのエントリを `dma(8)` に変更します。
+
+```
+# Execute the "real" sendmail program, named /usr/libexec/sendmail/sendmail
+#
+# If dma(8) is installed, an example mailer.conf that uses dma(8) instead can
+# be found in /usr/share/examples/dma
+#
+sendmail        /usr/local/libexec/dma
+mailq           /usr/local/libexec/dma
+newaliases      /usr/local/libexec/dma
+```
+
+> **注**: ベースシステムに含まれる `dma(8)` を使用する場合は、パスが `/usr/libexec/dma` に変わります。
+
+起動時またはシャットダウン前にキュー内のメールを確実にフラッシュ（送出）するため、次のコマンドを実行します。
+
+```shell
+# sysrc dma_flushq_enable="YES"
+```
+
+すべての設定が終わったら、システムを再起動することを推奨します。再起動することで、起動時に新しい MTA が自動的に開始されるよう正しく設定されているかを確認できます。
+
+<a id="replace-dma"></a>
+### DragonFly Mail Agent（DMA）を他の MTA へ置き換える
+
+前述のとおり、FreeBSD 14.0 以降のデフォルト MTA は DMA です。この例では、代替 MTA として `mail/postfix` を使用します。
+
+`mail/postfix` をインストールする前に、追加の設定が必要です。`/etc/periodic.conf` を確認し、次の設定値が `NO` になっていることを確かめてください。ファイルが存在しない場合は、次の内容で作成します。
+
+```
+daily_clean_hoststat_enable="NO"
+daily_status_mail_rejects_enable="NO"
+daily_status_include_submit_mailq="NO"
+daily_submit_queuerun="NO"
+```
+
+続いて、`mail/postfix` をインストールします。
+
+```shell
+# pkg install postfix
+```
+
+システム起動時に `mail/postfix` を自動起動するには、次のコマンドを実行します。
+
+```shell
+# sysrc postfix_enable="YES"
+```
+
+> **ヒント**: アプリケーションをインストールした後は、インストールメッセージを読む習慣を付けるとよいでしょう。設定などに関する有用な情報が含まれています。
+
+`/usr/local/etc/mail/mailer.conf` で Postfix が**まだ**有効化されていない場合は、次のコマンドを実行します。
+
+```shell
+mv /usr/local/etc/mail/mailer.conf /usr/local/etc/mail/mailer.conf.old
+install -d /usr/local/etc/mail
+install -m 0644 /usr/local/share/postfix/mailer.conf.postfix /usr/local/etc/mail/mailer.conf
+```
+
+SASL を使用する場合は、Postfix が sasldb ファイルを読み取れるようにしておく必要があります。これには、ユーザー `postfix` をグループ `mail` に追加し、`/usr/local/etc/sasldb*` ファイルをグループ `mail` から読み取り可能にします（新規インストールではこれがデフォルトになっているはずです）。
+
+すべての設定が終わったら、システムを再起動することを推奨します。再起動することで、起動時に新しい MTA が自動的に開始されるよう正しく設定されているかを確認できます。
