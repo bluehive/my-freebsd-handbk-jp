@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch07/07-network.adoc.txt",
       "translation_path": "handbook/ja/07-network.md",
       "source_sha256": "1184065b01b76c506140ac2dcfd2f5e1b947fef8b2c12f9c94fbea9c0c2bd1f7",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft in progress; pinned source snapshot and verification scaffold initialized; runtime and third-party review not performed",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 29 headings, 30 anchors, 57 code blocks, 2 tables, and all cross-references in the pinned source; pciconf iwm0 vs iwn(4) discrepancy annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 29,
         "anchors": 30,
