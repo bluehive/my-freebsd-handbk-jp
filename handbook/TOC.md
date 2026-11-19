@@ -38,7 +38,7 @@
 | 29 | Serial Communications | — | 未着手 | |
 | 30 | PPP | — | 未着手 | |
 | 31 | Electronic Mail | — | 未着手 | |
-| 32 | Network Servers | — | 未着手 | 高工数 |
+| 32 | Network Servers（公式Chapter 33） | [33-network-servers.md](ja/33-network-servers.md) | **ドラフト** | 2026-11-19 原文固定・翻訳作業中（公式Chapter 33、高工数） |
 | 33 | Firewalls | — | 未着手 | 高工数 |
 | 34 | Advanced Networking | — | 未着手 | 高工数 |
 | A | Obtaining FreeBSD | — | 未着手 | |
