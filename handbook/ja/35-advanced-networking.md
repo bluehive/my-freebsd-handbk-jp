@@ -215,3 +215,248 @@ options MROUTING
 設定例については、これらの man ページを参照してください。
 
 > **注記**: 多くのマルチキャスト環境では、DVMRP はすでに PIM プロトコルへ置き換えられています。詳細は `pim(4)` を参照してください。
+
+<a id="configtuning-virtual-hosts"></a>
+## 仮想ホスト（Virtual Hosts）
+
+FreeBSD の一般的な用途の 1 つに仮想サイトホスティング（virtual site hosting）があり、1 台のサーバをネットワーク上で複数のサーバに見せかけることができます。
+これは、単一のインタフェースに複数のネットワークアドレスを割り当てることで実現します。
+
+1 つのネットワークインタフェースには 1 つの「実（real）」アドレスがあり、それに加えて任意の数の「エイリアス（alias）」アドレスを持たせることができます。
+通常、これらのエイリアスは次のように `/etc/rc.conf` にエイリアスエントリを記述して追加します。
+
+```shell
+# sysrc ifconfig_fxp0_alias0="inet xxx.xxx.xxx.xxx netmask xxx.xxx.xxx.xxx"
+```
+
+エイリアスエントリは `alias0`、`alias1` のように `alias0` から始まる連番で指定しなければなりません。
+設定処理は、連番が途切れた最初の箇所で停止します。
+
+エイリアスのネットマスクの計算は重要です。
+あるインタフェースにおいて、そのネットワークのネットマスクを正しく表すアドレスが 1 つ存在する必要があります。
+同じネットワーク内に属するそれ以外のアドレスは、すべてビットが `1` のネットマスク（`255.255.255.255` または `0xffffffff`）を指定しなければなりません。
+
+たとえば、`fxp0` インタフェースがネットマスク `255.255.255.0` の `10.1.1.0` と、ネットマスク `255.255.255.240` の `202.0.75.16` という 2 つのネットワークに接続されている場合を考えます。
+このシステムで `10.1.1.1` 〜 `10.1.1.5` および `202.0.75.17` 〜 `202.0.75.20` の範囲のアドレスを持たせたいとします。
+それぞれのネットワーク範囲における最初のアドレスだけに本来のネットマスクを指定し、残りのすべて（`10.1.1.2` 〜 `10.1.1.5` および `202.0.75.18` 〜 `202.0.75.20`）にはネットマスク `255.255.255.255` を設定しなければなりません。
+
+このシナリオに対してアダプタを正しく設定する `/etc/rc.conf` のエントリは次のとおりです。
+
+```shell
+# sysrc ifconfig_fxp0="inet 10.1.1.1 netmask 255.255.255.0"
+# sysrc ifconfig_fxp0_alias0="inet 10.1.1.2 netmask 255.255.255.255"
+# sysrc ifconfig_fxp0_alias1="inet 10.1.1.3 netmask 255.255.255.255"
+# sysrc ifconfig_fxp0_alias2="inet 10.1.1.4 netmask 255.255.255.255"
+# sysrc ifconfig_fxp0_alias3="inet 10.1.1.5 netmask 255.255.255.255"
+# sysrc ifconfig_fxp0_alias4="inet 202.0.75.17 netmask 255.255.255.240"
+# sysrc ifconfig_fxp0_alias5="inet 202.0.75.18 netmask 255.255.255.255"
+# sysrc ifconfig_fxp0_alias6="inet 202.0.75.19 netmask 255.255.255.255"
+# sysrc ifconfig_fxp0_alias7="inet 202.0.75.20 netmask 255.255.255.255"
+```
+
+これをより簡潔に記述する方法として、IP アドレス範囲を空白区切りのリストで指定する形式もあります。
+この形式では、最初のアドレスに指定したサブネットマスクが割り当てられ、残りのアドレスにはサブネットマスク `255.255.255.255` が割り当てられます。
+
+```shell
+# sysrc ifconfig_fxp0_aliases="inet 10.1.1.1-5/24 inet 202.0.75.17-20/28"
+```
+
+<a id="network-advanced-wireless"></a>
+## 無線ネットワークの高度な認証（Wireless Advanced Authentication）
+
+FreeBSD は無線ネットワークへ接続するための複数の方式に対応しています。
+この節では、無線ネットワークに対する高度な認証の設定方法を説明します。
+
+無線ネットワークへの接続と基本的な認証については、Network 章の [Connection and Authentication to a Wireless Network](https://docs.freebsd.org/en/books/handbook/network/#wireless-authentication) を参照してください。
+
+<a id="network-wireless-wpa-eap-tls"></a>
+### EAP-TLS を用いた WPA（WPA with EAP-TLS）
+
+WPA を利用する 2 つ目の方法は、802.1X バックエンド認証サーバと組み合わせる方式です。
+この場合、セキュリティ強度の低い WPA Personal と区別して **WPA Enterprise** と呼ばれます。
+WPA Enterprise における認証は、Extensible Authentication Protocol（EAP）に基づいています。
+
+EAP 自体は暗号化方式を備えていません。
+その代わり、EAP は暗号化されたトンネルの内部に埋め込まれてやり取りされます。
+EAP の認証方式には多くの種類がありますが、最も一般的なのは EAP-TLS、EAP-TTLS、および EAP-PEAP です。
+
+EAP with Transport Layer Security（EAP-TLS）は、[Wi-Fi Alliance](https://www.wi-fi.org/) によって最初に認定された EAP 方式であるため、広くサポートされている無線認証プロトコルです。
+EAP-TLS を運用するには、すべてのマシンにインストールする認証局（CA）の証明書、認証サーバ用のサーバ証明書、そして各無線クライアント用のクライアント証明書の 3 種類の証明書が必要です。
+この EAP 方式では、認証サーバと無線クライアントがそれぞれの証明書を提示して相互に認証し、それらの証明書が組織の CA によって署名されていることを検証します。
+
+これまでと同様に、設定は `/etc/wpa_supplicant.conf` で行います。
+
+```
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=TLS
+  identity="loader"
+  ca_cert="/etc/certs/cacert.pem"
+  client_cert="/etc/certs/clientcert.pem"
+  private_key="/etc/certs/clientkey.pem"
+  private_key_passwd="freebsdmallclient"
+}
+```
+
+1. `ssid` はネットワーク名（SSID）を指定します。
+2. `proto=RSN` は WPA2 とも呼ばれる RSN IEEE® 802.11i プロトコルを使用することを示します。
+3. `key_mgmt` 行は使用する鍵管理プロトコルを指定します。この例では EAP 認証を用いる WPA です。
+4. `eap` は接続に用いる EAP 方式を指定します。
+5. `identity` には EAP 用の識別子文字列を指定します。
+6. `ca_cert` は CA 証明書ファイルのパス名を指定します。このファイルはサーバ証明書の検証に必要です。
+7. `client_cert` はクライアント証明書ファイルのパス名を指定します。この証明書はネットワーク上の各無線クライアントごとに固有です。
+8. `private_key` はクライアント証明書の秘密鍵ファイルのパス名です。
+9. `private_key_passwd` には秘密鍵のパスフレーズを指定します。
+
+次に、`/etc/rc.conf` に次の行を追加します。
+
+```
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+```
+
+続いて、インタフェースを起動します。
+
+```shell
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+```
+
+`wpa_supplicant(8)` と `ifconfig(8)` を使って手動でインタフェースを起動することも可能です。
+
+<a id="network-wireless-wpa-eap-ttls"></a>
+### EAP-TTLS を用いた WPA（WPA with EAP-TTLS）
+
+EAP-TLS では認証サーバとクライアントの双方に証明書が必要でしたが、EAP-TTLS ではクライアント証明書は任意です。
+この方式は、訪問者がクライアント証明書を持っていなくても安全な SSL トンネルを構築する Web サーバの仕組みと似ています。
+EAP-TTLS は暗号化された TLS トンネルを使って認証データを安全に転送します。
+
+必要な設定は `/etc/wpa_supplicant.conf` に追加します。
+
+```
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=TTLS
+  identity="test"
+  password="test"
+  ca_cert="/etc/certs/cacert.pem"
+  phase2="auth=MD5"
+}
+```
+
+1. `eap` は接続に用いる EAP 方式を指定します。
+2. `identity` には、暗号化された TLS トンネル内での EAP 認証に使う識別子文字列を指定します。
+3. `password` には EAP 認証のパスフレーズを指定します。
+4. `ca_cert` は CA 証明書ファイルのパス名を指定します。このファイルはサーバ証明書の検証に必要です。
+5. `phase2` は暗号化された TLS トンネル内で使われる認証方式を指定します。この例では MD5-Challenge を用いる EAP を使用しています。この「内側認証（inner authentication）」フェーズは、しばしば「phase2」と呼ばれます。
+
+次に、`/etc/rc.conf` に次の行を追加します。
+
+```
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+```
+
+続いて、インタフェースを起動します。
+
+```shell
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 21
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+```
+
+<a id="network-wireless-wpa-eap-peap"></a>
+### EAP-PEAP を用いた WPA（WPA with EAP-PEAP）
+
+> **注記**: PEAPv0/EAP-MSCHAPv2 は最も一般的な PEAP 方式です。この章では、その方式を指して「PEAP」と呼びます。
+
+Protected EAP（PEAP）は EAP-TTLS の代替として設計されており、EAP-TLS に次いで広く使われている EAP 標準です。
+複数のオペレーティングシステムが混在するネットワークでは、EAP-TLS に次いで最も広くサポートされている標準となるはずです。
+
+PEAP は、クライアントと認証サーバの間に暗号化された TLS トンネルを作成し、サーバ側証明書でクライアント側がサーバを認証したうえで後続の認証情報のやり取りを保護する点で、EAP-TTLS と似ています。
+ただし PEAP 認証は、ユーザー名を平文で送信し、パスワードのみを暗号化された TLS トンネル内で送信する点が EAP-TTLS と異なります。
+EAP-TTLS ではユーザー名とパスワードの両方に TLS トンネルを使用します。
+
+EAP-PEAP 関連の設定を行うには、`/etc/wpa_supplicant.conf` に次の行を追加します。
+
+```
+network={
+  ssid="freebsdap"
+  proto=RSN
+  key_mgmt=WPA-EAP
+  eap=PEAP
+  identity="test"
+  password="test"
+  ca_cert="/etc/certs/cacert.pem"
+  phase1="peaplabel=0"
+  phase2="auth=MSCHAPV2"
+}
+```
+
+1. `eap` は接続に用いる EAP 方式を指定します。
+2. `identity` には、暗号化された TLS トンネル内での EAP 認証に使う識別子文字列を指定します。
+3. `password` には EAP 認証のパスフレーズを指定します。
+4. `ca_cert` は CA 証明書ファイルのパス名を指定します。このファイルはサーバ証明書の検証に必要です。
+5. `phase1` には認証の第 1 フェーズである TLS トンネル用のパラメータを指定します。使用する認証サーバに応じて、認証用の特定のラベルを指定してください。多くの場合、ラベルは `"client EAP encryption"` であり、これは `peaplabel=0` によって設定されます。詳細は `wpa_supplicant.conf(5)` を参照してください。
+6. `phase2` は暗号化された TLS トンネル内で使用される認証プロトコルを指定します。PEAP の場合は `auth=MSCHAPV2` になります。
+
+`/etc/rc.conf` に次の行を追加します。
+
+```
+wlans_ath0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+```
+
+その後、インタフェースを起動します。
+
+```shell
+# service netif start
+Starting wpa_supplicant.
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 7
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 15
+DHCPREQUEST on wlan0 to 255.255.255.255 port 67 interval 21
+DHCPACK from 192.168.0.20
+bound to 192.168.0.254 -- renewal in 300 seconds.
+wlan0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+      ether 00:11:95:d5:43:62
+      inet 192.168.0.254 netmask 0xffffff00 broadcast 192.168.0.255
+      media: IEEE 802.11 Wireless Ethernet DS/11Mbps mode 11g
+      status: associated
+      ssid freebsdap channel 1 (2412 Mhz 11g) bssid 00:11:95:c3:0d:ac
+      country US ecm authmode WPA2/802.11i privacy ON deftxkey UNDEF
+      AES-CCM 3:128-bit txpower 21.5 bmiss 7 scanvalid 450 bgscan
+      bgscanintvl 300 bgscanidle 250 roam:rssi 7 roam:rate 5 protmode CTS
+      wme burst roaming MANUAL
+```
