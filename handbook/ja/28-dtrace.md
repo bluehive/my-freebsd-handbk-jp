@@ -28,3 +28,22 @@ DTrace の公式ガイドは、illumos プロジェクトによって [illumos D
 
 * UNIX® と FreeBSD の基本（[FreeBSD の基本](03-basics.md#basics)）
 * セキュリティおよび FreeBSD におけるセキュリティの扱いについての基礎知識（[セキュリティ](15-security.md#security)）
+
+<a id="dtrace-implementation"></a>
+## 実装の違い
+
+FreeBSD の DTrace は Solaris™ のものと似ていますが、いくつかの違いがあります。最大の違いは、FreeBSD では DTrace が一連のカーネルモジュールとして実装されており、モジュールを読み込むまで DTrace を使用できない点です。必要なモジュールをすべて読み込むには、次のように実行します。
+
+```shell
+# kldload dtraceall
+```
+
+FreeBSD 10.0-RELEASE 以降では、`dtrace(1)` を実行するとモジュールが自動的に読み込まれます。
+
+FreeBSD では、カーネルモジュールおよびカーネル本体から `ctf(5)` データを読み込む機能を有効にするために、`DDB_CTF` カーネルオプションを使用します。`CTF` は Solaris™ の Compact C Type Format であり、`DWARF` や古くからある stabs に似た簡略化デバッグ情報を格納する形式です。`CTF` データは、`ctfconvert(1)` および `ctfmerge(1)` というビルドツールによってバイナリに付加されます。`ctfconvert` ユーティリティはコンパイラが生成した `DWARF` の `ELF` デバッグセクションを解析し、`ctfmerge` はオブジェクトファイル群の `CTF` `ELF` セクションを実行ファイルまたは共有ライブラリへ統合します。
+
+FreeBSD には Solaris™ とは異なるプロバイダも存在します。最も注目すべきは `dtmalloc` プロバイダで、FreeBSD カーネル内で型ごとに `malloc(9)` をトレースできます。一方で、Solaris™ にあるプロバイダの一部（`cpc` など）は FreeBSD には存在しませんが、今後の FreeBSD のバージョンで追加される可能性があります。さらに、両方の OS で利用できるプロバイダであっても、プローブの引数の型が異なるという意味で互換性がない場合があります。そのため、Solaris™ で書かれた `D` スクリプトは FreeBSD 上で無修正のまま動作するとは限らず、その逆も同様です。
+
+セキュリティ上の違いにより、FreeBSD では `root` のみが DTrace を使用できます。Solaris™ には FreeBSD にまだ実装されていない低レベルのセキュリティチェックがいくつか備わっています。そのため、`/dev/dtrace/dtrace` へのアクセスは厳格に `root` に限定されています。
+
+DTrace は Common Development and Distribution License（`CDDL`）ライセンスの下で提供されています。FreeBSD 上でこのライセンスを確認するには、`/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE` を参照するか、オンラインの [https://opensource.org/licenses/CDDL-1.0](https://opensource.org/licenses/CDDL-1.0) をご覧ください。DTrace サポートを含む FreeBSD カーネル自体は `BSD` ライセンスですが、モジュールがバイナリ形式で配布される場合や、バイナリが読み込まれる場合には `CDDL` が適用されます。
