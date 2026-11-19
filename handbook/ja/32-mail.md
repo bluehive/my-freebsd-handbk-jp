@@ -484,3 +484,224 @@ alpine でのメールの返信には、alpine と一緒にデフォルトでイ
 ![メッセージ作成画面を表示している alpine メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/pine5.png)
 
 alpine は、メインメニューの `SETUP` 項目からカスタマイズできます。
+
+
+<a id="mail-advanced"></a>
+## 高度なトピック
+
+この節では、メールの詳細な設定やドメイン全体のメール構築といった、より高度なトピックを扱います。
+
+<a id="mail-config"></a>
+### 基本設定
+
+`/etc/resolv.conf` が設定されているか、ネットワーク上から設定済みの DNS サーバーにアクセスできる環境であれば、初期状態のまま外部ホストへメールを送信できます。FreeBSD ホスト上の MTA でメールを受信するには、次のいずれかを行います。
+
+* そのドメイン用の DNS サーバーを運用する。
+* マシンの FQDN 宛てに直接メールを配送させる。
+
+ホスト宛てに直接メールを配送させるには、動的 IP アドレスではなく固定の静的 IP アドレスが必要です。システムがファイアウォールの背後にある場合は、SMTP トラフィックを許可するよう設定しておく必要があります。ホストで直接メールを受信するには、次の 2 つのいずれかを設定します。
+
+* DNS で最も番号の小さい MX レコードが、そのホストの静的 IP アドレスを指すようにする。
+* DNS にそのホスト用の MX エントリを置かないようにする。
+
+いずれかの設定を行えば、ホストで直接メールを受信できます。
+
+次のコマンドを試してみてください。
+
+```shell
+# hostname
+```
+
+出力は次のようになります。
+
+```
+example.FreeBSD.org
+```
+
+```shell
+# host example.FreeBSD.org
+```
+
+出力は次のようになります。
+
+```
+example.FreeBSD.org has address 204.216.27.XX
+```
+
+この例では、`example.FreeBSD.org` 上で本格的な MTA が正しく稼働していれば、[yourlogin@example.FreeBSD.org](mailto:yourlogin@example.FreeBSD.org) 宛てに直接送られたメールは問題なく届くはずです。なお、`dma(8)` は受信接続のためにポート 25 で待ち受けを行わないため、この構成では使用できません。
+
+次に、以下の例を見てみます。
+
+```shell
+# host example.FreeBSD.org
+```
+
+出力は次のようになります。
+
+```
+example.FreeBSD.org has address 204.216.27.XX
+example.FreeBSD.org mail is handled (pri=10) by nevdull.FreeBSD.org
+```
+
+この場合、`example.FreeBSD.org` 宛てのメールはすべて、ローカルホストへ直接送られる代わりに、`nevdull` 上の同じユーザー名で受け取られます。
+
+上記の情報は DNS サーバーによって管理されています。メールの配送先情報を保持する DNS レコードは、[メールエクスチェンジャレコード（MX レコード）](https://en.wikipedia.org/wiki/MX_record)と呼ばれます。MX レコードが存在しない場合、メールはそのホストの IP アドレスを使って直接配送されます。
+
+かつて `freefall.FreeBSD.org` の MX エントリは次のようになっていました。
+
+```
+freefall		MX	30	mail.crl.net
+freefall		MX	40	agora.rdrop.com
+freefall		MX	10	freefall.FreeBSD.org
+freefall		MX	20	who.cdrom.com
+```
+
+`freefall` には多数の MX エントリがありました。最も番号の小さい MX が、到達可能であればメールを直接受信するホストです。何らかの理由でそのホストに到達できない場合は、次に番号の小さいホストが一時的にメッセージを受け取り、より番号の小さいホストが再び到達可能になった時点で転送します。
+
+代替の MX サイトは、最大限の効果を発揮させるために別のインターネット回線を持つべきです。こうしたサービスは ISP が提供している場合があります。
+
+<a id="mail-domain"></a>
+### ドメイン宛てのメール
+
+ネットワーク向けに MTA を設定する場合は、そのドメイン内の各ホスト宛てに送られたメールを MTA へ集約し、ユーザーがマスターメールサーバー上でメールを受け取れるようにします。
+
+もっとも管理を簡単にするには、MTA 側と MUA を使うシステム側の両方に同じ*ユーザー名*のユーザーアカウントを用意します。ユーザーアカウントの作成には `adduser(8)` を使用します。
+
+> **ヒント**: ホストにローカルユーザーを追加する以外にも、仮想ユーザー（virtual users）と呼ばれる代替手段があります。[Cyrus](https://www.cyrusimap.org/) や [Dovecot](https://www.dovecot.org/) などのプログラムを MTA と連携させると、ユーザー管理やメール保存に加え、POP3 や IMAP 経由でのアクセスも提供できます。
+
+MTA は、ネットワーク上の各ワークステーションに対する指定メールエクスチェンジャとして設定する必要があります。これは DNS 設定で MX レコードを使って行います。
+
+```
+example.FreeBSD.org	A	204.216.27.XX		; Workstation
+			MX	10 nevdull.FreeBSD.org	; Mailhost
+```
+
+これにより、A レコードがどこを指しているかにかかわらず、ワークステーション宛てのメールは MTA へ転送されます。メールは MX ホストへ送られます。
+
+これは DNS サーバー上で設定する必要があります。ネットワーク内で独自の DNS サーバーを運用していない場合は、ISP または DNS プロバイダーに相談してください。
+
+次に、仮想メールホスティングの例を示します。
+
+ドメイン `customer1.org` を持つ顧客がいて、`customer1.org` 宛てのメールをすべて `mail.myhost.com` へ送りたいとします。
+
+DNS エントリは次のようになります。
+
+```
+customer1.org		MX	10	mail.myhost.com
+```
+
+そのドメインのメールだけを扱うのであれば、`customer1.org` に `A` レコードは*不要*です。ただし、`A` レコードが存在しない場合、`customer1.org` に対して `ping` を実行しても応答は得られません。
+
+続いて、どのドメインやホスト名宛てのメールを受理するかを MTA に指示します。Sendmail では次のいずれかの方法が使えます。
+
+* `FEATURE(use_cw_file)` を使用している場合は、`/etc/mail/local-host-names` にホスト名を追加する。
+* `/etc/sendmail.cf` に `Cwyour.host.com` の行を追加する。（訳注: 原文では `/etc/sendmail.cf` と記載されていますが、FreeBSD の Sendmail マスター設定ファイルは通常 `/etc/mail/sendmail.cf` に配置されます。）
+
+<a id="outgoing-only"></a>
+### 送信専用の設定
+
+リレー経由でメールを送信するだけでよいケースは数多くあります。たとえば次のような場合です。
+
+* デスクトップマシンであり、ISP のメールリレーを使って `mail(1)` などのプログラムを利用したい場合。
+* ローカルではメールを処理しないサーバーであり、すべてのメールをリレーへ渡して処理させたい場合。
+
+どの MTA でもこうした用途に対応できますが、メールを外部へ送り出すためだけに本格的な MTA を正しく設定するのは手間がかかります。この用途には Sendmail や Postfix のようなプログラムは大げさすぎます。
+
+さらに、一般的なインターネット接続サービスの利用規約では、「メールサーバー」の運用が禁止されていることもあります。
+
+こうした要件を満たすもっとも簡単な方法は、[ベースシステム](#configuring-dragonfly-mail-agent)に含まれる `dma(8)` MTA を使うことです。FreeBSD 13.2 までのシステムでは、Ports からインストールする必要があります。
+
+`dma(8)` 以外にも、`mail/ssmtp` のようなサードパーティ製ソフトウェアを使って同じ目的を達成できます。
+
+```shell
+# cd /usr/ports/mail/ssmtp
+# make install replace clean
+```
+
+インストールが完了したら、`/usr/local/etc/ssmtp/ssmtp.conf` で `mail/ssmtp` を設定します。
+
+```
+root=yourrealemail@example.com
+mailhub=mail.example.com
+rewriteDomain=example.com
+hostname=_HOSTNAME_
+```
+
+`root` には実際のメールアドレスを指定します。`mail.example.com` の部分には ISP の送信メールリレーを入力します。ISP によっては、これを「送信メールサーバー（outgoing mail server）」や「SMTP サーバー」と呼ぶこともあります。
+
+送信メールサービスを含め、Sendmail を必ず無効化しておいてください。
+
+`mail/ssmtp` には他にもいくつかのオプションが用意されています。詳細は `/usr/local/etc/ssmtp` にある設定例や `ssmtp` の man ページを参照してください。
+
+このように `ssmtp` を設定しておけば、ISP の利用規約に違反したり、スパム送信に悪用されたりすることなく、コンピュータ上でメール送信を必要とするソフトウェアを正常に動作させることができます。
+
+<a id="SMTP-Auth"></a>
+### Sendmail における SMTP 認証
+
+MTA で SMTP 認証を設定すると、さまざまな利点があります。SMTP 認証は Sendmail にセキュリティの層を追加するだけでなく、接続元ホストを移動するモバイルユーザーが、毎回メールクライアントの設定を変更しなくても同じ MTA を使えるようにしてくれます。
+
+Ports Collection から `security/cyrus-sasl2` をインストールします。この port には多数のコンパイル時オプションがあります。この例で示す SMTP 認証方式を使うには、`LOGIN` が無効化されていないことを確認してください。
+
+`security/cyrus-sasl2` をインストールしたら、`/usr/local/lib/sasl2/Sendmail.conf` を編集（存在しない場合は新規作成）し、次の行を追加します。
+
+```
+pwcheck_method: saslauthd
+```
+
+次に、`security/cyrus-sasl2-saslauthd` をインストールし、次のコマンドを実行します。
+
+```shell
+# sysrc saslauthd_enable="YES"
+```
+
+最後に、`saslauthd` デーモンを起動します。
+
+```shell
+# service saslauthd start
+```
+
+このデーモンは、Sendmail が FreeBSD の `passwd(5)` データベースに対して認証を行う際の仲介役として機能します。これにより、SMTP 認証を使うユーザーごとに新しいユーザー名とパスワードの組を作り直す手間が省け、ログインパスワードとメールパスワードを同じに保つことができます。
+
+次に、`/etc/make.conf` を編集し、以下の行を追加します。
+
+```
+SENDMAIL_CFLAGS=-I/usr/local/include/sasl -DSASL
+SENDMAIL_LDADD=/usr/local/lib/libsasl2.so
+```
+
+これらの行は、Sendmail のコンパイル時に `cyrus-sasl2` とリンクするための適切な設定オプションを指定します。Sendmail を再コンパイルする前に、`cyrus-sasl2` がインストール済みであることを確認してください。
+
+次のコマンドを実行して Sendmail を再コンパイルします。
+
+```shell
+# cd /usr/src/lib/libsmutil
+# make cleandir && make obj && make
+# cd /usr/src/lib/libsm
+# make cleandir && make obj && make
+# cd /usr/src/usr.sbin/sendmail
+# make cleandir && make obj && make && make install
+```
+
+`/usr/src` に大幅な変更が加えられておらず、必要な共有ライブラリが揃っていれば、このコンパイルは問題なく完了するはずです。
+
+Sendmail のコンパイルと再インストールが終わったら、`/etc/mail/freebsd.mc` またはローカルの `.mc` ファイルを編集します。一意性を保つため、`hostname(1)` の出力を `.mc` ファイル名として使う管理者も多くいます。
+
+次の行を追加します。
+
+```
+dnl set SASL options
+TRUST_AUTH_MECH(`GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+define(`confAUTH_MECHANISMS', `GSSAPI DIGEST-MD5 CRAM-MD5 LOGIN')dnl
+```
+
+これらのオプションは、Sendmail がユーザー認証に使用できる各種方式を設定します。`pwcheck` 以外の方式を使う場合は、Sendmail のドキュメントを参照してください。
+
+最後に、`/etc/mail` ディレクトリ内で `make(1)` を実行します。これにより新しい `.mc` が処理され、`freebsd.cf` またはローカルの `.mc` で使用した名前の `.cf` ファイルが生成されます。
+
+続いて `make install restart` を実行すると、そのファイルが `sendmail.cf` へコピーされ、Sendmail が適切に再起動されます。
+
+この処理の詳細は `/etc/mail/Makefile` を参照してください。
+
+設定をテストするには、MUA を使ってテストメッセージを送信します。さらに詳しく調査したい場合は、Sendmail の `LogLevel` を `13` に設定し、`/var/log/maillog` にエラーが出力されないか確認してください。
+
+詳細については、[SMTP authentication](http://www.sendmail.org/~ca/email/auth.html) を参照してください。
