@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Appendix B Bibliography (B-bibliography) only; legacy TOC ID B; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": "B",
+      "slug": "bibliography",
+      "upstream_chapter_number": null,
+      "legacy_toc_id": "B",
+      "upstream_path": "documentation/content/en/books/handbook/bibliography/_index.adoc",
+      "source_path": "handbook/en/appB/B-bibliography.adoc.txt",
+      "translation_path": "handbook/ja/B-bibliography.md",
+      "source_sha256": "70af57a95bbe4533a6f6f40dbb523ea19b8053d85cf4b4700ca5a119c4c49f99",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft in progress; pinned source snapshot recorded, translation and self-proofreading not yet complete; runtime and third-party review not performed",
+      "counts": {
+        "headings": 5,
+        "anchors": 5,
+        "code_blocks": 0,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}
