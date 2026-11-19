@@ -33,4 +33,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Check Chapter 18 OCI Containers translation and pinned source
-        run: python3 scripts/check_ch18_translation.py
+        run: python3 scripts/check_ch18_translation.py --require-complete

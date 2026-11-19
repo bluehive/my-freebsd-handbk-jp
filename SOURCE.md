@@ -152,3 +152,7 @@
 ## 公式Chapter 32（Electronic Mail）の意訳用スナップショット
 
 2026-11-20に、公式Chapter 32 Electronic Mail（`documentation/content/en/books/handbook/mail/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch32/32-mail.adoc.txt`（38378バイト、SHA-256: `68acd6aa52ac7a2ca5abaf5a9ae4ecadf6277a9cf17675212f09858b83f39385`）、出典・進捗は [マニフェスト](docs/translation-ch32.json)と[作業記録](docs/translation-ch32.md)に保存しています。既存TOCのID 31に対応します。画像は同じ固定コミットの `documentation/static/images/books/handbook/mail/`（8枚）を参照します。
+
+## 公式Chapter 18（OCI Containers）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 18 OCI Containers（`documentation/content/en/books/handbook/containers/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch18/18-containers.adoc.txt`（41706バイト、SHA-256: `e666506444b45f33115e8a6de8fc65062ff38388eae3a9dc3cfe718bcb9baf5e`）、出典・進捗は [マニフェスト](docs/translation-ch18.json)と[作業記録](docs/translation-ch18.md)に保存しています。既存TOCのID 17に対応し、訳文パスは既存の `handbook/ja/17-containers.md` を維持しています。旧スナップショット `handbook/en/17-containers.adoc.txt` は履歴として未変更のまま保持しています。
