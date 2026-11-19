@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-19",
+  "scope": "Official Chapter 16 Security (15-security) only; legacy TOC ID 15; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 16,
+      "slug": "security",
+      "upstream_chapter_number": 16,
+      "legacy_toc_id": 15,
+      "upstream_path": "documentation/content/en/books/handbook/security/_index.adoc",
+      "source_path": "handbook/en/ch16/16-security.adoc.txt",
+      "translation_path": "handbook/ja/15-security.md",
+      "source_sha256": "ffdcea842b969971bc80f65443abb850d21eacc059c15296aff8bbb8b2862404",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Pinned source captured; rewriting and proofreading existing draft handbook/ja/15-security.md against pinned source",
+      "counts": {
+        "headings": 53,
+        "anchors": 53,
+        "code_blocks": 119,
+        "images": 0,
+        "tables": 1
+      }
+    }
+  ]
+}

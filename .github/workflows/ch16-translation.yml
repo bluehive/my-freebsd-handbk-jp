@@ -1,0 +1,36 @@
+name: Handbook Chapter 16 Security
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/ch16/**'
+      - 'handbook/ja/15-security.md'
+      - 'docs/translation-ch16.json'
+      - 'scripts/check_ch16_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch16-translation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/ch16/**'
+      - 'handbook/ja/15-security.md'
+      - 'docs/translation-ch16.json'
+      - 'scripts/check_ch16_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch16-translation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-ch16:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check Chapter 16 Security translation and pinned source
+        run: python3 scripts/check_ch16_translation.py
