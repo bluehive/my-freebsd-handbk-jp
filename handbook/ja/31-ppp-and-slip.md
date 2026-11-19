@@ -601,3 +601,123 @@ net.graph.nonstandard_pppoe=1
 ```
 
 残念ながら、これはシステム全体の設定であるため、通常の PPPoE クライアントまたはサーバーと 3Com® HomeConnect™ ADSL Modem の両方と同時に通信することはできません。
+
+<a id="pppoa"></a>
+## PPP over ATM（PPPoA）の利用
+
+以下では、PPP over ATM（PPPoA）のセットアップ方法を説明します。PPPoA はヨーロッパの DSL プロバイダの間で広く使われている方式です。
+
+<a id="chapter-31-heading-19"></a>
+### mpd の利用
+
+mpd アプリケーションはさまざまなサービス、特に PPTP サービスへの接続に使用できます。`net/mpd5` パッケージまたは port を使ってインストールできます。多くの ADSL モデムでは、モデムとコンピュータの間に PPTP トンネルを作成する必要があります。
+
+インストールしたら、プロバイダの設定に合わせて mpd を設定します。この port は、詳しく解説されたサンプル設定ファイル一式を `/usr/local/etc/mpd/` に配置します。mpd の設定に関する完全なガイドは HTML 形式で `/usr/ports/shared/doc/mpd/` にあります。以下に、mpd で ADSL サービスに接続するためのサンプル設定を示します。設定は 2 つのファイルに分かれており、まずは `mpd.conf` です。
+
+> **注**: この `mpd.conf` の例は mpd 4.x でのみ動作します。
+
+```
+default:
+    load adsl
+
+adsl:
+    new -i ng0 adsl adsl
+    set bundle authname username
+    set bundle password password
+    set bundle disable multilink
+
+    set link no pap acfcomp protocomp
+    set link disable chap
+    set link accept chap
+    set link keep-alive 30 10
+
+    set ipcp no vjcomp
+    set ipcp ranges 0.0.0.0/0 0.0.0.0/0
+
+    set iface route default
+    set iface disable on-demand
+    set iface enable proxy-arp
+    set iface idle 0
+
+    open
+```
+
+1. `username`: ISP との認証に使用するユーザー名。
+2. `password`: ISP との認証に使用するパスワード。
+
+確立する 1 つまたは複数のリンクに関する情報は `mpd.links` に記述します。上記の例に対応する `mpd.links` の例を次に示します。
+
+```
+adsl:
+    set link type pptp
+    set pptp mode active
+    set pptp enable originate outcall
+    set pptp self 10.0.0.1
+    set pptp peer 10.0.0.138
+```
+
+1. `10.0.0.1`: mpd を実行している FreeBSD コンピュータの IP アドレス。
+2. `10.0.0.138`: ADSL モデムの IP アドレス。Alcatel SpeedTouch™ Home のデフォルトは `10.0.0.138` です。
+
+接続の初期化は、`root` として次のコマンドを実行するだけで簡単に行えます。
+
+```shell
+# mpd -b adsl
+```
+
+接続の状態を確認するには次を実行します。
+
+```shell
+% ifconfig ng0
+ng0: flags=88d1<UP,POINTOPOINT,RUNNING,NOARP,SIMPLEX,MULTICAST> mtu 1500
+     inet 216.136.204.117 --> 204.152.186.171 netmask 0xffffffff
+```
+
+FreeBSD から ADSL サービスに接続するには、mpd を使用する方法が推奨されています。
+
+<a id="chapter-31-heading-20"></a>
+### pptpclient の利用
+
+`net/pptpclient` を使用して、FreeBSD から他の PPPoA サービスに接続することもできます。
+
+`net/pptpclient` を使って DSL サービスに接続するには、port またはパッケージをインストールした後、`/etc/ppp/ppp.conf` を編集します。`ppp.conf` のセクション例を以下に示します。`ppp.conf` のオプションの詳細については `ppp(8)` を参照してください。
+
+```
+adsl:
+ set log phase chat lcp ipcp ccp tun command
+ set timeout 0
+ enable dns
+ set authname username
+ set authkey password
+ set ifaddr 0 0
+ add default HISADDR
+```
+
+1. `username`: DSL プロバイダのユーザー名。
+2. `password`: アカウントのパスワード。
+
+> **警告**: アカウントのパスワードは平文で `ppp.conf` に記述されるため、他のユーザーがこのファイルの内容を読めないようにしてください。
+
+```shell
+# chown root:wheel /etc/ppp/ppp.conf
+# chmod 600 /etc/ppp/ppp.conf
+```
+
+これにより、DSL ルーターへの PPP セッション用トンネルが開かれます。イーサネット接続の DSL モデムには、接続用に事前設定された LAN IP アドレスがあります。Alcatel SpeedTouch™ Home の場合、このアドレスは `10.0.0.138` です。デバイスが使用するアドレスはルーターのドキュメントに記載されているはずです。トンネルを開いて PPP セッションを開始するには、次を実行します。
+
+```shell
+# pptp address adsl
+```
+
+> **ヒント**: このコマンドの末尾にアンパサンド（"&"）を付けると、pptp はプロンプトを返します。
+
+pptp プロセスと ppp プロセス間でやり取りするための仮想トンネルデバイス `tun` が作成されます。プロンプトが戻ったら、または pptp プロセスが接続を確認したら、トンネルを確認します。
+
+```shell
+% ifconfig tun0
+tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+        inet 216.136.204.21 --> 204.152.186.171 netmask 0xffffff00
+	Opened by PID 918
+```
+
+接続に失敗する場合は、ルーターの設定を確認してください。通常は Web ブラウザからアクセスできます。また、`pptp` の出力およびログファイル `/var/log/ppp.log` の内容に手がかりがないか確認してください。
