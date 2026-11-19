@@ -39,7 +39,7 @@
 | 30 | PPP | — | 未着手 | |
 | 31 | Electronic Mail | — | 未着手 | |
 | 32 | Network Servers（公式Chapter 33） | [33-network-servers.md](ja/33-network-servers.md) | **自己校正済（意訳）** | 2026-11-19 原文69見出し・70アンカー・143コード例・7表を照合。実機検証は未実施 |
-| 33 | Firewalls | — | 未着手 | 高工数 |
+| 33 | Firewalls（公式Chapter 34） | [34-firewalls.md](ja/34-firewalls.md) | **ドラフト** | 2026-11-19 原文固定・翻訳作業中。実機検証は未実施 |
 | 34 | Advanced Networking | — | 未着手 | 高工数 |
 | A | Obtaining FreeBSD | — | 未着手 | |
 | B | Bibliography | — | 未着手 | |

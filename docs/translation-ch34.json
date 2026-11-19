@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-19",
+  "scope": "Official Chapter 34 Firewalls (legacy TOC ID 33) only; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 34,
+      "slug": "firewalls",
+      "upstream_chapter_number": 34,
+      "legacy_toc_id": 33,
+      "upstream_path": "documentation/content/en/books/handbook/firewalls/_index.adoc",
+      "source_path": "handbook/en/ch34/34-firewalls.adoc.txt",
+      "translation_path": "handbook/ja/34-firewalls.md",
+      "source_sha256": "59d166966e604c5564548036577be575aa27922f9a8a516761e16aa83cd5229a",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft in progress; pinned source retrieved and verified (2691 lines, 123801 bytes)",
+      "counts": {
+        "headings": 43,
+        "anchors": 43,
+        "code_blocks": 152,
+        "images": 0,
+        "tables": 1
+      }
+    }
+  ]
+}
