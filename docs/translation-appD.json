@@ -13,9 +13,9 @@
       "source_path": "handbook/en/appD/D-pgpkeys.adoc.txt",
       "translation_path": "handbook/ja/D-pgpkeys.md",
       "source_sha256": "7d6200e0f9eb409416afa210d4fbd6516dc916666c5026ba7528be2449fb070f",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Pinned upstream source and draft scaffolding added; translation pending",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 6 headings, 6 anchors (2 explicit, 4 generated), and all links/attributes in the pinned source; officer names/emails resolved from pinned shared/en/teams.adoc and pgpkeys URL from pinned shared/en/urls.adoc; shared include key files (documentation/static/pgpkeys/*.key) excluded from translation without altering keys or fingerprints and linked to the pinned commit; runtime and third-party review not performed",
       "counts": {
         "headings": 6,
         "anchors": 6,
