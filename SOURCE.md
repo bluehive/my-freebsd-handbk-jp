@@ -108,3 +108,7 @@
 ## 公式Chapter 16（Security）の意訳用スナップショット
 
 2026-11-19に、公式Chapter 16 Security（`documentation/content/en/books/handbook/security/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch16/16-security.adoc.txt`（94868バイト、SHA-256: `ffdcea842b969971bc80f65443abb850d21eacc059c15296aff8bbb8b2862404`）、出典・進捗は [マニフェスト](docs/translation-ch16.json)と[作業記録](docs/translation-ch16.md)に保存しています。既存TOCのID 15に対応し、既存の `handbook/en/15-security.adoc.txt` は履歴としてそのまま残しています。
+
+## 公式Chapter 22（GEOM）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 22 GEOM: Modular Disk Transformation Framework（`documentation/content/en/books/handbook/geom/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch22/22-geom.adoc.txt`（50810バイト、SHA-256: `90c1eb66118e7afafdd9d66e461723c03aa5ca543895a8b32766735de31bbb14`）、出典・SHA-256・進捗は [マニフェスト](docs/translation-ch22.json)と[作業記録](docs/translation-ch22.md)に保存しています。既存TOCのID 21に対応します。画像は同じ固定コミットの `documentation/static/images/books/handbook/geom/` を参照します。
