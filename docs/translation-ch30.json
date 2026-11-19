@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Chapter 30 Serial Communications (30-serialcomms) only; legacy TOC ID 29; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 30,
+      "slug": "serialcomms",
+      "upstream_chapter_number": 30,
+      "legacy_toc_id": 29,
+      "upstream_path": "documentation/content/en/books/handbook/serialcomms/_index.adoc",
+      "source_path": "handbook/en/ch30/30-serialcomms.adoc.txt",
+      "translation_path": "handbook/ja/30-serialcomms.md",
+      "source_sha256": "10508c90d2175ab5e9001bcd9354926a3c88ffc64b05013afd8f05fe5042d1ed",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft in progress; pinned source snapshot added; translation and self-proofreading pending",
+      "counts": {
+        "headings": 28,
+        "anchors": 33,
+        "code_blocks": 37,
+        "images": 0,
+        "tables": 5
+      }
+    }
+  ]
+}
