@@ -327,3 +327,160 @@ install -m 0644 /usr/local/share/postfix/mailer.conf.postfix /usr/local/etc/mail
 SASL を使用する場合は、Postfix が sasldb ファイルを読み取れるようにしておく必要があります。これには、ユーザー `postfix` をグループ `mail` に追加し、`/usr/local/etc/sasldb*` ファイルをグループ `mail` から読み取り可能にします（新規インストールではこれがデフォルトになっているはずです）。
 
 すべての設定が終わったら、システムを再起動することを推奨します。再起動することで、起動時に新しい MTA が自動的に開始されるよう正しく設定されているかを確認できます。
+
+<a id="mail-agents"></a>
+## メールユーザーエージェント（MUA）
+
+MUA はメールの送受信に使用するアプリケーションです。メールが「進化」して複雑になるにつれて、MUA もますます高機能になり、ユーザーにより高い機能性と柔軟性を提供するようになっています。FreeBSD の Ports Collection の `mail` カテゴリには多数の MUA が用意されており、Evolution や Balsa のようなグラフィカルなメールクライアントから、`mutt` や `alpine` のようなコンソールベースのクライアントまで幅広く揃っています。
+
+<a id="mail-command"></a>
+### mail
+
+`mail(1)` は FreeBSD に標準でインストールされているデフォルトの MUA です。コンソールベースの MUA であり、テキストベースのメールを送受信するための基本的な機能を備えています。添付ファイルのサポートは限定的で、アクセスできるのはローカルメールボックスのみです。
+
+`mail(1)` 自体は POP や IMAP サーバーとのやり取りに対応していませんが、`fetchmail` や `getmail` のようなアプリケーションを使えば、リモートメールボックスのメールをローカルの `mbox` へダウンロードできます。
+
+メールを送受信するには、`mail(1)` を実行します。
+
+```shell
+% mail
+```
+
+`mail(1)` は `/var/mail` にあるユーザーのメールボックスの内容を自動的に読み込みます。メールボックスが空であれば、メールが見つからない旨のメッセージを表示して終了します。メールが存在する場合は、アプリケーションのインターフェースが起動し、メッセージの一覧が表示されます。
+
+次の例のように、メッセージには自動的に番号が振られます。
+
+```
+Mail version 8.1 6/6/93.  Type ? for help.
+"/var/mail/username": 3 messages 3 new
+>N  1 root@localhost        Mon Mar  8 14:05  14/510   "test"
+ N  2 root@localhost        Mon Mar  8 14:05  14/509   "user account"
+ N  3 root@localhost        Mon Mar  8 14:05  14/509   "sample"
+```
+
+メッセージを読むには、`t` に続けてメッセージ番号を入力します。
+
+次の例では 1 番目のメールを読んでいます。
+
+```
+& t 1
+Message 1:
+From root@localhost  Mon Mar  8 14:05:52 2004
+X-Original-To: username@localhost
+Delivered-To: username@localhost
+To: username@localhost
+Subject: test
+Date: Mon,  8 Mar 2004 14:05:52 +0200 (SAST)
+From: root@localhost (Charlie Root)
+
+This is a test message, please reply if you receive it.
+```
+
+この例のように、メッセージはすべてのヘッダ付きで表示されます。
+
+メッセージ一覧をもう一度表示するには、`h` を押します。
+
+メールに返信する必要がある場合は、`mail(1)` で `R` または `r` キーを押します。`R` はメールの送信者のみに返信するよう `mail(1)` に指示し、`r` は元のメッセージの他の受信者全員にも返信します。これらのコマンドの後ろに、返信対象となるメールの番号を付けることもできます。返信内容を入力し終えたら、1 行にピリオド（`.`）だけを単独で入力してメッセージの終わりを示します。
+
+例を次に示します。
+
+```
+& R 1
+To: root@localhost
+Subject: Re: test
+
+Thank you, I did get your email.
+.
+EOT
+```
+
+新しいメールを送信するには、`m` に続けて宛先メールアドレスを入力します。各アドレスをカンマ（`,`）で区切ることで複数の宛先を指定できます。続いてメッセージの件名を入力し、本文を入力します。メッセージの終わりには、1 行にピリオド（`.`）だけを単独で入力します。
+
+```
+& mail root@localhost
+Subject: I mastered mail
+
+Now I can send and receive email using mail ... :)
+.
+EOT
+```
+
+`mail(1)` の使用中は、いつでも `?` を押すとヘルプを表示できます。`mail(1)` の詳しい使い方については `mail(1)` を参照してください。
+
+> **注**: `mail(1)` は添付ファイルを扱うようには設計されていないため、添付ファイルの処理は得意ではありません。より新しい MUA の方が、添付ファイルをより適切に扱えます。
+
+<a id="mutt-command"></a>
+### Mutt
+
+Mutt は高機能な MUA であり、次のような多くの機能を備えています。
+
+* メッセージのスレッド表示機能
+* メールのデジタル署名および暗号化のための PGP サポート
+* MIME サポート
+* Maildir サポート
+* 高いカスタマイズ性
+
+Mutt の詳細については [http://www.mutt.org](http://www.mutt.org) を参照してください。
+
+> **ヒント**: 追加機能を備えた NeoMutt という Mutt のフォークも知っておくとよいでしょう。詳細は [NeoMutt の Web サイト](https://neomutt.org/about.html)を参照してください。NeoMutt を選んだ場合は、以降のコマンド例の `mutt` を `neomutt` に読み替えてください。
+
+Mutt は `mail/mutt` port を使ってインストールできます。インストールが完了したら、次のコマンドで Mutt を起動できます。
+
+```shell
+% mutt
+```
+
+Mutt は `/var/mail` にあるユーザーのメールボックスの内容を自動的に読み込み、表示します。メールが見つからない場合、Mutt はユーザーからのコマンド入力待ちになります。次の例は、Mutt がメッセージ一覧を表示している画面です。
+
+![メッセージ一覧を表示している Mutt メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/mutt1.png)
+
+メールを読むには、カーソルキーで選択して `Enter` を押します。Mutt でメールを表示した例を次に示します。
+
+![メールを表示している Mutt メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/mutt2.png)
+
+`mail(1)` と同様に、Mutt でも送信者のみへの返信と、受信者全員への返信を使い分けられます。送信者のみに返信するには `r` を押します。元の送信者とすべての受信者へグループ返信を送るには `g` を押します。
+
+> **注**: デフォルトでは、Mutt はメールの作成や返信に `vi(1)` エディタを使用します。各ユーザーはホームディレクトリに `.muttrc` を作成または編集して `editor` 変数を設定するか、環境変数 `EDITOR` を設定することで、これをカスタマイズできます。Mutt の設定に関する詳細は [http://www.mutt.org/](http://www.mutt.org/) を参照してください。
+
+新しいメールを作成するには `m` を押します。有効な件名を入力すると、メール本文を書けるように Mutt が `vi(1)` を起動します。本文を書き終えたら `vi` を保存して終了します。すると Mutt の画面に戻り、送信しようとしているメールの概要画面が表示されます。メールを送信するには `y` を押します。概要画面の例を次に示します。
+
+![送信前の概要画面を表示している Mutt メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/mutt3.png)
+
+Mutt には充実したヘルプが組み込まれており、ほとんどのメニューから `?` を押すことで参照できます。画面最上部にも、その場に応じたキーボードショートカットが表示されます。
+
+<a id="alpine-command"></a>
+### alpine
+
+alpine は初心者ユーザーを主な対象としつつ、高度な機能もいくつか備えています。
+
+> **警告**: alpine には過去に複数のリモート脆弱性が見つかっており、細工されたメールを送りつけることで、リモートの攻撃者がローカルシステム上のユーザー権限で任意のコードを実行できる問題がありました。*既知の*問題は修正されていますが、alpine のコードは安全性の低いスタイルで書かれており、FreeBSD Security Officer は他にも未発見の脆弱性が存在する可能性が高いと考えています。alpine のインストールはユーザー自身の責任で行ってください。
+
+最新版の alpine は `mail/alpine` port を使ってインストールできます。インストールが完了したら、次のコマンドで alpine を起動できます。
+
+```shell
+% alpine
+```
+
+alpine を初めて起動すると、簡単な紹介と、クライアントの利用者数を把握するために匿名のメールメッセージを送信してほしいという alpine 開発チームからのお願いが書かれた挨拶ページが表示されます。この匿名メッセージを送信するには `Enter` を押します。匿名メッセージを送信せずに挨拶ページを終了するには `E` を押します。挨拶ページの例を次に示します。
+
+![挨拶ページを表示している alpine メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/pine1.png)
+
+続いてメインメニューが表示され、カーソルキーで移動できます。メインメニューには、新しいメールの作成、メールディレクトリの閲覧、アドレス帳エントリの管理といった操作へのショートカットが用意されています。メインメニューの下部には、現在の作業に応じた機能を実行するためのキーボードショートカットが表示されます。
+
+alpine がデフォルトで開くディレクトリは `inbox` です。メッセージ一覧を表示するには、`I` を押すか、下の図にある `MESSAGE INDEX` 項目を選択します。
+
+![デフォルトディレクトリを表示している alpine メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/pine2.png)
+
+メッセージ一覧には現在のディレクトリ内のメッセージが表示され、カーソルキーで移動できます。強調表示されているメッセージは、`Enter` を押して読むことができます。
+
+![メッセージ一覧を表示している alpine メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/pine3.png)
+
+次のスクリーンショットは、alpine でサンプルメッセージを表示しているところです。画面下部には状況に応じたキーボードショートカットが表示されます。たとえば `r` は、現在表示中のメッセージに返信するよう MUA に指示するショートカットです。
+
+![メールを表示している alpine メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/pine4.png)
+
+alpine でのメールの返信には、alpine と一緒にデフォルトでインストールされる pico エディタが使用されます。pico はメッセージ内の移動が簡単で、初心者にとっては `vi(1)` や `mail(1)` よりも扱いやすいエディタです。返信を書き終えたら、`Ctrl+X` を押してメッセージを送信できます。alpine は送信前に確認を求めてきます。
+
+![メッセージ作成画面を表示している alpine メールクライアント](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/mail/pine5.png)
+
+alpine は、メインメニューの `SETUP` 項目からカスタマイズできます。
