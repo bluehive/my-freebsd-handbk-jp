@@ -84,3 +84,110 @@ CFLAGS+= -DKDTRACE_HOOKS
 ```
 
 このフラグはコンパイル時に DTrace フックを有効にし、モジュールの高度なデバッグや監視を可能にします。DTrace 機能を有効にするため、この変更を行った後に必ずモジュールを再コンパイルしてください。
+
+<a id="dtrace-using"></a>
+## DTrace の使い方
+
+DTrace スクリプトは、1 つ以上の*プローブ*（instrumentation point：計測点）の並びで構成され、各プローブにはそれぞれアクションが関連付けられています。あるプローブの条件が満たされるたびに、関連付けられたアクションが実行されます。たとえば、ファイルが開かれたとき、プロセスが起動されたとき、あるいはコードの 1 行が実行されたときにアクションを発生させることができます。アクションの内容としては、何らかの情報を記録したり、コンテキスト変数を変更したりすることが挙げられます。コンテキスト変数の読み書きによって、プローブ同士が情報を共有し、異なるイベント間の相関関係を協調して分析できます。
+
+すべてのプローブを表示するには、管理者は次のコマンドを実行します。
+
+```shell
+# dtrace -l | more
+```
+
+各プローブには `ID`、`PROVIDER`（例：`dtrace` や `fbt`）、`MODULE`、`FUNCTION NAME` があります。このコマンドの詳細については `dtrace(1)` を参照してください。
+
+この節の例では、DTrace Toolkit に含まれる完全サポート済みのスクリプトのうち、`hotkernel` と `procsystime` の 2 つの使い方を概説します。
+
+`hotkernel` スクリプトは、カーネル時間を最も多く消費している関数を特定するためのものです。実行すると、次のような出力が表示されます。
+
+```shell
+# cd /usr/local/share/dtrace-toolkit
+# ./hotkernel
+Sampling... Hit Ctrl-C to end.
+```
+
+指示どおり、`Ctrl`+`C` キーを押して処理を停止します。終了すると、カーネル関数と時間情報の一覧が、時間の昇順で並び替えて表示されます。
+
+```shell
+kernel`_thread_lock_flags                                   2   0.0%
+0xc1097063                                                  2   0.0%
+kernel`sched_userret                                        2   0.0%
+kernel`kern_select                                          2   0.0%
+kernel`generic_copyin                                       3   0.0%
+kernel`_mtx_assert                                          3   0.0%
+kernel`vm_fault                                             3   0.0%
+kernel`sopoll_generic                                       3   0.0%
+kernel`fixup_filename                                       4   0.0%
+kernel`_isitmyx                                             4   0.0%
+kernel`find_instance                                        4   0.0%
+kernel`_mtx_unlock_flags                                    5   0.0%
+kernel`syscall                                              5   0.0%
+kernel`DELAY                                                5   0.0%
+0xc108a253                                                  6   0.0%
+kernel`witness_lock                                         7   0.0%
+kernel`read_aux_data_no_wait                                7   0.0%
+kernel`Xint0x80_syscall                                     7   0.0%
+kernel`witness_checkorder                                   7   0.0%
+kernel`sse2_pagezero                                        8   0.0%
+kernel`strncmp                                              9   0.0%
+kernel`spinlock_exit                                       10   0.0%
+kernel`_mtx_lock_flags                                     11   0.0%
+kernel`witness_unlock                                      15   0.0%
+kernel`sched_idletd                                       137   0.3%
+0xc10981a5                                              42139  99.3%
+```
+
+このスクリプトはカーネルモジュールに対しても使用できます。この機能を使うには、`-m` オプションを付けて実行します。
+
+```shell
+# ./hotkernel -m
+Sampling... Hit Ctrl-C to end.
+^C
+MODULE                                                  COUNT   PCNT
+0xc107882e                                                  1   0.0%
+0xc10e6aa4                                                  1   0.0%
+0xc1076983                                                  1   0.0%
+0xc109708a                                                  1   0.0%
+0xc1075a5d                                                  1   0.0%
+0xc1077325                                                  1   0.0%
+0xc108a245                                                  1   0.0%
+0xc107730d                                                  1   0.0%
+0xc1097063                                                  2   0.0%
+0xc108a253                                                 73   0.0%
+kernel                                                    874   0.4%
+0xc10981a5                                             213781  99.6%
+```
+
+`procsystime` スクリプトは、指定したプロセス `ID`（`PID`）またはプロセス名について、システムコールの経過時間使用量を計測して表示します。次の例では、新しく `/bin/csh` のインスタンスを起動しました。その後、`procsystime` を実行して待機させた状態で、別の `csh` インスタンス上でいくつかコマンドを入力しました。このテストの結果は次のとおりです。
+
+```shell
+# ./procsystime -n csh
+Tracing... Hit Ctrl-C to end...
+^C
+
+Elapsed Times for processes csh,
+
+         SYSCALL          TIME (ns)
+          getpid               6131
+       sigreturn               8121
+           close              19127
+           fcntl              19959
+             dup              26955
+         setpgid              28070
+            stat              31899
+       setitimer              40938
+           wait4              62717
+       sigaction              67372
+     sigprocmask             119091
+    gettimeofday             183710
+           write             263242
+          execve             492547
+           ioctl             770073
+           vfork            3258923
+      sigsuspend            6985124
+            read         3988049784
+```
+
+出力に示されているとおり、`read(2)` システムコールがナノ秒単位で最も多くの時間を消費し、`getpid(2)` システムコールが最も少ない時間となりました。
