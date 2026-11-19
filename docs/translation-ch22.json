@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch22/22-geom.adoc.txt",
       "translation_path": "handbook/ja/22-geom.md",
       "source_sha256": "90c1eb66118e7afafdd9d66e461723c03aa5ca543895a8b32766735de31bbb14",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft in progress; pinned source retrieved and structural checker initialized",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 25 headings, 25 anchors, 85 code blocks, 1 image, and all cross-references in the pinned source; legacy adX device naming annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 25,
         "anchors": 25,
