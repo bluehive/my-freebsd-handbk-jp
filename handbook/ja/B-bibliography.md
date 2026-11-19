@@ -30,3 +30,16 @@ man ページは FreeBSD オペレーティングシステムの個々の要素�
 
 * **The Book of PF: A No-Nonsense Guide to the OpenBSD Firewall**、第3版、[No Starch Press](https://nostarch.com/pf3) 刊、2014年。ISBN: 978-1593275891
 * **SSH Mastery: OpenSSH, PuTTY, Tunnels, and Keys**、第2版、2018年。ISBN: 978-1642350029
+
+<a id="bibliography-history"></a>
+## UNIX® の歴史（UNIX® History）
+
+* Lion, John *Lion's Commentary on UNIX, 6th Ed. With Source Code*. ITP Media Group、1996年。ISBN 1573980137
+* Raymond, Eric S. *The New Hacker's Dictionary, 3rd edition*. MIT Press、1996年。ISBN 0-262-68092-0。[Jargon File](http://www.catb.org/~esr/jargon/html/index.html) としても知られています。
+* Salus, Peter H. *A quarter century of UNIX*. Addison-Wesley Publishing Company, Inc.、1994年。ISBN 0-201-54777-5
+* Simon Garfinkel、Daniel Weise、Steven Strassmann *The UNIX-HATERS Handbook*. IDG Books Worldwide, Inc.、1994年。ISBN 1-56884-203-1。絶版ですが、[オンライン](http://www.simson.net/ref/ugh.pdf)で入手できます。
+* Don Libes、Sandy Ressler *Life with UNIX* - special edition. Prentice-Hall, Inc.、1989年。ISBN 0-13-536657-7
+* *The BSD family tree*. [https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree](https://cgit.freebsd.org/src/tree/share/misc/bsd-family-tree)、または FreeBSD マシン上の [`/usr/share/misc/bsd-family-tree`](file://localhost/usr/share/misc/bsd-family-tree)。
+* *Networked Computer Science Technical Reports Library*.
+* *Old BSD releases from the Computer Systems Research group (CSRG)*. [https://www.mckusick.com/csrg/](https://www.mckusick.com/csrg/): 4 枚組 CD セットで、1BSD から 4.4BSD および 4.4BSD-Lite2 までのすべての BSD バージョンを収録しています（残念ながら 2.11BSD は含まれていません）。最後のディスクには最終版のソースコードと SCCS ファイルも収められています。
+* Kernighan, Brian *Unix: A History and a Memoir*. Kindle Direct Publishing、2020年。ISBN 978-169597855-3
