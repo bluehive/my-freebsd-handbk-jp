@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Appendix C Resources on the Internet（既存TOC ID C）を意訳
+
+- 公式Appendix C [Resources on the Internet](handbook/ja/C-eresources.md)（既存TOC ID C）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全10見出し・11アンカー（明示ID 8、生成ID 3）・全外部リンクおよびメーリングリスト属性を意訳・自己校正しました。
+- メーリングリスト属性（`{freebsd-doc}` 等）や `extref:` は同じ固定コミットの `shared/en/mailing-lists.adoc`・`shared/en/urls.adoc` に照合して解決しています。
+- [作業・検証記録](docs/translation-appC.md) / [原文ハッシュと状態](docs/translation-appC.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Chapter 31 PPP（既存TOC ID 30）を意訳
 
 - 公式Chapter 31 [PPP](handbook/ja/31-ppp-and-slip.md)（既存TOC ID 30）を追加し、`handbook/TOC.md` を更新しました。
