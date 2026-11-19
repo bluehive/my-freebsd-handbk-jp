@@ -590,3 +590,269 @@ pkg: Warning: Major OS version upgrade detected.  Running "pkg bootstrap -f" rec
 
 `--dns` フラグは、ホストの `/etc/resolv.conf` をマウントする代わりに任意の DNS サーバを指定します。
 `--no-hosts` フラグは、ホストからの `/etc/hosts` マウントを抑止します。
+
+<a id="containers-building"></a>
+## カスタムイメージの構築
+
+カスタムイメージは、tarball（たとえば `poudriere(8)` で生成したものや公式リリース tarball）から直接構築する方法、既存のタグ付きイメージから構築する方法、`pkg(8)` からブートストラップする方法で作成できます。
+
+<a id="containers-building-base"></a>
+### tarball からの構築
+
+任意の FreeBSD ルートファイルシステム tarball から、`podman-import(1)` を使ってカスタムイメージを作成できます。
+使用する tarball は、公式リリースの `base.txz`、`poudriere-image(8)` で生成したもの、あるいは独自のカスタム tarball のいずれでもかまいません。
+最終的にタグ付けされたイメージは、レジストリへのプッシュ、変更、さらなるイメージ作成のベースとして利用できます。
+
+```shell
+# podman import --os freebsd \
+    --arch amd64 \
+    --message 'Import FreeBSD {rel-latest}-RELEASE base.txz' \
+    https://download.freebsd.org/releases/amd64/{rel-latest}-RELEASE/base.txz
+Downloading from "https://download.freebsd.org/releases/amd64/{rel-latest}-RELEASE/base.txz"
+Getting image source signatures
+Copying blob 3768988b151c done   |
+Copying config 332bec83a4 done   |
+Writing manifest to image destination
+sha256:332bec83a428efa6c9f7d1f8b3fbd589c5613d938dca7da5125240c89f4f3dcd
+
+# podman image tag 332bec83a428 localhost/freebsd-base:{rel-latest}
+
+# podman image ls
+REPOSITORY              TAG   IMAGE ID      CREATED        SIZE
+localhost/freebsd-base  {rel-latest}  332bec83a428  5 minutes ago  715 MB
+```
+
+<a id="containers-building-containerfile"></a>
+### Containerfile からの構築
+
+Dockerfile と同様の `Containerfile` を使ってイメージを構築できます。
+ほとんどの場合、標準システムツールの大半を含む `freebsd-notoolchain` イメージをベースにするのが最も便利です。
+より軽量なコンテナを作る場合は、用途に応じて `freebsd-static`、`freebsd-dynamic`、または `freebsd-runtime` を起点とし、必要なものだけを追加してください。
+
+```dockerfile
+# Containerfile
+FROM ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+RUN env ASSUME_ALWAYS_YES=yes IGNORE_OS_VERSION=yes pkg bootstrap -r FreeBSD
+RUN pkg update
+RUN pkg upgrade -y
+RUN pkg clean -y
+ENTRYPOINT /bin/sh
+```
+
+`podman-build(1)` でイメージをビルドします。
+
+```shell
+# podman build --no-hosts --squash \
+    -t localhost/freebsd-base:{rel-latest} \
+    -f ./Containerfile
+```
+
+さらにその上に別のイメージを重ねて構築することもできます。
+
+```dockerfile
+# Containerfile.webserver
+FROM localhost/freebsd-base:{rel-latest}
+RUN pkg install -y lang/python3
+RUN pkg clean -y
+ENTRYPOINT /usr/local/bin/python3 -m http.server
+```
+
+```shell
+# podman build --no-hosts \
+    -t localhost/python-www:{rel-latest} \
+    -f ./Containerfile.webserver
+```
+
+`--detach` を指定して Web サーバをバックグラウンドで起動し、`-p` でホストのポートをコンテナのポートへマッピングします。
+この例では、コンテナが待ち受けるデフォルトのポート 8000 をホストのポート 8888 にマッピングしています。
+
+```shell
+# c=$(podman run --detach --rm -p 8888:8000 localhost/python-www:{rel-latest})
+```
+
+ポートマッピングには `pf(4)` のリダイレクトルールが使われます。
+これらのルールはネットワーク経由で到着するトラフィックをリダイレクトするため、マッピングされたポートには別ホストからアクセスするか、ホストのネットワーク向け IP アドレス経由でアクセスする必要があります。
+
+```shell
+$ fetch -v http://172.16.2.10:8888/
+resolving server address: 172.16.2.10:8888
+requesting http://172.16.2.10:8888/
+remote size / mtime: 784 / 0
+fetch.out                                              784  B 3791 kBps    00s
+```
+
+ホストからコンテナへ直接アクセスするには、コンテナ自身の IP アドレスと待ち受けポートを使用します。
+
+```shell
+# podman inspect -f '{{.NetworkSettings.IPAddress}}' $c
+10.88.0.91
+# fetch -v http://10.88.0.91:8000/
+resolving server address: 10.88.0.91:8000
+requesting http://10.88.0.91:8000/
+remote size / mtime: 784 / 0
+fetch.out                                              784  B   25 MBps    00s
+```
+
+> **注**: `-p` によるポートマッピングは `pf(4)` のリダイレクトルールで処理され、ネットワーク経由で到着するトラフィックにのみ適用されます。jail ホスト自身から `localhost` や `127.0.0.1` 宛てに発信されたトラフィックはリダイレクトされません。ホストからは代わりにコンテナの IP アドレスを直接使用してください。
+
+> **訳注**: 上記の注記は固定原文のまま訳出していますが、本章の[ネットワークの設定](#containers-networking)節では、`pf.conf` の `nat-anchor "cni-rdr/*"` と `sysctl net.pf.filter_local=1` によりホストから `localhost` 宛ての接続をコンテナ内サービスへリダイレクトできる旨が説明されています。
+
+<a id="containers-advanced"></a>
+## 応用的な利用方法
+
+> **訳注**: 原文ではこの見出しの直下に本文がなく、内容は以下の小節で説明されています。
+
+<a id="containers-daemonising"></a>
+### Podman のデーモン化
+
+FreeBSD 版の Podman 実装では、2 つの `rc(8)` サービスが提供されます。
+
+* `podman` サービスは起動時に実行され、`restart-policy=always` が設定されたすべてのコンテナを確実に起動します。
+* `podman_service` サービスは [Podman API サービス](https://docs.podman.io/en/latest/_static/api.html)を実行し、REST API を提供します。デフォルトでは `/var/run/podman/podman.sock` で待ち受けます。
+
+次のように有効化して起動します。
+
+```shell
+# sysrc podman_enable=YES
+# sysrc podman_service_enable=YES
+# sysrc podman_service_flags='--time 0'
+# service podman start
+# service podman_service start
+```
+
+ホストの再起動後に自動で再起動させたいコンテナは、`--restart=always` オプションを付けて実行しておく必要があります。
+
+```shell
+# podman run --detach --restart=always my-image
+```
+
+<a id="containers-linux"></a>
+### Linux コンテナの実行
+
+FreeBSD の Linux エミュレーション機能を使うと、多くの Linux コンテナイメージを実行できます。
+
+```shell
+# service linux onestart
+# podman run --rm --os=linux docker.io/alpine cat /etc/os-release | head -1
+Trying to pull docker.io/library/alpine:latest...
+Getting image source signatures
+Copying blob 4abcf2066143 done   |
+Copying config 05455a0888 done   |
+Writing manifest to image destination
+NAME="Alpine Linux"
+```
+
+> **注**: systemd に依存する Linux コンテナ、PID 1 として動作することを前提とする Linux コンテナ、あるいは Linux 固有のカーネルインターフェースに依存する Linux コンテナは、FreeBSD の Linux エミュレーション上では正しく動作しない場合があります。
+
+<a id="containers-local-registry"></a>
+### ローカルレジストリの運用
+
+レジストリは、OCI イメージを保存・共有するための Web サーバです。
+[sysutils/docker-registry](https://freshports.org/sysutils/docker-registry) port は、ローカル開発や小規模組織に適したシンプルなレジストリを提供します。
+より包括的でモダンな代替としては [Zot Registry](https://zotregistry.dev/) があります。
+
+```shell
+# pkg install -r FreeBSD sysutils/docker-registry
+# zfs create zroot/var/db/registry
+# chown -R www:www /var/db/registry
+# sysrc docker_registry_enable=YES
+# sysrc docker_registry_user=www
+# sed -i '' -E -e 's,rootdirectory:.+,rootdirectory: /var/db/registry,' \
+    /usr/local/etc/docker-registry/config.yml
+# touch /usr/local/etc/docker-registry/htpasswd
+# chown -R root:www /usr/local/etc/docker-registry/config.yml \
+    /usr/local/etc/docker-registry/htpasswd
+# chmod 0640 /usr/local/etc/docker-registry/config.yml \
+    /usr/local/etc/docker-registry/htpasswd
+```
+
+`/usr/local/etc/docker-registry/config.yml` の設定例です。
+
+```yaml
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/db/registry
+http:
+  addr: :5000
+  secret: <random-secret>
+  headers:
+    X-Content-Type-Options: [nosniff]
+auth:
+  htpasswd:
+    realm: basic-realm
+    path: /usr/local/etc/docker-registry/htpasswd
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+```
+
+レジストリを起動し、稼働していることを確認します。
+
+```shell
+# service registry start
+# curl -u admin:passwd http://localhost:5000/v2/
+```
+
+> **ヒント**: レジストリは nginx や haproxy などのリバースプロキシの背後に置き、TLS 経由で公開することを推奨します。
+
+<a id="containers-syncing"></a>
+### レジストリの同期
+
+`skopeo` を使うと、FreeBSD 公式イメージをローカルレジストリへ同期できます。
+次の例では、[Docker Hub](https://hub.docker.com/u/freebsd) にある FreeBSD 関連イメージをすべてローカルレジストリへ複製します。
+
+```yaml
+# sync.yml
+docker.io:
+  images:
+    freebsd/freebsd-static: []
+    freebsd/freebsd-dynamic: []
+    freebsd/freebsd-runtime: []
+```
+
+```shell
+$ skopeo sync --src yaml --dest docker --all sync.yml cr.example.net/freebsd
+INFO[0000] Processing repo                               repo=freebsd/freebsd-static
+INFO[0000] Querying registry for image tags              repo=freebsd/freebsd-static
+...
+INFO[0771] Synced 42 images from 3 sources
+```
+
+`/root/.config/containers/auth.json` の認証情報が最新である限り、イメージの同期に root 権限は必要ありません。
+
+<a id="containers-registries-auth"></a>
+### コンテナレジストリの操作
+
+一般にレジストリではプッシュ操作に認証が必要であり、プル操作でも認証を求められる場合があります。
+ログイン後、認証情報はデフォルトで `/root/.config/containers/auth.json` に保存されます。
+
+```shell
+# podman login ghcr.io -u username
+Password:
+Login Succeeded!
+```
+
+その後、イメージをレジストリへプッシュできます。
+
+```shell
+# podman push localhost/freebsd-runtime:{rel-latest} \
+    docker://ghcr.io/example/freebsd-runtime:{rel-latest}
+Getting image source signatures
+Copying blob bbacfdfbe140 done   |
+Copying config 786f2592a8 done   |
+Writing manifest to image destination
+```
+
+公開イメージは認証なしでプルできます。
+
+```shell
+# podman pull ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+```
