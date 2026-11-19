@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch31/31-ppp-and-slip.adoc.txt",
       "translation_path": "handbook/ja/31-ppp-and-slip.md",
       "source_sha256": "fafc8c3b0608f5741f8d552d25cb397bd6203b0d20addb3474caa5a34fd13941",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft in progress; source pinned and structure prepared",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 20 headings, 20 anchors, 61 code blocks, and all cross-references in the pinned source; upstream speed unit error (115,200 kbps vs bps), repeated Ppp prompt example, and truncated sentence in sendmail explanation annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 20,
         "anchors": 20,

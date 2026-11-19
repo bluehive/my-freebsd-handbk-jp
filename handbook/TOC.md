@@ -37,7 +37,7 @@
 | 27 | DTrace（公式Chapter 28） | [28-dtrace.md](ja/28-dtrace.md) | **自己校正済（意訳）** | 2026-11-20 原文6見出し・6アンカー・9コード例を照合。実機検証・第三者専門校閲は未実施 |
 | 28 | USB Device Mode（公式Chapter 29） | [29-usb-device-mode.md](ja/29-usb-device-mode.md) | **自己校正済（意訳）** | 2026-11-20 原文12見出し・12アンカー・19コード例を照合。実機検証・第三者専門校閲は未実施 |
 | 29 | Serial Communications（公式Chapter 30） | [30-serialcomms.md](ja/30-serialcomms.md) | **自己校正済（意訳）** | 2026-11-20 原文28見出し・33アンカー・37コード例・5表を照合。実機検証・第三者専門校閲は未実施 |
-| 30 | PPP（公式Chapter 31） | [31-ppp-and-slip.md](ja/31-ppp-and-slip.md) | **ドラフト** | 2026-11-20 原文固定済み・意訳作業中。実機検証・第三者専門校閲は未実施 |
+| 30 | PPP（公式Chapter 31） | [31-ppp-and-slip.md](ja/31-ppp-and-slip.md) | **自己校正済（意訳）** | 2026-11-20 原文20見出し・20アンカー・61コード例を照合。実機検証・第三者専門校閲は未実施 |
 | 31 | Electronic Mail | — | 未着手 | |
 | 32 | Network Servers（公式Chapter 33） | [33-network-servers.md](ja/33-network-servers.md) | **自己校正済（意訳）** | 2026-11-19 原文69見出し・70アンカー・143コード例・7表を照合。実機検証は未実施 |
 | 33 | Firewalls（公式Chapter 34） | [34-firewalls.md](ja/34-firewalls.md) | **自己校正済（意訳）** | 2026-11-19 原文43見出し・43アンカー・152コード例・1表を照合。実機検証は未実施 |
