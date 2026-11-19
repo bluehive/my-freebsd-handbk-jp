@@ -1,0 +1,36 @@
+name: Handbook Chapter 32 Electronic Mail
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/ch32/**'
+      - 'handbook/ja/32-mail.md'
+      - 'docs/translation-ch32.json'
+      - 'scripts/check_ch32_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch32-translation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/ch32/**'
+      - 'handbook/ja/32-mail.md'
+      - 'docs/translation-ch32.json'
+      - 'scripts/check_ch32_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch32-translation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-ch32:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check Chapter 32 Electronic Mail translation and pinned source
+        run: python3 scripts/check_ch32_translation.py

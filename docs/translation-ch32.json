@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Chapter 32 Electronic Mail (32-mail) only; legacy TOC ID 31; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 32,
+      "slug": "mail",
+      "upstream_chapter_number": 32,
+      "legacy_toc_id": 31,
+      "upstream_path": "documentation/content/en/books/handbook/mail/_index.adoc",
+      "source_path": "handbook/en/ch32/32-mail.adoc.txt",
+      "translation_path": "handbook/ja/32-mail.md",
+      "source_sha256": "68acd6aa52ac7a2ca5abaf5a9ae4ecadf6277a9cf17675212f09858b83f39385",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft in progress; source pinned and structure analyzed",
+      "counts": {
+        "headings": 22,
+        "anchors": 22,
+        "code_blocks": 49,
+        "images": 8,
+        "tables": 0
+      }
+    }
+  ]
+}
