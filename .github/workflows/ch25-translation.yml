@@ -1,0 +1,36 @@
+name: Handbook Chapter 25 Virtualization
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/ch25/**'
+      - 'handbook/ja/25-virtualization.md'
+      - 'docs/translation-ch25.json'
+      - 'scripts/check_ch25_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch25-translation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/ch25/**'
+      - 'handbook/ja/25-virtualization.md'
+      - 'docs/translation-ch25.json'
+      - 'scripts/check_ch25_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch25-translation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-ch25:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check Chapter 25 translation and pinned source
+        run: python3 scripts/check_ch25_translation.py
