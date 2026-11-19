@@ -43,3 +43,10 @@ man ページは FreeBSD オペレーティングシステムの個々の要素�
 * *Networked Computer Science Technical Reports Library*.
 * *Old BSD releases from the Computer Systems Research group (CSRG)*. [https://www.mckusick.com/csrg/](https://www.mckusick.com/csrg/): 4 枚組 CD セットで、1BSD から 4.4BSD および 4.4BSD-Lite2 までのすべての BSD バージョンを収録しています（残念ながら 2.11BSD は含まれていません）。最後のディスクには最終版のソースコードと SCCS ファイルも収められています。
 * Kernighan, Brian *Unix: A History and a Memoir*. Kindle Direct Publishing、2020年。ISBN 978-169597855-3
+
+<a id="bibliography-journals"></a>
+## 定期刊行物・専門誌・雑誌（Periodicals, Journals, and Magazines）
+
+* [Admin Magazin](https://www.admin-magazin.de/)（ドイツ語）、Medialinx AG 刊。ISSN: 2190-1066
+* [BSD Now - Video Podcast](https://www.bsdnow.tv/)、Jupiter Broadcasting LLC 配信
+* [FreeBSD Journal](https://freebsdfoundation.org/our-work/journal/)、S&W Publishing 刊、The FreeBSD Foundation 後援。ISBN: 978-0-615-88479-0
