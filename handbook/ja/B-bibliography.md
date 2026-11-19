@@ -24,3 +24,9 @@ man ページは FreeBSD オペレーティングシステムの個々の要素�
 * **UNIX and Linux System Administration Handbook**、第5版、[Pearson Education, Inc.](https://www.pearson.com/en-us/subject-catalog/p/unix-and-linux-system-administration-handbook/P200000000513/9780137460359) 刊、2017年。ISBN: 978-0134277554
 * **Designing BSD Rootkits**、[No Starch Press](https://nostarch.com/rootkits.htm) 刊、2007年。ISBN: 978-1593271428
 * **FreeBSD Jails using VNETs**、[gumroad](https://rderik.gumroad.com/l/uwOLZ) にて公開
+
+<a id="bibliography-security"></a>
+## セキュリティ関連文献（Security Reference）
+
+* **The Book of PF: A No-Nonsense Guide to the OpenBSD Firewall**、第3版、[No Starch Press](https://nostarch.com/pf3) 刊、2014年。ISBN: 978-1593275891
+* **SSH Mastery: OpenSSH, PuTTY, Tunnels, and Keys**、第2版、2018年。ISBN: 978-1642350029
