@@ -3,7 +3,7 @@
 
 本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/serialcomms/)の「Chapter 30. Serial Communications」（既存 TOC ID 29）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/serialcomms/_index.adoc`）に基づいて日本語へ意訳したものです。
 
-> **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。掲載されているコマンドや設定例は説明のための例であり、翻訳作業中に実機で実行したものではありません。実行例中の `#` は root ユーザー、`%` は一般ユーザーのプロンプトを示します。
+> **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。掲載されているコマンドや設定例は説明のための例であり、翻訳作業中に実機で実行したものではありません。実行例中の `#` は root ユーザーのプロンプトを示します。
 
 <a id="serial-synopsis"></a>
 ## 概要
@@ -476,7 +476,7 @@ cu115200|Use cu to dial any number at 115200bps:\
         :dv=/dev/cuau1:br#57600:at=hayes:pa=none:du:
 ```
 
-> **訳注**: 原文の例ではエントリ名が `cu115200`（115200bps）となっていますが、設定値は `br#57600` のまま記載されています。原文どおり保持しているため、実際に 115200 bps で使う場合は環境に合わせて `br` の値を調整してください。
+> **訳注**: 原文の例ではエントリ名が `cu115200`（115200bps）となっていますが、設定値は `br#57600` のまま記載されています。原文どおり保持しています。
 
 そのうえで、次のように入力します。
 
