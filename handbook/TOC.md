@@ -26,7 +26,7 @@
 | 17 | Containers | [17-containers.md](ja/17-containers.md) | **ドラフト** | 2026-08-21 Podman/OCI |
 | 18 | MAC（公式Chapter 19） | [19-mac.md](ja/19-mac.md) | **自己校正済（意訳）** | 2026-11-04 原文27見出し・35コード例を照合。実機検証は未実施 |
 | 19 | Security Event Auditing（公式Chapter 20） | [20-audit.md](ja/20-audit.md) | **自己校正済（意訳）** | 2026-11-04 原文11見出し・14コード例・2表を照合。実機検証は未実施 |
-| 20 | Storage / Disks | — | 未着手 | |
+| 20 | Storage（公式Chapter 21） | [21-disks.md](ja/21-disks.md) | **自己校正済（意訳）** | 2026-11-19 原文50見出し・51アンカー・153コード例を照合。実機検証は未実施 |
 | 21 | GEOM | — | 未着手 | |
 | 22 | OpenZFS（公式Chapter 23） | [23-zfs.md](ja/23-zfs.md) | **自己校正済（意訳）** | 2026-11-04 原文81見出し・192コード例を照合。実機検証は未実施 |
 | 23 | Other File Systems（公式Chapter 24） | [24-filesystems.md](ja/24-filesystems.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・14コード例を照合。実機検証は未実施 |
