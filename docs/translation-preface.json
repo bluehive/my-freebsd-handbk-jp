@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-19",
+  "scope": "Official Preface (00-preface) only; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 0,
+      "slug": "preface",
+      "upstream_chapter_number": null,
+      "legacy_toc_id": "00",
+      "upstream_path": "documentation/content/en/books/handbook/preface/_index.adoc",
+      "source_path": "handbook/en/preface/00-preface.adoc.txt",
+      "translation_path": "handbook/ja/00-preface.md",
+      "source_sha256": "87c44a462d614081a4f953f42364eb7e18c2d079896c4b7fe3da2acd6c142703",
+      "status": "translated",
+      "reviewed_at": "2026-11-19",
+      "review": "Interpretive translation self-checked against all 12 headings, 12 anchors, 3 command-prompt examples, and all cross-references in the pinned source; Organization of This Book omits network/containers/serialcomms per pinned source (annotated with reference to book.adoc); runtime and third-party review not performed",
+      "counts": {
+        "headings": 12,
+        "anchors": 12,
+        "code_blocks": 3,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}

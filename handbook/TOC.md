@@ -6,7 +6,7 @@
 
 | ID | 章 | 日本語 MD | 状態 | 備考 |
 |----|-----|-----------|------|------|
-| 00 | Preface | — | 未着手 | |
+| 00 | Preface | [00-preface.md](ja/00-preface.md) | **自己校正済（意訳）** | 2026-11-19 原文12見出し・12アンカー・3コード例を照合。実機検証は未実施 |
 | 01 | Introduction | [01-introduction.md](ja/01-introduction.md) | **自己校正済（意訳）** | 2026-11-04 固定原文11見出し・1コード例へ再照合 |
 | 02 | Installing FreeBSD (bsdinstall) | [02-bsdinstall.md](ja/02-bsdinstall.md) | **自己校正済（意訳）** | 2026-11-04 原文31見出し・5コード例を照合。実機検証は未実施 |
 | 03 | FreeBSD Basics | [03-basics.md](ja/03-basics.md) | **自己校正済（意訳）** | 2026-11-04 固定原文40見出し・69コード例を再照合。実機検証は未実施 |
