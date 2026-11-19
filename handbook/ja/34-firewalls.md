@@ -57,7 +57,7 @@ FreeBSD が複数のファイアウォールを用意しているのは、利用
 
 FTP にはアクティブモード（active mode）とパッシブモード（passive mode）の2つの動作モードがあります。
 両者の違いは、データチャネルをどのように確立するかにあります。
-パッシブモードでは通常の FTP セッションを要求する側がデータチャネルを開くため、より安全です。
+パッシブモードでは、FTP セッションを最初に要求した側（クライアント）がデータチャネルを開くため、より安全です（訳注: 原文の ordinal は original の誤記と思われます）。
 FTP と各モードの詳しい解説については、[http://www.slacksite.com/other/ftp.html](http://www.slacksite.com/other/ftp.html) を参照してください。
 
 ファイアウォールのルールセットには、「排他的（exclusive）」と「包含的（inclusive）」の2種類があります。
@@ -182,6 +182,8 @@ PF の制御には `pfctl` を使います。
 利用可能なすべてのオプションについては `pfctl(8)` を参照してください。
 
 <a id="pfctl"></a>
+
+**pfctl の便利なオプション**
 
 | コマンド | 目的 |
 |---|---|
@@ -567,7 +569,7 @@ pass inet proto tcp from <clients> to any port $client_out flags S/SA keep state
 この方法で行った変更は即座に反映されるためテストには最適ですが、電源断や再起動をまたいでは残りません。
 変更を永続化するには、ルールセット内のテーブル定義を修正するか、テーブルが参照しているファイルを編集してください。
 `pfctl -t clients -T show >/etc/clients` のようなコマンドを `cron(8)` ジョブで定期実行し、テーブルの内容をディスク上のコピーへ書き出して維持することもできます。
-また、次のようにしてメモリ上のテーブル内容を `/etc/clients` の内容で更新することもできます。
+また、次のようにしてメモリ上のテーブル内容を `/etc/clients` の内容で更新することもできます（訳注: 原文は「`/etc/clients` をメモリ上のテーブル内容で更新できる」と書いていますが、直後のコマンド `pfctl -t clients -T replace -f /etc/clients` はファイルの内容をテーブルへ読み込み、置き換えるものです。ここではコマンドの動作に合わせて訳しています）。
 
 ```shell
 # pfctl -t clients -T replace -f /etc/clients
@@ -885,7 +887,7 @@ options         ALTQ_PRIQ       # Priority Queuing (PRIQ)
 ## IPFW
 
 IPFW は FreeBSD 向けに開発されたステートフルファイアウォールで、IPv4 と IPv6 の両方に対応しています。
-カーネル内のファイアウォールフィルタリングルール処理部とそれに統合されたパケット課金（アカウンティング）機能、ログ記録機能、NAT、`dummynet(4)` トラフィックシェーパー、転送（forward）機能、ブリッジ機能、ipstealth 機能など、複数のコンポーネントで構成されています。
+カーネル内のファイアウォールフィルタリングルール処理部とそれに統合されたパケットアカウンティング機能、ログ記録機能、NAT、`dummynet(4)` トラフィックシェーパー、転送（forward）機能、ブリッジ機能、ipstealth 機能など、複数のコンポーネントで構成されています。
 
 FreeBSD は `/etc/rc.firewall` にサンプルのルールセットを用意しており、初心者が適切なルールセットを簡単に生成できるよう、よくある用途向けのファイアウォールタイプをいくつか定義しています。
 また、IPFW は高度な構文を備えており、上級者は環境ごとのセキュリティ要件に合わせた独自のルールセットを作成できます。
@@ -985,7 +987,7 @@ IPFW ルールを作成するときは、キーワードを次の順序で記述
 `#` 記号はコメントの開始を示し、ルールの末尾にも独立した行にも置けます。
 空行は無視されます。
 
-`*CMD RULE_NUMBER* set *SET_NUMBER ACTION* log *LOG_AMOUNT PROTO* from *SRC SRC_PORT* to *DST DST_PORT OPTIONS*`
+`CMD RULE_NUMBER set SET_NUMBER ACTION log LOG_AMOUNT PROTO from SRC SRC_PORT to DST DST_PORT OPTIONS`
 
 ここでは、これらのキーワードとオプションの概要を説明します。
 利用可能なすべてのオプションを網羅したものではありません。
@@ -1481,7 +1483,7 @@ last message repeated 45 times
 手順を何度でも実行できるため、新しいルールのテストにも便利です。
 スクリプトであるため、よく使う値に変数置換（symbolic substitution）を使って複数のルールへ埋め込むこともできます。
 
-次の例のスクリプトは、`sh(1)`、`csh(1)`、`tcsh(1)` シェルで使われる構文と互換性があります（訳注: 原文では `sh(1)`・`csh(1)`・`tcsh(1)` と書かれていますが、下記の `VAR="value"` 形式の代入は `#!/bin/sh` による `sh(1)` 互換構文です）。
+次の例のスクリプトは、`sh(1)`、`csh(1)`、`tcsh(1)` シェルで使われる構文と互換性があります（訳注: 原文では `sh(1)`・`csh(1)`・`tcsh(1)` と互換と書かれていますが、下記の `VAR="value"` 形式の代入は `sh(1)` の構文です（`csh(1)`/`tcsh(1)` では `set VAR="value"` を使います）。このスクリプトは `sh /etc/ipfw.rules` のように `sh(1)` で実行します）。
 変数置換を行う箇所には先頭にドル記号（`$`）を付けます。
 変数の定義側には `$` を付けません。
 変数に設定する値は二重引用符（`""`）で囲む必要があります。
@@ -1641,7 +1643,7 @@ ipnat_rules="/etc/ipnat.rules"    # rules definition file for ipnat
 一部のキーワードにはサブオプションがあり、それら自体がキーワードとなってさらにサブオプションを持つこともあります。
 キーワードの順序は次のとおりです。大文字で示された語は変数（値）を表し、小文字で示された語は直後に続く変数の前に必ず置く必要があります。
 
-`*ACTION DIRECTION OPTIONS* proto *PROTO_TYPE* from *SRC_ADDR SRC_PORT* to *DST_ADDR DST_PORT TCP_FLAG|ICMP_TYPE* keep state *STATE*`
+`ACTION DIRECTION OPTIONS proto PROTO_TYPE from SRC_ADDR SRC_PORT to DST_ADDR DST_PORT TCP_FLAG|ICMP_TYPE keep state STATE`
 
 ここでは、これらのキーワードとオプションをそれぞれ説明します。
 利用可能なすべてのオプションを網羅したものではありません。
@@ -2105,7 +2107,7 @@ local0.* /var/log/ipfilter.log
 Blocklistd は、ソケットを待ち受けて他のデーモンから接続試行の失敗または成功に関する通知を受け取るデーモンです。
 最も広く使われている用途は、公開ポートへの過剰な接続試行を遮断することです。
 代表例は、インターネット上で稼働している SSH が、ボットやスクリプトからパスワード推測による侵入を狙った大量のリクエストを受けるケースです。
-blocklistd を使うと、各デーモンがファイアウォールへ通知を送り、一定の試行回数を超えた単一の送信元からの過剰な接続試行を遮断するフィルタールールを作成させることができます。Blocklistd はもともと NetBSD で開発されてバージョン 7 で登場し、当初は blacklistd と呼ばれていました。
+blocklistd を使うと、blocklistd がファイアウォールへ通知し、一定の試行回数を超えた単一の送信元からの過剰な接続試行を遮断するフィルタールールを作成させることができます。Blocklistd はもともと NetBSD で開発されてバージョン 7 で登場し、当初は blacklistd と呼ばれていました。
 FreeBSD 11 で NetBSD から blocklistd が取り込まれました。
 
 本節では、blocklistd のセットアップ方法と設定方法、および使い方の例を説明します。
