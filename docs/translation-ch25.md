@@ -34,6 +34,13 @@
 - `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch25_translation.py --require-complete`
 - `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py`
 - `pandoc --from=gfm --to=json handbook/ja/25-virtualization.md` による GFM 構文解析とブロック数確認（Header 58、Image 38、CodeBlock 126、Table 1）
-- `git diff --check`
+- `git diff --check`：コード例の5か所（1396・1414・1429・1449・1514 行目）で `space before tab in indent` の警告が出ます。上流原文の空白をそのまま保持しているためで、コード例は変更していません。
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
+
+## PR #13 レビュー指摘による修正
+
+- 最新 `main` へ rebase を行いました。
+- `### 利用のヒント` 直下に足し込んでいた一文を削除し、検査器の「各節に日本語説明」要件を満たすため、本文のない見出しである旨の訳注に置き換えました。
+- bhyve UEFI 節のインラインコード内に残っていた AsciiDoc 由来の `_` を削除しました。
+- `git diff --check` に関する記録を実測値（5か所の `space before tab in indent` 警告）に合わせて訂正しました。
