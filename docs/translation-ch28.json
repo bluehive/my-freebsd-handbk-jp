@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch28/28-dtrace.adoc.txt",
       "translation_path": "handbook/ja/28-dtrace.md",
       "source_sha256": "1852b9a5ea44fa362c82617656e31707206cecf4bcdd3e968053f3780bf5bdc8",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Pinned source snapshot acquired; translation in progress",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 6 headings, 6 anchors, 9 code blocks, and all cross-references in the pinned source; runtime and third-party review not performed",
       "counts": {
         "headings": 6,
         "anchors": 6,

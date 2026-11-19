@@ -36,6 +36,12 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 28 DTrace（既存TOC ID 27）を意訳
+
+- 公式Chapter 28 [DTrace](handbook/ja/28-dtrace.md)（既存TOC ID 27）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全6見出し・6アンカー・9コード例・全相互参照を意訳・自己校正しました。
+- [作業記録](docs/translation-ch28.md) / [原文ハッシュと状態](docs/translation-ch28.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Appendix A Obtaining FreeBSD（既存TOC ID A）を意訳
 
 - 公式Appendix A [Obtaining FreeBSD](handbook/ja/A-mirrors.md)（既存TOC ID A、slug `mirrors`）を追加し、`handbook/TOC.md` を更新しました。
