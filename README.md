@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 16 Security（既存TOC ID 15）を意訳・改稿
+
+- 既存ドラフト [Security](handbook/ja/15-security.md)（公式 Chapter 16 / 既存 TOC ID 15）を固定原文へ全面照合・改稿し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全53見出し・53アンカー・119コード例・1表・全相互参照を意訳・自己校正しました。
+- 旧スナップショット `handbook/en/15-security.adoc.txt` は履歴として残し、固定原文 `handbook/en/ch16/16-security.adoc.txt` との差分（ヘッダおよび欠落していた4行のコード例）を復元・記録しました。
+- [作業・検証記録](docs/translation-ch16.md) / [原文ハッシュと状態](docs/translation-ch16.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-19 — 公式Chapter 21 Storage（既存TOC ID 20）を意訳
 
 - 公式Chapter 21 [Storage](handbook/ja/21-disks.md)（既存TOC ID 20）を追加し、`handbook/TOC.md` を更新しました。

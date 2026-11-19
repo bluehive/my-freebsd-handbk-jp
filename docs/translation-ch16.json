@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch16/16-security.adoc.txt",
       "translation_path": "handbook/ja/15-security.md",
       "source_sha256": "ffdcea842b969971bc80f65443abb850d21eacc059c15296aff8bbb8b2862404",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Pinned source captured; rewriting and proofreading existing draft handbook/ja/15-security.md against pinned source",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 53 headings, 53 anchors, 119 code blocks, 1 table, and all cross-references in the pinned source; MD5/SHA256 crypt prefix note, mtree output path note, and self-signed cert path note added; runtime and third-party review not performed",
       "counts": {
         "headings": 53,
         "anchors": 53,
