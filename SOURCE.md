@@ -112,3 +112,7 @@
 ## 公式Chapter 22（GEOM）の意訳用スナップショット
 
 2026-11-20に、公式Chapter 22 GEOM: Modular Disk Transformation Framework（`documentation/content/en/books/handbook/geom/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch22/22-geom.adoc.txt`（50810バイト、SHA-256: `90c1eb66118e7afafdd9d66e461723c03aa5ca543895a8b32766735de31bbb14`）、出典・SHA-256・進捗は [マニフェスト](docs/translation-ch22.json)と[作業記録](docs/translation-ch22.md)に保存しています。既存TOCのID 21に対応します。画像は同じ固定コミットの `documentation/static/images/books/handbook/geom/` を参照します。
+
+## 公式Chapter 30（Serial Communications）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 30 Serial Communications（`documentation/content/en/books/handbook/serialcomms/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch30/30-serialcomms.adoc.txt`（49481バイト、SHA-256: `10508c90d2175ab5e9001bcd9354926a3c88ffc64b05013afd8f05fe5042d1ed`）、出典・進捗は [マニフェスト](docs/translation-ch30.json)と[作業記録](docs/translation-ch30.md)に保存しています。既存TOCのID 29に対応します。

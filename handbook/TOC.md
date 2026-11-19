@@ -35,7 +35,7 @@
 | 26 | Updating and Upgrading（公式Chapter 27） | [27-cutting-edge.md](ja/27-cutting-edge.md) | **自己校正済（意訳）** | 2026-11-04 原文45見出し・78コード例を照合。実機検証は未実施 |
 | 27 | DTrace | — | 未着手 | |
 | 28 | USB Device Mode | — | 未着手 | |
-| 29 | Serial Communications（公式Chapter 30） | [30-serialcomms.md](ja/30-serialcomms.md) | **ドラフト** | 2026-11-20 意訳作業中。実機検証・第三者専門校閲は未実施 |
+| 29 | Serial Communications（公式Chapter 30） | [30-serialcomms.md](ja/30-serialcomms.md) | **自己校正済（意訳）** | 2026-11-20 原文28見出し・33アンカー・37コード例・5表を照合。実機検証・第三者専門校閲は未実施 |
 | 30 | PPP | — | 未着手 | |
 | 31 | Electronic Mail | — | 未着手 | |
 | 32 | Network Servers（公式Chapter 33） | [33-network-servers.md](ja/33-network-servers.md) | **自己校正済（意訳）** | 2026-11-19 原文69見出し・70アンカー・143コード例・7表を照合。実機検証は未実施 |

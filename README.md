@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 30 Serial Communications（既存TOC ID 29）を意訳
+
+- 公式Chapter 30 [Serial Communications](handbook/ja/30-serialcomms.md)（既存TOC ID 29）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全28見出し・33アンカー・37コード例・5表・全相互参照を意訳・自己校正しました。
+- 原文のコマンド・設定例（`cu115200` エントリの `br#57600` を含む）は保持し、注意点を訳注で区別しています。
+- [作業記録](docs/translation-ch30.md) / [原文ハッシュと状態](docs/translation-ch30.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Chapter 22 GEOM（既存TOC ID 21）を意訳
 
 - 公式Chapter 22 [GEOM](handbook/ja/22-geom.md)（既存TOC ID 21）を追加し、`handbook/TOC.md` を更新しました。
