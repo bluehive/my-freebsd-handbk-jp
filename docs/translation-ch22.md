@@ -25,7 +25,7 @@
 
 ## 訳注で区別した原文の仕様・注意点
 
-- **旧来の ATA デバイス名（`ad2`・`ad3` 等）**：`gstripe` 等の例にある `/dev/ad2`・`/dev/ad3` は固定原文のまま保持し、近年の FreeBSD（CAM ベースの ATA ドライバ）では `adaX` となる旨を訳注で補足しました。
+- **旧来の ATA デバイス名（`adX`：`/dev/ad2`・`/dev/ad3` 等）**：`gstripe` 等の例にある旧来の ATA デバイス名は固定原文のまま保持し、近年の FreeBSD（9.0 以降の CAM ベース ATA）では `ada0` から検出順に `adaY` へ番号が振られ旧名と一致するとは限らないこと、および旧名の互換リンクが FreeBSD 11 で廃止されていることを訳注で補足しました。
 - **相互参照**：本リポジトリで自己校正済みの章（`09-kernelconfig.md#kernelconfig`、`21-disks.md#disks`、`33-network-servers.md#network-nfs`）および章内アンカーへリンクし、`extref:{gjournal-desktop}` は公式記事 URL（`https://docs.freebsd.org/en/articles/gjournal-desktop/`）へリンクしました。
 
 ## 検証
@@ -36,3 +36,13 @@
 - `git diff --check origin/main...HEAD`
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
+
+## レビュー反映（PR #16）
+
+2026-11-20 の PR #16 レビュー指摘を受け、`handbook/ja/22-geom.md` の次の 5 点を修正しました。
+
+- 誤訳修正：「メモリイメージ」→「USB メモリ」（原文 `memory stick`）
+- 主語の明確化：`ggated`／`ggatec` の説明でリクエスト処理の主体がサーバデーモンであることを明示
+- 訳注の訂正：旧来の ATA デバイス名（`adX`）に関する訳注を、9.0 以降の CAM ベース ATA での検出順採番（`adaY`）と旧名との不一致、および FreeBSD 11 での互換リンク廃止に修正
+- 訳語のずれ修正：「最も適しています」→「主に適しています」（原文 `mostly suitable`）
+- 表記ゆれ統一：「Soft Updates」→「ソフトアップデート」（章内表記に統一）
