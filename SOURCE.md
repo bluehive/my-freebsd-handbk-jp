@@ -128,3 +128,7 @@
 ## 公式Chapter 29（USB Device Mode / USB OTG）の意訳用スナップショット
 
 2026-11-20に、公式Chapter 29 USB Device Mode / USB OTG（`documentation/content/en/books/handbook/usb-device-mode/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch29/29-usb-device-mode.adoc.txt`（11215バイト、SHA-256: `36ea6729de7bd258730c3290fd72d85a68ce40dc26b9bb2737c6a306d591d568`）、出典・進捗は [マニフェスト](docs/translation-ch29.json)と[作業記録](docs/translation-ch29.md)に保存しています。既存TOCのID 28に対応します。NAA 識別子の桁数に関する訳注では [FreeBSD 15.0 ctl.conf(5)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.sbin/ctld/ctl.conf.5) を参照しています。
+
+## 公式Appendix B（Bibliography）の意訳用スナップショット
+
+2026-11-20に、公式Appendix B Bibliography（`documentation/content/en/books/handbook/bibliography/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/appB/B-bibliography.adoc.txt`（5652バイト、SHA-256: `70af57a95bbe4533a6f6f40dbb523ea19b8053d85cf4b4700ca5a119c4c49f99`）、出典・進捗は [マニフェスト](docs/translation-appB.json)と[作業記録](docs/translation-appB.md)に保存しています。既存TOCのID Bに対応します。

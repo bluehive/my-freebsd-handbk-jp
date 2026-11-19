@@ -42,7 +42,7 @@
 | 33 | Firewalls（公式Chapter 34） | [34-firewalls.md](ja/34-firewalls.md) | **自己校正済（意訳）** | 2026-11-19 原文43見出し・43アンカー・152コード例・1表を照合。実機検証は未実施 |
 | 34 | Advanced Networking（公式Chapter 35） | [35-advanced-networking.md](ja/35-advanced-networking.md) | **自己校正済（意訳）** | 2026-11-19 原文45見出し・49アンカー・130コード例・2画像・1表を照合。実機検証は未実施 |
 | A | Obtaining FreeBSD（公式Appendix A） | [A-mirrors.md](ja/A-mirrors.md) | **自己校正済（意訳）** | 2026-11-20 原文11見出し・12アンカー・4コード例・3表を照合。実機検証・第三者専門校閲は未実施 |
-| B | Bibliography（公式Appendix B） | [B-bibliography.md](ja/B-bibliography.md) | **ドラフト** | 2026-11-20 翻訳作業中（固定原文取得済） |
+| B | Bibliography（公式Appendix B） | [B-bibliography.md](ja/B-bibliography.md) | **自己校正済（意訳）** | 2026-11-20 原文5見出し・5アンカー・全25文献を照合。実機検証・第三者専門校閲は未実施 |
 | C | Resources | — | 未着手 | |
 | D | OpenPGP Keys | — | 未着手 | |
 | G | Glossary | [glossary.md](ja/glossary.md) | ドラフト（種） | |

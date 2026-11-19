@@ -33,4 +33,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Check Appendix B Bibliography translation and pinned source
-        run: python3 scripts/check_appB_translation.py
+        run: python3 scripts/check_appB_translation.py --require-complete
