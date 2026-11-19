@@ -44,7 +44,7 @@
 | A | Obtaining FreeBSD（公式Appendix A） | [A-mirrors.md](ja/A-mirrors.md) | **自己校正済（意訳）** | 2026-11-20 原文11見出し・12アンカー・4コード例・3表を照合。実機検証・第三者専門校閲は未実施 |
 | B | Bibliography（公式Appendix B） | [B-bibliography.md](ja/B-bibliography.md) | **自己校正済（意訳）** | 2026-11-20 原文5見出し・5アンカー・全25文献を照合。実機検証・第三者専門校閲は未実施 |
 | C | Resources | — | 未着手 | |
-| D | OpenPGP Keys（公式Appendix D） | [D-pgpkeys.md](ja/D-pgpkeys.md) | **ドラフト** | 2026-11-20 原文固定・初期構築中 |
+| D | OpenPGP Keys（公式Appendix D） | [D-pgpkeys.md](ja/D-pgpkeys.md) | **自己校正済（意訳）** | 2026-11-20 原文6見出し・6アンカーを照合（共有includeの鍵本体は翻訳対象外）。実機検証・第三者専門校閲は未実施 |
 | G | Glossary | [glossary.md](ja/glossary.md) | ドラフト（種） | |
 
 ### おまけ（Handbook 本編外）

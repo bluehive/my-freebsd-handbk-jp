@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Appendix D OpenPGP Keys（既存TOC ID D）を意訳
+
+- 公式Appendix D [OpenPGP Keys](handbook/ja/D-pgpkeys.md)（既存TOC ID D）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全6見出し・6アンカー・全リンクおよび属性解決を意訳・自己校正しました。
+- 共有インクルードの公開鍵ファイル本体（`documentation/static/pgpkeys/*.key`）は翻訳対象外として転記・改変せず、固定コミットの原文ファイルおよび公式の `pgpkeys.txt` への参照を訳注で明記しています。
+- [作業・検証記録](docs/translation-appD.md) / [原文ハッシュと状態](docs/translation-appD.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Appendix B Bibliography（既存TOC ID B）を意訳
 
 - 公式Appendix B [Bibliography](handbook/ja/B-bibliography.md)（既存TOC ID B）を追加し、`handbook/TOC.md` を更新しました。
