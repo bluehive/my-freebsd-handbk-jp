@@ -709,33 +709,33 @@ AllowUsers root@192.168.1.32 user
 # service sshd reload
 ```
 
-[[openssl]]
-
+<a id="openssl"></a>
 ## OpenSSL
 
-OpenSSL は、Secure Sockets Layer (SSL) および Transport Layer Security (TLS) ネットワークプロトコルと、多くの暗号化ルーチンを実装した暗号ツールキットです。
+OpenSSL は、Secure Sockets Layer（SSL）および Transport Layer Security（TLS）ネットワークプロトコルと多くの暗号化ルーチンを実装した暗号ツールキットです。
 
-openssl プログラムは、シェルから OpenSSL の crypto ライブラリのさまざまな暗号機能を使用するためのコマンドラインツールです。以下の用途に使用できます。
+`openssl` プログラムは、OpenSSL の暗号ライブラリが提供する各種暗号機能をシェルから利用するためのコマンドラインツールです。次の用途に使えます。
 
 * 秘密鍵、公開鍵、パラメータの作成と管理
 * 公開鍵暗号操作
 * X.509 証明書、CSR、CRL の作成
 * メッセージダイジェストの計算
-* 暗号化と復号化
-* SSL/TLS クライアントおよびサーバーテスト
+* 暗号方式を用いた暗号化と復号
+* SSL/TLS クライアントおよびサーバーのテスト
 * S/MIME 署名付きまたは暗号化メールの処理
-* タイムスタンプリクエストの生成と検証
+* タイムスタンプリクエスト、生成、および検証
 * 暗号ルーチンのベンチマーク
 
-OpenSSL の詳細については、無料の [OpenSSL Cookbook](https://www.feistyduck.com/books/openssl-cookbook/) を読んでください。
+OpenSSL の詳細については、無償公開されている [OpenSSL Cookbook](https://www.feistyduck.com/books/openssl-cookbook/) を参照してください。
 
-### 証明書の生成（Generating Certificates）
+<a id="generating-certificates"></a>
+### 証明書の生成
 
-OpenSSL は、[CA](https://en.wikipedia.org/wiki/Certificate_authority) による検証を受ける証明書と、自己利用のための証明書の両方を生成できます。
+OpenSSL は、[認証局（CA）](https://en.wikipedia.org/wiki/Certificate_authority)による検証を受ける証明書と、自己利用のための証明書のどちらの生成にも対応しています。
 
-以下の引数を指定して `man openssl(1)` コマンドを実行すると、[CA](https://en.wikipedia.org/wiki/Certificate_authority) 用の有効な証明書を生成できます。このコマンドは、カレントディレクトリに 2 つのファイルを作成します。証明書リクエスト `req.pem` は [CA](https://en.wikipedia.org/wiki/Certificate_authority) に送信できます。CA は入力された資格情報を検証し、リクエストに署名し、署名済み証明書を返します。2 番目のファイル `cert.key` は証明書の秘密鍵であり、安全な場所に保管する必要があります。これが他人の手に渡ると、ユーザーやサーバーになりすまされる可能性があります。
+[CA](https://en.wikipedia.org/wiki/Certificate_authority) 用の有効な証明書を生成するには、次の引数を指定して `openssl(1)` コマンドを実行します。このコマンドは、カレントディレクトリに 2 つのファイルを作成します。証明書署名要求（CSR）である `req.pem` は [CA](https://en.wikipedia.org/wiki/Certificate_authority) へ送ることができ、CA は入力された資格情報を検証して要求に署名し、署名済み証明書を返します。2 つ目のファイル `cert.key` は証明書の秘密鍵であり、安全な場所へ保管する必要があります。これが他人の手に渡ると、ユーザーやサーバーになりすますために悪用されるおそれがあります。
 
-次のコマンドを実行して証明書を生成します。
+証明書要求を生成するには、次のコマンドを実行します。
 
 ```shell
 # openssl req -new -nodes -out req.pem -keyout cert.key -sha3-512 -newkey rsa:4096
@@ -770,9 +770,9 @@ A challenge password []:123456789
 An optional company name []:Another name
 ```
 
-あるいは、[CA](https://en.wikipedia.org/wiki/Certificate_authority) からの署名が必要ない場合は、自己署名証明書を作成できます。これにより、カレントディレクトリに秘密鍵ファイル `cert.key` と証明書自体の `cert.crt` の 2 つの新しいファイルが作成されます。これらのファイルは、`root` だけが読み取り可能なディレクトリ（できれば `/etc/ssl/` 配下）に配置する必要があります。これらのファイルにはパーミッション `0700` が適切であり、`chmod` を使用して設定できます。
+一方、[CA](https://en.wikipedia.org/wiki/Certificate_authority) からの署名が不要な場合は、自己署名証明書を作成できます。これにより、カレントディレクトリ（訳注: 次のコマンド例では `-keyout` と `-out` で `/etc/ssl/` 配下を直接指定しています）に秘密鍵ファイル `cert.key` と証明書本体 `cert.crt` の 2 つの新しいファイルが作成されます。これらは、`root` のみが読み取れるディレクトリ、できれば `/etc/ssl/` 配下に配置する必要があります。これらのファイルにはパーミッション `0700` が適切であり、`chmod` で設定できます。
 
-次のコマンドを実行して証明書を生成します。
+証明書を生成するには、次のコマンドを実行します。
 
 ```shell
 # openssl req -new -x509 -days 365 -sha3-512 -keyout /etc/ssl/private/cert.key -out /etc/ssl/certs/cert.crt
@@ -796,31 +796,28 @@ For some fields there will be a default value,
 If you enter '.', the field will be left blank.
 -----
 Country Name (2 letter code) [AU]:ES
-State or Province Name (full name) [Some-State]:
-```
-
-Valencian Community
+State or Province Name (full name) [Some-State]:Valencian Community
 Locality Name (eg, city) []:Valencia
 Organization Name (eg, company) [Internet Widgits Pty Ltd]:My Company
 Organizational Unit Name (eg, section) []:Systems Administrator
 Common Name (e.g. server FQDN or YOUR name) []:localhost.example.org
 Email Address []:user@FreeBSD.org
-....
+```
 
-[[fips-provider]]
-=== FIPS プロバイダの設定
+<a id="fips-provider"></a>
+### FIPS プロバイダの設定
 
-FreeBSD 14 以降のベースシステムへの OpenSSL 3 の取り込みにより、プロバイダモジュールという新しい概念がシステムに導入されました。ライブラリに組み込まれたデフォルトのプロバイダモジュールに加えて、_legacy_ モジュールは、現在ではオプションとなった非推奨の暗号化アルゴリズムを実装し、_fips_ モジュールは、OpenSSL の実装を [FIPS](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards) 標準セットに含まれる暗号化アルゴリズムに限定します。OpenSSL のこの部分は [特に注意](https://www.openssl.org/docs/fips.html) が払われており、[関連するセキュリティ問題のリスト](https://www.openssl.org/news/fips-cve.html) を含み、定期的に [FIPS 140 検証プロセス](https://github.com/openssl/openssl/blob/master/README-FIPS.md) の対象となっています。[FIPS 検証済みバージョンのリスト](https://www.openssl.org/source/) も利用できます。これにより、ユーザーは OpenSSL の使用において FIPS 準拠を保証できます。
+FreeBSD 14 以降のベースシステムへ OpenSSL 3 が取り込まれたことで、プロバイダモジュール（provider module）という新しい仕組みがシステムに導入されました。ライブラリに組み込まれたデフォルトのプロバイダモジュールに加えて、_legacy_ モジュールは現在オプション扱いとなった非推奨の暗号アルゴリズムを実装し、_fips_ モジュールは OpenSSL の実装を [FIPS](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standards) 標準規格群に含まれる暗号アルゴリズムに制限します。OpenSSL のこの部分は[特別な管理](https://www.openssl.org/docs/fips.html)を受けており、[関連するセキュリティ問題の一覧](https://www.openssl.org/news/fips-cve.html)が公開されているほか、定期的に [FIPS 140 検証プロセス](https://github.com/openssl/openssl/blob/master/README-FIPS.md)の対象となっています。[FIPS 検証済みバージョンの一覧](https://www.openssl.org/source/)も公開されており、利用者は OpenSSL の利用にあたって FIPS 準拠を確認できます。
 
-重要なのは、`man fips_module(7)` が追加のセキュリティ対策によって保護されており、整合性チェックを通過しない限り使用できないことです。このチェックはシステム管理者が設定でき、OpenSSL 3 のすべてのユーザーがこのモジュールをロードできるようになります。正しく設定されていない場合、FIPS モジュールは次のように失敗します:
+重要な点として、`fips_module(7)` は追加のセキュリティ対策で保護されており、整合性チェックに合格しなければ使用できません。このチェックはローカルのシステム管理者が設定でき、設定後は OpenSSL 3 のすべての利用者がこのモジュールを読み込めるようになります。正しく設定されていない場合、FIPS モジュールは次のように失敗します。
 
 ```shell
 # echo test | openssl aes-128-cbc -a -provider fips -pbkdf2
 ```
 
-出力は次のようになるはずです:
+出力は次のようになります。
 
-```text
+```
 aes-128-cbc: unable to load provider fips
 Hint: use -provider-path option or OPENSSL_MODULES environment variable.
 00206124D94D0000:error:1C8000D5:Provider routines:SELF_TEST_post:missing config data:crypto/openssl/providers/fips/self_test.c:275:
@@ -829,25 +826,25 @@ Hint: use -provider-path option or OPENSSL_MODULES environment variable.
 00206124D94D0000:error:078C0105:common libcrypto routines:provider_init:init fail:crypto/openssl/crypto/provider_core.c:932:name=fips
 ```
 
-このチェックは、`/etc/ssl/fipsmodule.cnf` にファイルを作成することで設定でき、その後 OpenSSL のメイン設定ファイル `/etc/ssl/openssl.cnf` から参照されます。OpenSSL はこのプロセスを支援する `man openssl-fipsinstall(1)` ユーティリティを提供しており、次のように使用できます:
+このチェックは、`/etc/ssl/fipsmodule.cnf` にファイルを作成し、それを OpenSSL のメイン設定ファイル `/etc/ssl/openssl.cnf` から参照することで設定できます。OpenSSL にはこの作業を支援する `openssl-fipsinstall(1)` ユーティリティが用意されており、次のように使えます。
 
 ```shell
 # openssl fipsinstall -module /usr/lib/ossl-modules/fips.so -out /etc/ssl/fipsmodule.cnf
 ```
 
-出力は次のようになるはずです:
+出力は次のようになります。
 
-```text
+```
 INSTALL PASSED
 ```
 
-次に、`/etc/ssl/openssl.cnf` を以下の目的で変更する必要があります:
+続いて、次の目的で `/etc/ssl/openssl.cnf` を変更する必要があります。
 
-* 上記で生成した `/etc/ssl/fipsmodule.cnf` ファイルを組み込む
-* FIPS モジュールを使用可能な状態で公開する
-* そして、デフォルトモジュールを明示的に有効化する
+* 上記で生成した `/etc/ssl/fipsmodule.cnf` ファイルをインクルードする
+* FIPS モジュールを使用できるように公開する
+* デフォルトモジュールを明示的に有効化する
 
-```text
+```
 [...]
 # For FIPS
 # Optionally include a file that is generated by the OpenSSL fipsinstall
@@ -878,10 +875,9 @@ fips = fips_sect
 activate = 1
 ```
 
-これで、FIPS モジュールが実際に利用可能で動作していることを確認できるはずです:
+これにより、FIPS モジュールが実際に利用可能で機能していることを確認できるはずです。
 
-[s
-
+```shell
 # echo test | openssl aes-128-cbc -a -provider fips -pbkdf2
 ```
 
@@ -893,7 +889,7 @@ Verifying - enter AES-128-CBC encryption password:
 U2FsdGVkX18idooW6e3LqWeeiKP76kufcOUClh57j8U=
 ```
 
-この手順は、FIPS モジュールが変更されるたびに繰り返す必要があります。たとえば、システムのアップデート後や、ベースシステムの OpenSSL に影響を与えるセキュリティ修正を適用した後などです。
+この手順は、システムのアップデートを実行した後やベースシステムの OpenSSL に影響するセキュリティ修正を適用した後など、FIPS モジュールが変更されるたびに繰り返す必要があります。
 
 [[kerberos5]]
 
