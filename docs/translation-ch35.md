@@ -35,3 +35,8 @@
 - `git diff --check`
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
+
+## PR #12 レビュー指摘への対応（2026-11-19）
+
+- 最新 `main` へ rebase し、`README.md`・`SOURCE.md`・`handbook/TOC.md` の競合を解消しました。
+- PR #12 のレビュー指摘に基づき、`handbook/ja/35-advanced-networking.md` の 6 点（PEAP の証明書認証に関する訳注追加、CARP の FreeBSD バージョン範囲表現、IBSS のポイントツーポイント表記、CCMP と TKIP の関係表現、表 1 の C フラグ説明の重複語句削除、`` `driver_load="YES"` `` の余分な `*` 削除）を修正し、検査を再実行しました。
