@@ -525,3 +525,79 @@ PPP 接続のログを記録するように `syslog(3)` を設定するには、
 !ppp
 *.*     /var/log/ppp.log
 ```
+
+<a id="pppoe"></a>
+## PPP over Ethernet（PPPoE）の利用
+
+この節では、PPP over Ethernet（PPPoE）のセットアップ方法を説明します。
+
+動作する `ppp.conf` の例を次に示します。
+
+```
+default:
+  set log Phase tun command # add more detailed logging when needed
+  set ifaddr 10.0.0.1/0 10.0.0.2/0
+
+name_of_service_provider:
+  set device PPPoE:xl1 # replace xl1 with the Ethernet device
+  set authname THELOGINNAME
+  set authkey THEPASSWORD
+  set dial
+  set login
+  add default HISADDR
+```
+
+`root` として次を実行します。
+
+```shell
+# ppp -ddial name_of_service_provider
+```
+
+`/etc/rc.conf` に次を追加します。
+
+```
+ppp_enable="YES"
+ppp_mode="ddial"
+ppp_nat="YES"	# when needing to enable nat for the local network, otherwise NO
+ppp_profile="name_of_service_provider"
+```
+
+<a id="chapter-31-heading-16"></a>
+### PPPoE サービスタグの利用
+
+接続を確立するためにサービスタグの使用が必要になる場合があります。サービスタグは、特定のネットワークに接続されている複数の異なる PPPoE サーバーを区別するために使用されます。
+
+必要なサービスタグの情報は、ISP から提供されたドキュメントに記載されているはずです。
+
+最後の手段として、`net/rr-pppoe` パッケージまたは port のインストールを試すこともできます。ただし、これを行うとモデムの設定が初期化されて使用不能になる可能性があるため、実行する前に慎重に検討してください。モデムに付属のプログラムをインストールし、そのプログラムから「System」メニューにアクセスするだけです。そこにプロファイル名が表示されているはずです。通常は *ISP* です。
+
+このプロファイル名（サービスタグ）は、`ppp.conf` の PPPoE 設定エントリで `set device` のプロバイダ部分として使用します。詳細は `ppp(8)` を参照してください。次のようになります。
+
+```
+set device PPPoE:xl1:ISP
+```
+
+*xl1* はお使いのイーサネットカードに対応する適切なデバイス名に変更してください。
+
+*ISP* は実際のプロファイル名に変更してください。
+
+追加情報については、Renaud Waldura による [Cheaper Broadband with FreeBSD on DSL](http://renaud.waldura.com/doc/freebsd/pppoe/) を参照してください。
+
+<a id="ppp-3com"></a>
+### 3Com® HomeConnect™ ADSL Modem Dual Link での PPPoE
+
+このモデムは、[RFC 2516](http://www.faqs.org/rfcs/rfc2516.html) で定義されている PPPoE 仕様に準拠していません。
+
+FreeBSD がこのデバイスと通信できるようにするには、sysctl を設定する必要があります。起動時に自動的に設定するには `/etc/sysctl.conf` を更新します。
+
+```
+net.graph.nonstandard_pppoe=1
+```
+
+あるいは、次のコマンドで即座に設定することもできます。
+
+```shell
+# sysctl net.graph.nonstandard_pppoe=1
+```
+
+残念ながら、これはシステム全体の設定であるため、通常の PPPoE クライアントまたはサーバーと 3Com® HomeConnect™ ADSL Modem の両方と同時に通信することはできません。
