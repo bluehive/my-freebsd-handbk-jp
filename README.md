@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 7 Network（既存TOC ID なし）を意訳
+
+- 公式Chapter 7 [Network](handbook/ja/07-network.md)（既存TOC ID なし）を追加し、`handbook/TOC.md` に新規行を追加しました（既存の `07-desktop.md` 等は旧TOC番号のまま維持）。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全29見出し・30アンカー・57コード例・2表・全相互参照を意訳・自己校正しました。
+- 原文のコマンド・設定・出力例（`pciconf` 出力の `iwm0` と本文の `iwn(4)` の差異を含む）は保持し、注意点を訳注で区別しています。
+- [作業記録](docs/translation-ch07.md) / [原文ハッシュと状態](docs/translation-ch07.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Appendix D OpenPGP Keys（既存TOC ID D）を意訳
 
 - 公式Appendix D [OpenPGP Keys](handbook/ja/D-pgpkeys.md)（既存TOC ID D）を追加し、`handbook/TOC.md` を更新しました。
