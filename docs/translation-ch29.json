@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Chapter 29 USB Device Mode / USB OTG (29-usb-device-mode) only; legacy TOC ID 28; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 29,
+      "slug": "usb-device-mode",
+      "upstream_chapter_number": 29,
+      "legacy_toc_id": 28,
+      "upstream_path": "documentation/content/en/books/handbook/usb-device-mode/_index.adoc",
+      "source_path": "handbook/en/ch29/29-usb-device-mode.adoc.txt",
+      "translation_path": "handbook/ja/29-usb-device-mode.md",
+      "source_sha256": "36ea6729de7bd258730c3290fd72d85a68ce40dc26b9bb2737c6a306d591d568",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft setup; translation in progress",
+      "counts": {
+        "headings": 12,
+        "anchors": 12,
+        "code_blocks": 19,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}
