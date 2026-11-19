@@ -1670,3 +1670,375 @@ create_args_wlan0="country FR"
 cloned_interfaces="lagg0"
 ifconfig_lagg0="up laggproto failover laggport re0 laggport wlan0 DHCP"
 ```
+
+<a id="network-diskless"></a>
+## PXE によるディスクレス運用（Diskless Operation with PXE）
+
+Intel® Preboot eXecution Environment（PXE）を使用すると、ネットワーク経由でオペレーティングシステムを起動できます。
+たとえば、FreeBSD システムをネットワーク経由で起動し、ローカルディスクを使わずに NFS サーバからマウントしたファイルシステム上で運用することが可能です。
+PXE サポートは通常 BIOS に組み込まれています。
+マシン起動時に PXE を利用するには、BIOS セットアップで `Boot from network` オプションを選択するか、システム初期化中にファンクションキーを押します。
+
+オペレーティングシステムをネットワーク経由で起動するために必要なファイルを提供するには、PXE の構成において DHCP、TFTP、および NFS サーバを適切に設定しておく必要があります。それぞれの役割は次のとおりです。
+
+* IP アドレス、起動可能なブートファイル名と場所、サーバ名、ルートパスなどの初期パラメータを DHCP サーバから取得します。
+* オペレーティングシステムのローダファイルを TFTP を使って起動（取得）します。
+* ファイルシステムを NFS を使って読み込みます。
+
+コンピュータが PXE ブートを行うと、まず初期ブートローダファイルの取得先に関する情報を DHCP 経由で受け取ります。
+ホストコンピュータはこの情報を受け取ると、TFTP 経由でブートローダをダウンロードし、そのブートローダを実行します。
+FreeBSD では、このブートローダファイルは `/boot/pxeboot` です。
+`/boot/pxeboot` が実行されると、FreeBSD カーネルが読み込まれ、以降は [FreeBSDの起動プロセス（The FreeBSD Booting Process）](14-boot.md#boot) で説明されている通常の FreeBSD 起動シーケンスが進行します。
+
+> **注記**: UEFI PXE ベースのブートでは、実際に使用するブートローダファイルは `/boot/loader.efi` になります。`/boot/loader.efi` の使用方法については、後述の [PXE の問題のデバッグ（Debugging PXE Problems）](#chapter-35-heading-42) を参照してください。
+
+この節では、他のシステムが FreeBSD へ PXE ブートできるように、FreeBSD システム上でこれらのサービスを設定する方法を説明します。
+詳細は `diskless(8)` を参照してください。
+
+> **警告**: ここで説明する構成では、これらのサービスを提供するシステムは安全ではありません。ネットワーク内の保護された領域に配置し、他のホストから信頼されない前提で運用してください。
+
+<a id="network-pxe-nfs"></a>
+### PXE 環境の構築（Setting Up the PXE Environment）
+
+この節の手順では、組み込みの NFS サーバと TFTP サーバを設定します。
+次の節では、DHCP サーバのインストールと設定方法を説明します。
+この例では、PXE ユーザーが使用するファイルを格納するディレクトリを `/b/tftpboot/FreeBSD/install` とします。
+このディレクトリが実際に存在すること、そして `/etc/inetd.conf` と `/usr/local/etc/dhcpd.conf` の両方に同じディレクトリ名が設定されていることが重要です。
+
+> **注記**: 以下のコマンド例は `sh(1)` シェルの使用を前提としています。`csh(1)` や `tcsh(1)` をお使いの場合は、`sh(1)` シェルを起動するか、コマンドを `csh(1)` の構文に合わせて読み替えてください。
+
+1. NFS マウントされる FreeBSD インストール環境を格納するためのルートディレクトリを作成します。
+
+```shell
+# export NFSROOTDIR=/b/tftpboot/FreeBSD/install
+# mkdir -p ${NFSROOTDIR}
+```
+
+2. `/etc/rc.conf` に次の行を追加して NFS サーバを有効にします。
+
+```
+nfs_server_enable="YES"
+```
+
+3. `/etc/exports` に次の行を追加して、ディスクレス用ルートディレクトリを NFS 経由で公開（export）します。
+
+```
+/b -ro -alldirs -maproot=root
+```
+
+4. NFS サーバを起動します。
+
+```shell
+# service nfsd start
+```
+
+5. `/etc/rc.conf` に次の行を追加して `inetd(8)` を有効にします。
+
+```
+inetd_enable="YES"
+```
+
+6. `/etc/inetd.conf` 内の次の行について、先頭に `#` 記号が付いていないことを確認し、コメントを解除します。
+
+```
+tftp dgram udp wait root /usr/libexec/tftpd tftpd blocksize 1468 -l -s /b/tftpboot
+```
+
+> **注記**: 指定している TFTP ブロックサイズ（例: 1468 バイト）は、既定値の 512 バイトを置き換えるものです。一部の PXE バージョンでは TCP 版の TFTP が必要になります。その場合は、`stream tcp` を含む 2 つ目の `tftp` 行のコメントを解除してください。
+
+7. `inetd(8)` を起動します。
+
+```shell
+# service inetd start
+```
+
+8. `${NFSROOTDIR}` にベースシステムをインストールします。公式アーカイブを展開するか、FreeBSD カーネルとユーザーランドを再構築してください（詳細な手順は [ソースからの FreeBSD の更新（Updating FreeBSD from Source）](27-cutting-edge.md#makeworld) を参照してください。ただし、`make installkernel` および `make installworld` コマンドを実行する際は、忘れずに `DESTDIR=${NFSROOTDIR}` を指定してください）。
+
+9. TFTP サーバが動作しており、PXE 経由で取得されるブートローダをダウンロードできることを確認します。
+
+```shell
+# tftp localhost
+tftp> get FreeBSD/install/boot/pxeboot
+Received 264951 bytes in 0.1 seconds
+```
+
+10. `${NFSROOTDIR}/etc/fstab` を編集し、ルートファイルシステムを NFS 経由でマウントするためのエントリを作成します。
+
+```
+# Device                                         Mountpoint    FSType   Options  Dump Pass
+myhost.example.com:/b/tftpboot/FreeBSD/install       /         nfs      ro        0    0
+```
+
+`myhost.example.com` は NFS サーバのホスト名または IP アドレスに置き換えてください。
+この例では、NFS クライアントが誤ってルートファイルシステムの内容を削除してしまうのを防ぐため、ルートファイルシステムを読み取り専用（`ro`）でマウントしています。
+
+11. PXE ブートを行うクライアントマシン向けに、PXE 環境内の `root` パスワードを設定します。
+
+```shell
+# chroot ${NFSROOTDIR}
+# passwd
+```
+
+12. 必要に応じて、`${NFSROOTDIR}/etc/ssh/sshd_config` を編集して `PermitRootLogin` を有効にし、PXE ブートしたクライアントマシンへの `ssh(1)` による `root` ログインを許可します。このオプションについては `sshd_config(5)` に記載されています。
+
+13. その他、`${NFSROOTDIR}` 内の PXE 環境に対して必要なカスタマイズを行います。これにはパッケージのインストールや `vipw(8)` を使ったパスワードファイルの編集などが含まれます。
+
+NFS ルートボリュームから起動すると、`/etc/rc` が NFS ブートであることを検出し、`/etc/rc.initdiskless` を実行します。
+この場合、NFS ルートディレクトリが読み取り専用であっても `/etc` と `/var` は書き込み可能にする必要があるため、これらをメモリベースのファイルシステムとして構成します。
+
+```shell
+# chroot ${NFSROOTDIR}
+# mkdir -p conf/base
+# tar -c -v -f conf/base/etc.cpio.gz --format cpio --gzip etc
+# tar -c -v -f conf/base/var.cpio.gz --format cpio --gzip var
+```
+
+システムが起動すると、`/etc` と `/var` 用のメモリファイルシステムが作成・マウントされ、`cpio.gz` ファイルの内容がその中に展開されます。
+既定では、これらのファイルシステムの最大容量は 5 メガバイトです。
+バイナリパッケージをインストールした後の `/var` など、アーカイブが収まりきらない場合は、必要な 512 バイトセクタ数（たとえば 5 メガバイトなら 10240 セクタ）を、`/etc` ファイルシステム用には `${NFSROOTDIR}/conf/base/etc/md_size`、`/var` ファイルシステム用には `${NFSROOTDIR}/conf/base/var/md_size` ファイルに記述してより大きなサイズを要求してください。
+
+<a id="network-pxe-setting-up-dhcp"></a>
+### DHCP サーバの設定（Configuring the DHCP Server）
+
+DHCP サーバは TFTP や NFS サーバと同じマシンである必要はありませんが、ネットワーク上で到達可能でなければなりません。
+
+DHCP は FreeBSD のベースシステムには含まれていませんが、`net/isc-dhcp44-server` port またはパッケージを使ってインストールできます。
+
+インストールしたら、設定ファイル `/usr/local/etc/dhcpd.conf` を編集します。
+次の例のように `next-server`、`filename`、`root-path` の各項目を設定してください。
+
+```
+subnet 192.168.0.0 netmask 255.255.255.0 {
+   range 192.168.0.2 192.168.0.3 ;
+   option subnet-mask 255.255.255.0 ;
+   option routers 192.168.0.1 ;
+   option broadcast-address 192.168.0.255 ;
+   option domain-name-servers 192.168.35.35, 192.168.35.36 ;
+   option domain-name "example.com";
+
+   # IP address of TFTP server
+   next-server 192.168.0.1 ;
+
+   # path of boot loader obtained via tftp
+   filename "FreeBSD/install/boot/pxeboot" ;
+
+   # pxeboot boot loader will try to NFS mount this directory for root FS
+   option root-path "192.168.0.1:/b/tftpboot/FreeBSD/install/" ;
+
+}
+```
+
+`next-server` ディレクティブは、TFTP サーバの IP アドレスを指定するために使用します。
+
+`filename` ディレクティブは `/boot/pxeboot` へのパスを定義します。
+ここでは相対パスが使われるため、パスに `/b/tftpboot` は含めない点に注意してください。
+
+`root-path` オプションは、NFS ルートファイルシステムへのパスを定義します。
+
+編集内容を保存したら、`/etc/rc.conf` に次の行を追加して起動時に DHCP を有効にします。
+
+```
+dhcpd_enable="YES"
+```
+
+その後、DHCP サービスを起動します。
+
+```shell
+# service isc-dhcpd start
+```
+
+<a id="chapter-35-heading-42"></a>
+### PXE の問題のデバッグ（Debugging PXE Problems）
+
+すべてのサービスが設定されて起動すると、PXE クライアントはネットワーク経由で自動的に FreeBSD を読み込めるようになるはずです。
+特定のクライアントが接続できない場合は、そのクライアントマシンの起動時に BIOS 設定メニューに入り、ネットワークから起動するように設定されているかを確認してください。
+
+この節では、どのクライアントも PXE ブートできない場合に設定上の問題箇所を切り分けるためのトラブルシューティングのヒントを説明します。
+
+1. `net/wireshark` パッケージまたは port を使用して、PXE ブート処理中のネットワークトラフィックをデバッグします。全体の流れは以下の図のとおりです。
+
+![NFS ルートマウントを用いた PXE ブートの流れ](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/advanced-networking/pxe-nfs.png)
+
+   1. クライアントが `DHCPDISCOVER` メッセージをブロードキャストします。
+   2. DHCP サーバが IP アドレス、`next-server`、`filename`、`root-path` の各値を応答します。
+   3. クライアントが `next-server` へ TFTP リクエストを送り、`filename` の取得を要求します。
+   4. TFTP サーバが応答し、クライアントへ `filename` を送信します。
+   5. クライアントが `filename`（すなわち `pxeboot(8)`）を実行し、カーネルを読み込みます。カーネルが実行されると、`root-path` で指定されたルートファイルシステムが NFS 経由でマウントされます。
+
+2. TFTP サーバ上で `/var/log/xferlog` を確認し、`pxeboot` が正しい場所から取得されているかを確かめます。この設定例をテストするには次のようにします。
+
+```shell
+# tftp 192.168.0.1
+tftp> get FreeBSD/install/boot/pxeboot
+Received 264951 bytes in 0.1 seconds
+```
+
+`tftpd(8)` および `tftp(1)` の `BUGS` 節には、TFTP に関するいくつかの制約が記載されています。
+
+3. ルートファイルシステムを NFS 経由でマウントできることを確認します。この設定例をテストするには次のようにします。
+
+```shell
+# mount -t nfs 192.168.0.1:/b/tftpboot/FreeBSD/install /mnt
+```
+
+4. UEFI PXE ベースのブートを行う場合は、`boot/pxeboot` ファイルを `boot/loader.efi` ファイルで置き換えます。
+
+```shell
+# chroot ${NFSROOTDIR}
+# mv boot/pxeboot boot/pxeboot.original
+# cp boot/loader.efi boot/pxeboot
+```
+
+<a id="carp"></a>
+## Common Address Redundancy Protocol（CARP）
+
+Common Address Redundancy Protocol（CARP）を使用すると、複数のホストが同じ IP アドレスと Virtual Host ID（VHID）を共有し、1 つ以上のサービスに対して**高可用性（high availability）**を提供できます。
+つまり、1 台以上のホストに障害が発生しても、他のホストが透過的に処理を引き継ぐため、ユーザーからはサービス障害が見えなくなります。
+
+共有 IP アドレスに加えて、各ホストには管理および設定用の固有の IP アドレスがあります。
+1 つの IP アドレスを共有するすべてのマシンは、同じ VHID を持ちます。
+各仮想 IP アドレスの VHID は、そのネットワークインタフェースのブロードキャストドメイン内で一意でなければなりません。
+
+CARP を用いた高可用性は FreeBSD に組み込まれていますが、設定手順は FreeBSD のバージョンによってわずかに異なります。
+この節では、FreeBSD 10 以前および FreeBSD 10 以降に対応した同じ設定例を示します。
+
+この例では、すべて固有の IP アドレスを持ちながら同じ Web コンテンツを提供する 3 台のホストでフェイルオーバー構成を組みます。
+`hosta.example.org` と `hostb.example.org` という 2 台の異なるマスターがあり、共通のバックアップとして `hostc.example.org` を用意します。
+
+これらのマシンはラウンドロビン DNS 構成によって負荷分散されています。
+マスターマシンとバックアップマシンは、ホスト名と管理用 IP アドレスを除いて同一に設定します。
+これらのサーバは同じ構成を持ち、同じサービスを実行していなければなりません。
+フェイルオーバーが発生した際、バックアップサーバが同じコンテンツにアクセスできて初めて、共有 IP アドレス宛てのサービス要求に正しく応答できるためです。
+バックアップマシンには、マスターコンテンツサーバの各 IP アドレスに対応して 2 つの追加 CARP インタフェースを持たせます。
+障害が発生すると、バックアップサーバは障害を起こしたマスターマシンの IP アドレスを引き継ぎます。
+
+<a id="carp-10x"></a>
+### CARP の使用（Using CARP）
+
+`/boot/loader.conf` に `carp.ko` カーネルモジュール用のエントリを追加し、起動時に CARP サポートを有効にします。
+
+```
+carp_load="YES"
+```
+
+再起動せずに今すぐモジュールを読み込むには次のようにします。
+
+```shell
+# kldload carp
+```
+
+カスタムカーネルを使いたい場合は、カスタムカーネル設定ファイルに次の行を含め、[カーネルの構築（Kernel Configuration）](09-kernelconfig.md#kernelconfig) の手順に従ってカーネルをコンパイルします。
+
+```
+device	carp
+```
+
+ホスト名、管理用 IP アドレスとサブネットマスク、共有 IP アドレス、および VHID は、すべて `/etc/rc.conf` にエントリを追加して設定します。次は `hosta.example.org` の例です。
+
+```
+hostname="hosta.example.org"
+ifconfig_em0="inet 192.168.1.3 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 1 pass testpass alias 192.168.1.50/32"
+```
+
+次のエントリ群は `hostb.example.org` 用です。
+こちらは 2 台目のマスターを表すため、異なる共有 IP アドレスと VHID を使用します。
+ただし、CARP は正しいパスワードを持つマシンからのアドバタイズメントのみを待ち受けて受け入れるため、`pass` で指定するパスワードは一致させる必要があります。
+
+```
+hostname="hostb.example.org"
+ifconfig_em0="inet 192.168.1.4 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 2 pass testpass alias 192.168.1.51/32"
+```
+
+3 台目のマシンである `hostc.example.org` は、どちらのマスターからのフェイルオーバーも引き受けられるように設定します。
+このマシンには 2 つの CARP VHID を設定し、それぞれのマスターホストの仮想 IP アドレスを扱えるようにします。
+また、複数のバックアップサーバが存在する場合の優先順位は `advskew` で制御されるため、バックアップホストがマスターよりも遅れてアドバタイズするように CARP アドバタイズメントのスキュー `advskew` を設定します。
+
+```
+hostname="hostc.example.org"
+ifconfig_em0="inet 192.168.1.5 netmask 255.255.255.0"
+ifconfig_em0_alias0="inet vhid 1 advskew 100 pass testpass alias 192.168.1.50/32"
+ifconfig_em0_alias1="inet vhid 2 advskew 100 pass testpass alias 192.168.1.51/32"
+```
+
+2 つの CARP VHID を設定しておくことで、`hostc.example.org` はどちらかのマスターサーバが利用不能になったことを検知できます。
+マスターがバックアップサーバより先にアドバタイズできなくなると、マスターが再び利用可能になるまでバックアップサーバがその共有 IP アドレスを引き継ぎます。
+
+> **注記**: 元のマスターサーバが再び利用可能になっても、`hostc.example.org` は仮想 IP アドレスを自動的にマスターへ返還しません。自動的に返還させるには、プリエンプション（preemption）を有効にする必要があります。この機能は既定で無効になっており、`sysctl(8)` 変数 `net.inet.carp.preempt` によって制御されます。管理者は次のようにして、バックアップサーバからマスターへ IP アドレスを強制的に戻すこともできます。
+
+```shell
+# ifconfig em0 vhid 1 state backup
+```
+
+設定が完了したら、ネットワークを再起動するか、各システムを再起動します。
+これで高可用性が有効になります。
+
+CARP の動作は、`carp(4)` のマニュアルページに記載されているいくつかの `sysctl(8)` 変数で制御できます。
+また、`devd(8)` を使用して CARP イベントから他のアクションをトリガーすることも可能です。
+
+<a id="network-vlan"></a>
+## VLAN（VLANs）
+
+VLAN は、1 つのネットワークを論理的に多数の異なるサブネットワークへ分割する（セグメント化とも呼ばれます）ための仕組みです。
+各セグメントは独自のブロードキャストドメインを持ち、他の VLAN から隔離されます。
+
+FreeBSD では、ネットワークカードドライバが VLAN に対応している必要があります。
+どのドライバが VLAN に対応しているかを確認するには、`vlan(4)` のマニュアルページを参照してください。
+
+VLAN を設定する際には、次の 2 つの情報を把握しておく必要があります。
+1 つ目はどのネットワークインタフェースを使うか、2 つ目は VLAN タグ（tag）は何か、という点です。
+
+NIC が `em0`、VLAN タグが `5` の場合に、実行時に VLAN を設定するコマンドは次のようになります。
+
+```shell
+# ifconfig em0.5 create vlan 5 vlandev em0 inet 192.168.20.20/24
+```
+
+> **注記**: インタフェース名に NIC ドライバ名と VLAN タグがピリオドで区切られて含まれている点に注目してください。これは、マシン上に多数の VLAN が存在する場合でも VLAN 設定の保守を容易にするためのベストプラクティスです。
+
+> **注記**: VLAN を定義する際は、親となるネットワークインタフェースも設定・有効化されていることを必ず確認してください。上記の例における最小限の設定は次のとおりです。
+
+```shell
+# ifconfig em0 up
+```
+
+起動時に VLAN を設定するには、`/etc/rc.conf` を更新する必要があります。
+上記の設定を再現するには、次の行を追加します。
+
+```
+vlans_em0="5"
+ifconfig_em0_5="inet 192.168.20.20/24"
+```
+
+追加の VLAN は、`vlans_em0` にタグを追記し、その VLAN タグのインタフェースに対するネットワーク設定行をもう 1 行追加するだけで増やせます。
+
+> **注記**: `/etc/rc.conf` で VLAN を定義する際は、親となるネットワークインタフェースも同様に設定・有効化されていることを確認してください。上記の例における最小限の設定は次のとおりです。
+
+```
+ifconfig_em0="up"
+```
+
+関連するハードウェアを交換したときに少数の設定変数を更新するだけで済むよう、インタフェースにシンボリック名（別名）を付けておくと便利です。
+たとえば、`em0` 上の VLAN 1 で防犯カメラ（security cameras）を運用する必要があるとします。
+将来、`em0` カードを `ixgb(4)` ドライバを使うカードに交換したとしても、`em0.1` へのすべての参照を `ixgb0.1` に書き換える必要がなくなります。
+
+NIC `em0` 上で VLAN `5` を設定し、インタフェース名に `cameras` を割り当て、さらに `24` ビットプレフィックスの IP アドレス `192.168.20.20` を割り当てるには、次のコマンドを使用します。
+
+```shell
+# ifconfig em0.5 create vlan 5 vlandev em0 name cameras inet 192.168.20.20/24
+```
+
+`video` という名前のインタフェースに対して行う場合は次のようにします。
+
+```shell
+# ifconfig video.5 create vlan 5 vlandev video name cameras inet 192.168.20.20/24
+```
+
+これらの変更を起動時に適用するには、`/etc/rc.conf` に次の行を追加します。
+
+```
+vlans_video="cameras"
+create_args_cameras="vlan 5"
+ifconfig_cameras="inet 192.168.20.20/24"
+```
