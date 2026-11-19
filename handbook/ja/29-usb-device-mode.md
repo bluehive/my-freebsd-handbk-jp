@@ -1,8 +1,6 @@
 <a id="usb-device-mode"></a>
 # 第29章 USB デバイスモード / USB OTG（USB Device Mode / USB OTG）
 
-> **ドラフト**: 本ファイルは現在翻訳作業中です。全節の翻訳および自己校正が完了するまでドラフト扱いです。
-
 本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/usb-device-mode/)の「Chapter 29. USB Device Mode / USB OTG」（既存 TOC ID 28）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/usb-device-mode/_index.adoc`）に基づいて日本語へ意訳したものです。
 
 > **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。掲載されているコマンドや設定例は説明のための例であり、翻訳作業中に実機で実行したものではありません。実行例中の `#` は root ユーザーのプロンプトを示します。

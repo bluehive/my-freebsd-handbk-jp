@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch29/29-usb-device-mode.adoc.txt",
       "translation_path": "handbook/ja/29-usb-device-mode.md",
       "source_sha256": "36ea6729de7bd258730c3290fd72d85a68ce40dc26b9bb2737c6a306d591d568",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft setup; translation in progress",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 12 headings, 12 anchors, and 19 code blocks in the pinned source; empty usb-device-mode-terminals parent section and 16-digit vs 32-digit NAA identifier note annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 12,
         "anchors": 12,
