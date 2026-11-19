@@ -879,3 +879,671 @@ options         ALTQ_PRIQ       # Priority Queuing (PRIQ)
 * **PRIQ**: Priority Queuing（PRIQ）は、より優先度の高いキューにあるトラフィックを常に先に通過させます。
 
 スケジューリングアルゴリズムやルールセットの例に関する詳しい情報は、[OpenBSD の Web アーカイブ](https://web.archive.org/web/20151109213426/http://www.openbsd.org/faq/pf/queueing.html) で入手できます。
+
+<a id="firewalls-ipfw"></a>
+## IPFW
+
+IPFW は FreeBSD 向けに開発されたステートフルファイアウォールで、IPv4 と IPv6 の両方に対応しています。
+カーネル内のファイアウォールフィルタリングルール処理部とそれに統合されたパケット課金（アカウンティング）機能、ログ記録機能、NAT、`dummynet(4)` トラフィックシェーパー、転送（forward）機能、ブリッジ機能、ipstealth 機能など、複数のコンポーネントで構成されています。
+
+FreeBSD は `/etc/rc.firewall` にサンプルのルールセットを用意しており、初心者が適切なルールセットを簡単に生成できるよう、よくある用途向けのファイアウォールタイプをいくつか定義しています。
+また、IPFW は高度な構文を備えており、上級者は環境ごとのセキュリティ要件に合わせた独自のルールセットを作成できます。
+
+本節では、IPFW を有効にする方法、ルール構文の概要、および一般的な構成シナリオ向けのルールセット例を紹介します。
+
+<a id="firewalls-ipfw-enable"></a>
+### IPFW を有効にする
+
+IPFW は FreeBSD の基本インストールに動的読み込み可能なカーネルモジュールとして含まれているため、IPFW を有効にするためにカスタムカーネルをビルドする必要はありません。
+
+カスタムカーネルへ IPFW サポートを静的に組み込みたい場合は、[IPFW カーネルオプション](#firewalls-ipfw-kernelconfig) を参照してください。
+
+システム起動時に IPFW を有効にするには、`/etc/rc.conf` に `firewall_enable="YES"` を追加します。
+
+```shell
+# sysrc firewall_enable="YES"
+```
+
+FreeBSD が提供する既定のファイアウォールタイプのいずれかを使うには、そのタイプを指定する行を追加します。
+
+```shell
+# sysrc firewall_type="open"
+```
+
+指定できるタイプは次のとおりです。
+
+* `open`: すべてのトラフィックを通過させる。
+* `client`: このマシンだけを保護する。
+* `simple`: ネットワーク全体を保護する。
+* `closed`: ループバックインタフェースを除き、IP トラフィックを完全に無効化する。
+* `workstation`: ステートフルルールを使ってこのマシンだけを保護する。
+* `UNKNOWN`: ファイアウォールルールの読み込みを無効化する。
+* `filename`: ファイアウォールルールセットを記述したファイルのフルパス。
+
+`firewall_type` を `client` または `simple` に設定した場合は、`/etc/rc.firewall` にある既定のルールをシステムの構成に合わせて修正してください。
+
+`filename` タイプは、独自のルールセットを読み込む際に使います。
+
+独自ルールセットを読み込む別の方法として、IPFW コマンド群を記述した**実行可能スクリプト**の絶対パスを `firewall_script` 変数に設定する方法もあります。
+本節の例では、`firewall_script` が `/etc/ipfw.rules` に設定されていることを前提としています。
+
+```shell
+# sysrc firewall_script="/etc/ipfw.rules"
+```
+
+`syslogd(8)` 経由でのログ記録を有効にするには、次の行を含めます。
+
+```shell
+# sysrc firewall_logging="YES"
+```
+
+> **警告**: `log` オプションが付いたファイアウォールルールだけがログに記録されます。既定のルールにはこのオプションが含まれていないため、手動で追加する必要があります。したがって、ログを取得するには既定のルールセットを編集しておくことを勧めます。さらに、ログを別ファイルへ保存する場合は、ログローテーションの設定も検討してください。
+
+ログ記録の回数制限を設定するための `/etc/rc.conf` 変数はありません。
+接続試行あたりに1つのルールがログへ記録される回数を制限するには、`/etc/sysctl.conf` に次の行を書いて回数を指定します。
+
+```shell
+# echo "net.inet.ip.fw.verbose_limit=5" >> /etc/sysctl.conf
+```
+
+代わりに `ipfw0` という専用インタフェース経由でログを記録するには、`/etc/rc.conf` に次の行を追加します。
+
+```shell
+# sysrc firewall_logif="YES"
+```
+
+その後、`tcpdump` を使って何が記録されているかを確認します。
+
+```shell
+# tcpdump -t -n -i ipfw0
+```
+
+> **ヒント**: `tcpdump` を接続していない限り、このログ機能によるオーバーヘッドは発生しません。
+
+必要な編集を保存したら、ファイアウォールを起動します。
+ログ回数制限を即座に有効にするため、上で指定した `sysctl` 値も同時に設定します。
+
+```shell
+# service ipfw start
+# sysctl net.inet.ip.fw.verbose_limit=5
+```
+
+<a id="firewalls-ipfw-rules"></a>
+### IPFW ルール構文
+
+パケットが IPFW ファイアウォールに入ると、ルールセットの先頭ルールと比較され、上から下へ順番に1ルールずつ評価されます。
+パケットがルールの選択条件に一致すると、そのルールのアクションが実行され、そのパケットに対するルールセットの検索はそこで終了します。
+これを「最初の一致が勝つ（first match wins）」方式と呼びます。
+どのルールにも一致しなかったパケットは、IPFW の必須の既定ルールである番号 65535 に捕捉され、すべて拒否されて黙って破棄されます。
+ただし、`count`、`skipto`、`tee` の各キーワードを含むルールに一致した場合は検索が続行されます。
+これらのキーワードがルール処理にどう影響するかの詳細は `ipfw(8)` を参照してください。
+
+IPFW ルールを作成するときは、キーワードを次の順序で記述する必要があります。
+必須のキーワードと省略可能なキーワードがあります。
+大文字で示された語は変数（値）を表し、小文字で示された語は直後に続く変数の前に必ず置く必要があります。
+`#` 記号はコメントの開始を示し、ルールの末尾にも独立した行にも置けます。
+空行は無視されます。
+
+`*CMD RULE_NUMBER* set *SET_NUMBER ACTION* log *LOG_AMOUNT PROTO* from *SRC SRC_PORT* to *DST DST_PORT OPTIONS*`
+
+ここでは、これらのキーワードとオプションの概要を説明します。
+利用可能なすべてのオプションを網羅したものではありません。
+IPFW ルールを作成する際に使える構文の完全な解説は `ipfw(8)` を参照してください。
+
+* **CMD**: すべてのルールは `ipfw add` で始める必要があります。
+
+* **RULE_NUMBER**: 各ルールには `1` から `65534` までの番号を割り当てます。この番号はルール処理の順序を示すために使われます。複数のルールに同じ番号を付けることもでき、その場合は追加された順に適用されます。
+
+* **SET_NUMBER**: 各ルールには `0` から `31` までのセット番号を割り当てます。セット単位で有効化・無効化できるため、一群のルールを素早く追加したり削除したりできます。`SET_NUMBER` を指定しない場合、ルールはセット `0` に追加されます。
+
+* **ACTION**: ルールには次のいずれかのアクションを関連付けられます。パケットがルールの選択条件に一致したとき、指定されたアクションが実行されます。
+
+  `allow | accept | pass | permit`: これらのキーワードは同等で、ルールに一致したパケットを許可します。
+
+  `check-state`: 動的ステートテーブルとパケットを照合します。一致が見つかった場合、その動的ルールを生成したルールに関連付けられたアクションを実行し、見つからなければ次のルールへ進みます。`check-state` ルールには選択条件がありません。ルールセット内に `check-state` ルールが存在しない場合、最初の `keep-state` または `limit` ルールの位置で動的ルールテーブルが検査されます。
+
+  `count`: ルールに一致したすべてのパケットについてカウンタを更新します。検索は次のルールへ続行されます。
+
+  `deny | drop`: どちらの語も、このルールに一致したパケットを黙って破棄します。
+
+  このほかにもアクションが用意されています。詳細は `ipfw(8)` を参照してください。
+
+* **LOG_AMOUNT**: パケットが `log` キーワード付きのルールに一致すると、ファシリティ名 `SECURITY` で `syslogd(8)` にメッセージが記録されます。ログ記録は、その特定ルールで記録されたパケット数が指定された `LOG_AMOUNT` を超えていない場合にのみ行われます。`LOG_AMOUNT` を指定しない場合、上限は `net.inet.ip.fw.verbose_limit` の値から取得されます。値を 0 にするとログ回数制限が解除されます。上限に達した後は、`ipfw resetlog` を使ってそのルールのログカウンタまたはパケットカウンタをクリアすることでログ記録を再開できます。
+
+  > **注記**: ログ記録は、パケットの他の一致条件がすべて満たされた後、パケットに対する最終アクションを実行する直前に行われます。どのルールでログを有効にするかは管理者が決めます。
+
+* **PROTO**: この省略可能な値では、`/etc/protocols` に記載されている任意のプロトコル名またはプロトコル番号を指定できます。
+
+* **SRC**: `from` キーワードの後には、送信元アドレスまたは送信元アドレスを表すキーワードを置く必要があります。アドレスには、`any`、`me`（このシステムのいずれかのインタフェースに設定されている任意のアドレス）、`me6`（このシステムのいずれかのインタフェースに設定されている任意の IPv6 アドレス）、あるいはアドレス一覧を含むルックアップテーブルの番号を続けた `table` を指定できます。IP アドレスを指定する場合、任意で CIDR マスクまたはサブネットマスクを後ろに付けられます。たとえば `1.2.3.4/25` や `1.2.3.4:255.255.255.128` のように書きます。
+
+* **SRC_PORT**: 送信元ポートは省略可能で、`/etc/services` のポート番号またはポート名を使って指定できます。
+
+* **DST**: `to` キーワードの後には、宛先アドレスまたは宛先アドレスを表すキーワードを置く必要があります。宛先の指定には、SRC の項目で説明したものと同じキーワードとアドレスが使えます。
+
+* **DST_PORT**: 宛先ポートは省略可能で、`/etc/services` のポート番号またはポート名を使って指定できます。
+
+* **OPTIONS**: 送信元と宛先の後ろにはいくつかのキーワードを続けられます。名前のとおり、`OPTIONS` は省略可能です。よく使われるオプションには、パケットの流れの方向を指定する `in` や `out`、ICMP メッセージの種別を続ける `icmptypes`、および `keep-state` があります。
+
+  `keep-state` ルールに一致すると、ファイアウォールは同じプロトコルを使う送信元・宛先のアドレスおよびポート間の双方向トラフィックに一致する動的ルールを作成します。
+
+  動的ルール機能は、大量の動的ルールを開かせる SYN フラッド攻撃によるリソース枯渇に対して脆弱です。IPFW でこの種の攻撃に対抗するには `limit` を使います。このオプションは、開いている動的ルールを検査してこのルールと IP アドレスの組み合わせが何回発生したかを数えることで、同時セッション数を制限します。この回数が `limit` で指定した値を超えると、パケットは破棄されます。
+
+  数十種類の `OPTIONS` が用意されています。利用可能な各オプションの解説は `ipfw(8)` を参照してください。
+
+<a id="chapter-34-heading-20"></a>
+### ルールセットの例
+
+ここでは、`/etc/ipfw.rules` という名前のステートフルファイアウォール用ルールセットスクリプトの例を作成する方法を示します。
+この例では、方向を明確にするためすべての接続ルールで `in` または `out` を使っています。
+また、パケットが通過するインタフェースを指定するために `via` *インタフェース名* を使っています。
+
+> **注記**: ファイアウォールルールセットを最初に作成またはテストするときは、一時的に次のチューナブルを設定することを検討してください。
+>
+> ```
+> net.inet.ip.fw.default_to_accept="1"
+> ```
+>
+> これにより `ipfw(8)` の既定ポリシーが標準の `deny ip from any to any` よりも緩やかになり、再起動直後にシステムからロックアウトされにくくなります。
+
+ファイアウォールスクリプトは、POSIX® シェルスクリプトであることを示す行から始まり、既存のルールをすべて消去（flush）します。
+次に、すべてのルールの先頭に `ipfw add` と書かなくて済むように `cmd` 変数を作成します。
+また、インターネットに接続されたインタフェース名を表す `pif` 変数も定義します。
+
+```
+#!/bin/sh
+# Flush out the list before we begin.
+ipfw -q -f flush
+
+# Set rules command prefix
+cmd="ipfw -q add"
+pif="dc0"     # interface name of NIC attached to Internet
+```
+
+最初の2つのルールは、信頼された内部インタフェースとループバックインタフェース上のすべてのトラフィックを許可します。
+
+```
+# Change xl0 to LAN NIC interface name
+$cmd 00005 allow all from any to any via xl0
+
+# No restrictions on Loopback Interface
+$cmd 00010 allow all from any to any via lo0
+```
+
+次のルールは、動的ルールテーブルの既存エントリに一致したパケットを通過させます。
+
+```
+$cmd 00101 check-state
+```
+
+続くルール群は、内部システムからインターネット上のホストに対して作成できるステートフル接続を定義します。
+
+```
+# Allow access to public DNS
+# Replace x.x.x.x with the IP address of a public DNS server
+# and repeat for each DNS server in /etc/resolv.conf
+$cmd 00110 allow tcp from any to x.x.x.x 53 out via $pif setup keep-state
+$cmd 00111 allow udp from any to x.x.x.x 53 out via $pif keep-state
+
+# Allow access to ISP's DHCP server for cable/DSL configurations.
+# Use the first rule and check log for IP address.
+# Then, uncomment the second rule, input the IP address, and delete the first rule
+$cmd 00120 allow log udp from any to any 67 out via $pif keep-state
+#$cmd 00120 allow udp from any to x.x.x.x 67 out via $pif keep-state
+
+# Allow outbound HTTP and HTTPS connections
+$cmd 00200 allow tcp from any to any 80 out via $pif setup keep-state
+$cmd 00220 allow tcp from any to any 443 out via $pif setup keep-state
+
+# Allow outbound email connections
+$cmd 00230 allow tcp from any to any 25 out via $pif setup keep-state
+$cmd 00231 allow tcp from any to any 110 out via $pif setup keep-state
+
+# Allow outbound ping
+$cmd 00250 allow icmp from any to any out via $pif keep-state
+
+# Allow outbound NTP
+$cmd 00260 allow udp from any to any 123 out via $pif keep-state
+
+# Allow outbound SSH
+$cmd 00280 allow tcp from any to any 22 out via $pif setup keep-state
+
+# deny and log all other outbound connections
+$cmd 00299 deny log all from any to any out via $pif
+```
+
+次のルール群は、インターネット上のホストから内部ネットワークへの接続を制御します。
+まず攻撃に典型的に使われるパケットを拒否し、続いて特定の種類の接続だけを明示的に許可します。
+インターネットから発信される許可済みサービスは、フラッドを防ぐためにすべて `limit` を使っています。
+
+```
+# Deny all inbound traffic from non-routable reserved address spaces
+$cmd 00300 deny all from 192.168.0.0/16 to any in via $pif     #RFC 1918 private IP
+$cmd 00301 deny all from 172.16.0.0/12 to any in via $pif      #RFC 1918 private IP
+$cmd 00302 deny all from 10.0.0.0/8 to any in via $pif         #RFC 1918 private IP
+$cmd 00303 deny all from 127.0.0.0/8 to any in via $pif        #loopback
+$cmd 00304 deny all from 0.0.0.0/8 to any in via $pif          #loopback
+$cmd 00305 deny all from 169.254.0.0/16 to any in via $pif     #DHCP auto-config
+$cmd 00306 deny all from 192.0.2.0/24 to any in via $pif       #reserved for docs
+$cmd 00307 deny all from 204.152.64.0/23 to any in via $pif    #Sun cluster interconnect
+$cmd 00308 deny all from 224.0.0.0/3 to any in via $pif        #Class D & E multicast
+
+# Deny public pings
+$cmd 00310 deny icmp from any to any in via $pif
+
+# Deny ident
+$cmd 00315 deny tcp from any to any 113 in via $pif
+
+# Deny all Netbios services.
+$cmd 00320 deny tcp from any to any 137 in via $pif
+$cmd 00321 deny tcp from any to any 138 in via $pif
+$cmd 00322 deny tcp from any to any 139 in via $pif
+$cmd 00323 deny tcp from any to any 81 in via $pif
+
+# Deny fragments
+$cmd 00330 deny all from any to any frag in via $pif
+
+# Deny ACK packets that did not match the dynamic rule table
+$cmd 00332 deny tcp from any to any established in via $pif
+
+# Allow traffic from ISP's DHCP server.
+# Replace x.x.x.x with the same IP address used in rule 00120.
+#$cmd 00360 allow udp from any to x.x.x.x 67 in via $pif keep-state
+
+# Allow HTTP connections to internal web server
+$cmd 00400 allow tcp from any to me 80 in via $pif setup limit src-addr 2
+
+# Allow inbound SSH connections
+$cmd 00410 allow tcp from any to me 22 in via $pif setup limit src-addr 2
+
+# Reject and log all other incoming connections
+$cmd 00499 deny log all from any to any in via $pif
+```
+
+最後のルールは、ルールセットのどのルールにも一致しなかったすべてのパケットをログに記録します。
+
+```
+# Everything else is denied and logged
+$cmd 00999 deny log all from any to any
+```
+
+<a id="in-kernel-nat"></a>
+### カーネル内 NAT（In-kernel NAT）
+
+FreeBSD の IPFW ファイアウォールには 2 種類の NAT 実装があります。ユーザーランド実装の `natd(8)` と、より新しいカーネル内 NAT（in-kernel NAT）実装です。
+どちらも IPFW と連携してネットワークアドレス変換を提供します。
+これを使うと、インターネット接続共有の仕組みを構築し、複数の内部コンピュータが単一のパブリック IP アドレスを使ってインターネットへ接続できるようになります。
+
+これを行うには、インターネットに接続された FreeBSD マシンがゲートウェイとして動作する必要があります。
+このシステムには 2 つの NIC が必要で、1つはインターネットに、もう1つは内部 LAN に接続します。
+LAN に接続された各マシンには、[RFC 1918](https://www.ietf.org/rfc/rfc1918.txt) で定義されたプライベートネットワーク空間の IP アドレスを割り当てる必要があります。
+
+IPFW のカーネル内 NAT 機能を有効にするには、いくつか追加の設定が必要です。
+起動時にカーネル内 NAT サポートを有効にするには、`/etc/rc.conf` に次を設定します。
+
+```
+gateway_enable="YES"
+firewall_enable="YES"
+firewall_nat_enable="YES"
+```
+
+> **注記**: `firewall_nat_enable` を設定しても `firewall_enable` が設定されていなければ、何の効果もなく何も行われません。カーネル内 NAT 実装は IPFW 専用だからです。
+
+ルールセットにステートフルルールが含まれる場合、NAT ルールの配置位置が重要になり、`skipto` アクションが使われます。
+`skipto` アクションには、どのルールへジャンプするかを示すルール番号が必要です。
+以下の例は、前の節で示したファイアウォールルールセットをベースにしています。
+ファイアウォールでカーネル内 NAT を使うために、いくつか新しい項目を追加し、既存のルールを一部変更しています。
+最初に、ジャンプ先のルール番号、`keep-state` オプション、そしてルール数を減らすために使う TCP ポートのリストを表す変数を追加しています。
+
+```
+#!/bin/sh
+ipfw -q -f flush
+cmd="ipfw -q add"
+skip="skipto 1000"
+pif=dc0
+ks="keep-state"
+good_tcpo="22,25,37,53,80,443,110"
+```
+
+カーネル内 NAT では、`libalias(3)` の構造上の理由から TCP セグメンテーションオフロード（TSO）を無効にする必要があります。`libalias(3)` は、IPFW のカーネル内 NAT 機能を提供するためにカーネルモジュールとして実装されているライブラリです。
+TSO は、`ifconfig(8)` を使ってネットワークインタフェース単位で無効にすることも、`sysctl(8)` を使ってシステム全体で無効にすることもできます。
+システム全体で TSO を無効にするには、`/etc/sysctl.conf` に次のように設定します。
+
+```
+net.inet.tcp.tso="0"
+```
+
+あわせて NAT インスタンスも構成します。
+それぞれ独自の設定を持つ複数の NAT インスタンスを作成することも可能です。
+この例では 1 つの NAT インスタンス（NAT インスタンス番号 1）だけが必要です。
+設定ではいくつかのオプションを指定できます。たとえば、`if` はパブリックインタフェースを示し、`same_ports` はエイリアスされたポートとローカルポート番号が同じ番号に対応付けられるようにし、`unreg_only` は未登録の（プライベート）アドレス空間のみを NAT インスタンスで処理させ、`reset` は IPFW マシンのパブリック IP アドレスが変わった場合でも NAT インスタンスが機能し続けるようにします。
+単一の NAT インスタンス設定に渡せるすべてのオプションについては `ipfw(8)` を参照してください。
+ステートフルな NAT ファイアウォールを構成する場合、変換されたパケットをさらに処理するためにファイアウォールへ再投入できるようにする必要があります。
+これは、ファイアウォールスクリプトの先頭で `one_pass` の挙動を無効にすることで実現できます。
+
+```
+ipfw disable one_pass
+ipfw -q nat 1 config if $pif same_ports unreg_only reset
+```
+
+インバウンド NAT ルールは、信頼されたインタフェースとループバックインタフェース上の全トラフィックを許可する2つのルールおよび再構成（reassemble）ルールの**後**、かつ `check-state` ルールの**前**に挿入します。
+この NAT ルールに選ぶルール番号（この例では `100`）は、最初の3つのルールより大きく、`check-state` ルールより小さいことが重要です。
+さらに、カーネル内 NAT の動作仕様上、最初の NAT ルールの直前かつ信頼インタフェース上のトラフィックを許可するルールの後ろに、再構成（reassemble）ルールを置くことが推奨されます。
+通常 IP フラグメンテーションは起きないはずですが、IPSEC/ESP/GRE トンネリングのトラフィックを扱う場合には発生し得るため、完成したパケットをカーネル内 NAT 機能へ渡す前にフラグメントの再構成が必要になります。
+
+> **注記**: ユーザーランドの `natd(8)` では再構成ルールは不要でした。`ipfw(8)` にも記載されているとおり、IPFW の `divert` アクションの内部処理がソケットへ渡す前にパケットの再構成を自動的に行ってくれるためです。
+>
+> この例で使う NAT インスタンス番号とルール番号は、FreeBSD に標準で用意されている既定のファイアウォールルール設定スクリプト `rc.firewall` が作成する既定の NAT インスタンス番号やルール番号とは一致しません。
+
+```
+$cmd 005 allow all from any to any via xl0  # exclude LAN traffic
+$cmd 010 allow all from any to any via lo0  # exclude loopback traffic
+$cmd 099 reass all from any to any in       # reassemble inbound packets
+$cmd 100 nat 1 ip from any to any in via $pif # NAT any inbound packets
+# Allow the packet through if it has an existing entry in the dynamic rules table
+$cmd 101 check-state
+```
+
+アウトバウンドルールは、`allow` アクションを `$skip` 変数に置き換えて修正し、ルール `1000` でルール処理が続くようにします。
+7つあった `tcp` ルールは、許可された7つのアウトバウンドポートを含む `$good_tcpo` 変数を使ってルール `125` にまとめられています。
+
+> **注記**: IPFW の性能は、ルールセット内に存在するルール数によって大きく左右されることを覚えておいてください。
+
+```
+# Authorized outbound packets
+$cmd 120 $skip udp from any to x.x.x.x 53 out via $pif $ks
+$cmd 121 $skip udp from any to x.x.x.x 67 out via $pif $ks
+$cmd 125 $skip tcp from any to any $good_tcpo out via $pif setup $ks
+$cmd 130 $skip icmp from any to any out via $pif $ks
+```
+
+インバウンドルールは同じままですが、最後のルールだけはインバウンドとアウトバウンドの両方のルールを捕捉するため `via $pif` を取り除きます。
+NAT ルールはこの最後のアウトバウンドルールより後ろに置き、そのルールより大きい番号を付け、`skipto` アクションからそのルール番号を参照する必要があります。
+このルールセットでは、ルール番号 `1000` がすべてのパケットを構成済みインスタンスへ渡して NAT 処理を行います。
+次のルールは、NAT 処理を受けたあらゆるパケットの通過を許可します。
+
+```
+$cmd 999 deny log all from any to any
+$cmd 1000 nat 1 ip from any to any out via $pif # skipto location for outbound stateful rules
+$cmd 1001 allow ip from any to any
+```
+
+この例では、動的ステートテーブルのエントリに常にプライベート LAN の IP アドレスが登録されるよう、ルール `100`、`101`、`125`、`1000`、`1001` が送受信パケットのアドレス変換を制御しています。
+
+内部の Web ブラウザがポート 80 で新しいアウトバウンド HTTP セッションを開始する場合を考えてみましょう。
+最初のアウトバウンドパケットがファイアウォールに入ると、インバウンドではなくアウトバウンドなのでルール `100` には一致しません。
+これは最初のパケットであり、まだ動的ステートテーブルに登録されていないためルール `101` を通過します。
+最後にこのパケットは、許可されたポートへのアウトバウンド通信であり内部 LAN の送信元 IP アドレスを持っているため、ルール `125` に一致します。
+このルールに一致すると、2つの動作が行われます。
+まず `keep-state` アクションが動的ステートテーブルにエントリを追加し、続いて指定されたアクション `skipto rule 1000` が実行されます。
+次に、パケットは NAT を受けてインターネットへ送り出されます。
+このパケットは宛先の Web サーバーへ届き、そこで応答パケットが生成されて返送されます。
+この新しいパケットはルールセットの先頭に入ります。
+ルール `100` に一致して、宛先 IP アドレスが元の内部アドレスへ戻されます。
+続いて `check-state` ルールで処理され、既存セッションとしてテーブル内に見つかり、LAN へ送り出されます。
+
+インバウンド側では、ルールセットは不正なパケットを拒否し、許可されたサービスだけを通す必要があります。
+インバウンドルールに一致したパケットは動的ステートテーブルに登録され、LAN へ送り出されます。
+応答として生成されたパケットは、`check-state` ルールによって既存セッションに属すると認識されます。
+その後、アウトバウンドインタフェースへ送り出される前に NAT を行うためルール `1000` へ送られます。
+
+> **注記**: ユーザーランドの `natd(8)` からカーネル内 NAT への移行は一見シームレスに見えますが、小さな注意点があります。GENERIC カーネルを使っていて `/etc/rc.conf` で `firewall_nat_enable` を有効にすると、IPFW は `libalias.ko` カーネルモジュールを読み込みます。`libalias.ko` カーネルモジュールが提供するのは基本的な NAT 機能だけであり、ユーザーランド実装の `natd(8)` が追加設定なしでユーザーランドライブラリ内の全 NAT 機能を備えているのとは異なります。全機能を利用するには、標準の `libalias.ko` カーネルモジュールに加えて、必要に応じて `/etc/rc.conf` の `kld_list` 指定を使って次のカーネルモジュールを追加読み込みできます：`alias_ftp.ko`、`alias_bbt.ko`、`skinny.ko`、`irc.ko`、`alias_pptp.ko`、`alias_smedia.ko`。カスタムカーネルを使う場合は、`options LIBALIAS` を指定することでユーザーランドライブラリの全機能をカーネルへ組み込めます。
+
+<a id="chapter-34-heading-22"></a>
+#### ポートリダイレクト（Port Redirection）
+
+一般的な NAT の欠点は、インターネットから LAN クライアントへアクセスできないことです。
+LAN 上のクライアントは外部へ接続できますが、外部からの着信接続を受けられません。
+これは、LAN クライアントマシンの1つでインターネットサービスを動かそうとする場合に問題になります。
+簡単な回避策は、NAT を提供しているマシン上の特定のインターネット向けポートを LAN クライアントへリダイレクト（転送）することです。
+
+たとえば、クライアント `A` で IRC サーバーが動き、クライアント `B` で Web サーバーが動いているとします。
+これを正しく動かすには、ポート 6667（IRC）とポート 80（HTTP）で受信した接続をそれぞれのマシンへリダイレクトする必要があります。
+
+カーネル内 NAT では、設定はすべて NAT インスタンス設定の中で行います。
+カーネル内 NAT インスタンスで使えるオプションの全一覧は `ipfw(8)` を参照してください。
+IPFW の構文は `natd` の構文を踏襲しています。`redirect_port` の構文は次のとおりです。
+
+```
+redirect_port proto targetIP:targetPORT[-targetPORT]
+  [aliasIP:]aliasPORT[-aliasPORT]
+  [remoteIP[:remotePORT[-remotePORT]]]
+```
+
+上記の例の構成を設定するには、引数を次のようにします。
+
+```
+redirect_port tcp 192.168.0.2:6667 6667
+redirect_port tcp 192.168.0.3:80 80
+```
+
+先ほどのルールセット内の NAT インスタンス 1 の設定にこれらの引数を追加すると、IRC と HTTP サービスを動かしている LAN クライアントマシンへ各 TCP ポートがポートフォワードされます。
+
+```
+ipfw -q nat 1 config if $pif same_ports unreg_only reset \
+  redirect_port tcp 192.168.0.2:6667 6667 \
+  redirect_port tcp 192.168.0.3:80 80
+```
+
+`redirect_port` では個別のポートではなくポート範囲も指定できます。
+たとえば *tcp 192.168.0.2:2000-3000 2000-3000* とすると、ポート 2000 から 3000 で受信したすべての接続がクライアント `A` のポート 2000 から 3000 へリダイレクトされます。
+
+<a id="chapter-34-heading-23"></a>
+#### アドレスリダイレクト（Address Redirection）
+
+複数の IP アドレスが利用できる場合は、アドレスリダイレクトが便利です。
+`ipfw(8)` によって各 LAN クライアントに専用の外部 IP アドレスを割り当てることができ、LAN クライアントから出ていくパケットを適切な外部 IP アドレスへ書き換え、その特定の IP アドレスに届いたすべてのトラフィックを特定の LAN クライアントへ転送し返します。
+これは静的 NAT（static NAT）とも呼ばれます。
+たとえば、`128.1.1.1`、`128.1.1.2`、`128.1.1.3` の IP アドレスが使える場合、`128.1.1.1` を `ipfw(8)` マシンの外部 IP アドレスとして使い、`128.1.1.2` と `128.1.1.3` は LAN クライアント `A` と `B` へ転送できます。
+
+`redirect_addr` の構文は次のとおりで、`localIP` が LAN クライアントの内部 IP アドレス、`publicIP` がその LAN クライアントに対応する外部 IP アドレスです。
+
+```
+redirect_addr localIP publicIP
+```
+
+この例では、引数は次のようになります。
+
+```
+redirect_addr 192.168.0.2 128.1.1.2
+redirect_addr 192.168.0.3 128.1.1.3
+```
+
+`redirect_port` と同様に、これらの引数は NAT インスタンスの設定に記述します。
+アドレスリダイレクトを使う場合、特定の IP アドレスで受信したすべてのデータがリダイレクトされるため、ポートリダイレクトは不要になります。
+
+`ipfw(8)` マシン上の外部 IP アドレスは有効化され、外部インタフェースにエイリアスとして設定されている必要があります。
+詳しくは `rc.conf(5)` を参照してください。
+
+<a id="chapter-34-heading-24"></a>
+#### ユーザー空間 NAT（Userspace NAT）
+
+まず明確にしておくと、ユーザー空間 NAT 実装である `natd(8)` は、カーネル内 NAT よりもオーバーヘッドが大きくなります。
+`natd(8)` がパケットを変換するには、パケットをカーネルからユーザー空間へコピーし、再びカーネルへ戻す必要があるため、カーネル内 NAT にはない余分なオーバーヘッドが生じます。
+
+起動時にユーザー空間 NAT デーモン `natd(8)` を有効にするための `/etc/rc.conf` の最小構成は次のとおりです。
+ここで `natd_interface` にはインターネットに接続された NIC の名前を設定します。
+`natd(8)` の `rc(8)` スクリプトは動的 IP アドレスが使われているかどうかを自動で確認し、それに対応できるように自身を設定します。
+
+```
+gateway_enable="YES"
+natd_enable="YES"
+natd_interface="rl0"
+```
+
+おおむね、カーネル内 NAT で説明した先ほどのルールセットは `natd(8)` と組み合わせてそのまま使えます。
+例外は、カーネル内 NAT インスタンスの設定 `(ipfw -q nat 1 config ...)` と再構成ルール 99 で、その機能は `divert` アクションに含まれているため不要になります。
+ルール番号 100 と 1000 は、次のように少し書き換える必要があります。
+
+```
+$cmd 100 divert natd ip from any to any in via $pif
+$cmd 1000 divert natd ip from any to any out via $pif
+```
+
+ポートリダイレクトやアドレスリダイレクトを設定するには、カーネル内 NAT と同様の構文を使います。
+ただし、カーネル内 NAT のようにルールセットスクリプト内に設定を書くのではなく、`natd(8)` の設定は設定ファイルに書くのが最適です。
+そのためには、`/etc/rc.conf` 経由で設定ファイルのパスを指定する追加フラグを渡す必要があります。
+
+```
+natd_flags="-f /etc/natd.conf"
+```
+
+> **注記**: 指定するファイルには、1行に1つずつ設定オプションを記述する必要があります。設定ファイルと利用可能な変数について詳しくは `natd(8)` を参照してください。以下は1行に1つずつ記述した2つの設定例です。
+>
+> ```
+> redirect_port tcp 192.168.0.2:6667 6667
+> redirect_addr 192.168.0.3 128.1.1.3
+> ```
+
+<a id="firewalls-ipfw-cmd"></a>
+### ipfw コマンド
+
+稼働中のファイアウォールに対して、`ipfw` を使って手動で単一のルールを追加したり削除したりできます。
+この方法の問題点は、システムを再起動すると変更がすべて失われることです。
+代わりに、すべてのルールをファイルに記述しておき、起動時にそのファイルからルールを読み込み、ファイルを変更したときもそれで現在稼働中のファイアウォールルールを置き換えることを推奨します。
+
+`ipfw` は、稼働中のファイアウォールルールをコンソール画面に表示する便利な手段でもあります。
+IPFW のアカウンティング機能は各ルールに対してカウンタを動的に作成し、そのルールに一致したパケット数を数えます。
+ルールのテスト中にルールをカウンタ付きで一覧表示することは、ルールが期待どおりに動いているかを確かめる方法の一つです。
+
+稼働中のすべてのルールを順番に表示するには次のようにします。
+
+```shell
+# ipfw list
+```
+
+最後にルールが一致した時刻のタイムスタンプ付きで稼働中の全ルールを表示するには次のようにします。
+
+```shell
+# ipfw -t list
+```
+
+次の例では、ルール自体とあわせてアカウンティング情報と一致したルールごとのパケット数を表示します。
+最初の列がルール番号、続いて一致したパケット数とバイト数、その後にルール本体が表示されます。
+
+```shell
+# ipfw -a list
+```
+
+静的ルールに加えて動的ルールも表示するには次のようにします。
+
+```shell
+# ipfw -d list
+```
+
+期限切れの動的ルールもあわせて表示するには次のようにします。
+
+```shell
+# ipfw -d -e list
+```
+
+カウンタをゼロにリセットするには次のようにします。
+
+```shell
+# ipfw zero
+```
+
+番号 *NUM* のルールについてのみカウンタをゼロにするには次のようにします。
+
+```shell
+# ipfw zero NUM
+```
+
+<a id="chapter-34-heading-26"></a>
+#### ファイアウォールメッセージのログ記録
+
+ログ機能を有効にしていても、IPFW は自動的にルールのログを生成することはありません。
+ルールセット内のどのルールをログに記録するかはファイアウォール管理者が決め、それらのルールに `log` キーワードを追加します。
+通常は拒否（deny）ルールのみをログに記録します。
+ルールセットの最後のルールとして、`log` キーワード付きの「ipfw 既定ですべて拒否」ルールを重複して配置するのが慣例です。
+こうすることで、ルールセットのどのルールにも一致しなかったすべてのパケットを確認できます。
+
+ログ記録は諸刃の剣です。
+注意しないと、過剰なログデータや DoS 攻撃によってログファイルがディスクを埋め尽くすことがあります。
+ログメッセージは `syslogd` に書き込まれるだけでなく root コンソール画面にも表示されるため、すぐに煩わしくなります。
+
+カーネルオプション `IPFIREWALL_VERBOSE_LIMIT=5` は、特定のルールのパケット一致に関して `syslogd(8)` へ連続して送られるメッセージ数を制限します。
+カーネルでこのオプションを有効にすると、特定のルールに関する連続メッセージ数は指定された数までに抑えられます。
+同じログメッセージが 200 件並んでも意味はありません。
+このオプションを 5 に設定すると、特定のルールに関する連続メッセージは 5 件まで `syslogd` に記録され、残りの同一の連続メッセージは集計されて次のような文言で `syslogd` へ送られます。
+
+```
+last message repeated 45 times
+```
+
+ログに記録されたパケットメッセージはすべて、既定で `/etc/syslog.conf` に定義されている `/var/log/security` へ書き込まれます。
+
+<a id="firewalls-ipfw-rules-script"></a>
+#### ルールスクリプトの作成
+
+経験豊富な IPFW 利用者の多くは、ルールを収めたファイルを作成し、スクリプトとして実行できる形式で記述します。
+この方法の最大の利点は、システムを再起動して有効化しなくても、ファイアウォールルールを一括で再読み込みできる点にあります。
+手順を何度でも実行できるため、新しいルールのテストにも便利です。
+スクリプトであるため、よく使う値に変数置換（symbolic substitution）を使って複数のルールへ埋め込むこともできます。
+
+次の例のスクリプトは、`sh(1)`、`csh(1)`、`tcsh(1)` シェルで使われる構文と互換性があります（訳注: 原文では `sh(1)`・`csh(1)`・`tcsh(1)` と書かれていますが、下記の `VAR="value"` 形式の代入は `#!/bin/sh` による `sh(1)` 互換構文です）。
+変数置換を行う箇所には先頭にドル記号（`$`）を付けます。
+変数の定義側には `$` を付けません。
+変数に設定する値は二重引用符（`""`）で囲む必要があります。
+
+ルールファイルは次のように書き始めます。
+
+```
+############### start of example ipfw rules script #############
+#
+ipfw -q -f flush       # Delete all rules
+# Set defaults
+oif="tun0"             # out interface
+odns="192.0.2.11"      # ISP's DNS server IP address
+cmd="ipfw -q add "     # build rule prefix
+ks="keep-state"        # just too lazy to key this each time
+$cmd 00500 check-state
+$cmd 00502 deny all from any to any frag
+$cmd 00501 deny tcp from any to any established
+$cmd 00600 allow tcp from any to any 80 out via $oif setup $ks
+$cmd 00610 allow tcp from any to $odns 53 out via $oif setup $ks
+$cmd 00611 allow udp from any to $odns 53 out via $oif $ks
+################### End of example ipfw rules script ############
+```
+
+この例では変数置換のフィールドにどう値が入るかに焦点を当てているため、ルール自体の内容は重要ではありません。
+
+上記の例が `/etc/ipfw.rules` にある場合、次のコマンドでルールを再読み込みできます。
+
+```shell
+# sh /etc/ipfw.rules
+```
+
+`/etc/ipfw.rules` はどこに置いてもよく、ファイル名も任意です。
+
+同じことは、次のコマンドを手動で実行することでも実現できます。
+
+```shell
+# ipfw -q -f flush
+# ipfw -q add check-state
+# ipfw -q add deny all from any to any frag
+# ipfw -q add deny tcp from any to any established
+# ipfw -q add allow tcp from any to any 80 out via tun0 setup keep-state
+# ipfw -q add allow tcp from any to 192.0.2.11 53 out via tun0 setup keep-state
+# ipfw -q add 00611 allow udp from any to 192.0.2.11 53 out via tun0 keep-state
+```
+
+<a id="firewalls-ipfw-kernelconfig"></a>
+### IPFW カーネルオプション
+
+カスタムカーネルへ IPFW サポートを静的にコンパイルして組み込むには、[FreeBSD カーネルの設定](09-kernelconfig.md#kernelconfig) の手順を参照してください。
+カスタムカーネル設定ファイルでは次のオプションが利用できます。
+
+```
+options    IPFIREWALL			# enables IPFW
+options    IPFIREWALL_VERBOSE		# enables logging for rules with log keyword to syslogd(8)
+options    IPFIREWALL_VERBOSE_LIMIT=5	# limits number of logged packets per-entry
+options    IPFIREWALL_DEFAULT_TO_ACCEPT # sets default policy to pass what is not explicitly denied
+options    IPFIREWALL_NAT		# enables basic in-kernel NAT support
+options    LIBALIAS			# enables full in-kernel NAT support
+options    IPFIREWALL_NAT64		# enables in-kernel NAT64 support
+options    IPFIREWALL_NPTV6		# enables in-kernel IPv6 NPT support
+options    IPFIREWALL_PMOD		# enables protocols modification module support
+options    IPDIVERT			# enables NAT through natd(8)
+```
+
+> **注記**: IPFW はカーネルモジュールとして読み込むことができます。上記のオプションは既定でモジュールとしてビルドされるか、実行時にチューナブルを使って設定できます。
