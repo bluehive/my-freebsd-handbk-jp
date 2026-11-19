@@ -2016,3 +2016,269 @@ IP `10.10.10.1`、ネットマスク `255.255.255.0` でネットワークに接
 
 > **警告**: システムの IP アドレス設定を変更すると、現在のリモート接続（SSH など）が切断され、ロックアウトされる可能性があります。
 > システムへのアクセスを維持する対策を講じるか、ローカルの端末セッションにログインした状態で変更を行ってください。
+
+<a id="virtualization-host-xen"></a>
+## Xen™ ホストとしての FreeBSD
+
+Xen は、Intel® および ARM® アーキテクチャ向けの GPLv2 ライセンスによる [Type 1 ハイパーバイザ](https://en.wikipedia.org/wiki/Hypervisor#Classification)です。
+FreeBSD は FreeBSD 8.0 から i386™ および AMD® 64 ビットでの [DomU](https://wiki.xenproject.org/wiki/DomU) および [Amazon EC2](https://en.wikipedia.org/wiki/Amazon_Elastic_Compute_Cloud) 非特権ドメイン（仮想マシン）のサポートを含んでおり、FreeBSD 11.0 からは Dom0 制御ドメイン（ホスト）のサポートも含んでいます。
+より高い性能が得られるハードウェア仮想化（HVM）ドメインを優先するため、準仮想化（PV）ドメインのサポートは FreeBSD 11 で削除されました。
+
+Xen™ はベアメタルハイパーバイザであり、BIOS の後に最初に読み込まれるプログラムです。
+その後、Domain-0（略して `Dom0`）と呼ばれる特別な特権ゲストが起動されます。
+Dom0 はその特別な権限を使って基盤となる物理ハードウェアに直接アクセスするため、高性能なソリューションとなります。
+ディスクコントローラやネットワークアダプタにも直接アクセスできます。
+Xen™ ハイパーバイザを管理・制御するための Xen™ 管理ツールも Dom0 上で使用され、仮想マシンの作成・一覧表示・破棄を行います。
+Dom0 は、しばしば `DomU` と呼ばれる非特権ドメイン向けに仮想ディスクとネットワークを提供します。
+Xen™ の Dom0 は他のハイパーバイザ製品におけるサービスコンソールに相当し、DomU は個々のゲスト仮想マシンが動作する場所にあたります。
+
+Xen™ は異なる Xen™ サーバ間で仮想マシンをマイグレーションできます。
+2 台の Xen ホストが同じ基盤ストレージを共有している場合、事前に仮想マシンをシャットダウンすることなくマイグレーションを実行できます。
+その代わりに DomU を実行したままライブマイグレーションが行われるため、再起動やダウンタイムの計画は不要です。
+これはメンテナンス時やアップグレード時間帯に、DomU が提供するサービスを止めずに維持するうえで有用です。
+Xen™ のさらに多くの機能は [Xen Wiki Overview ページ](https://wiki.xenproject.org/wiki/Category:Overview)にまとめられています。
+ただし、現時点ではすべての機能が FreeBSD でサポートされているわけではありません。
+
+<a id="virtualization-host-xen-requirements"></a>
+### Xen™ Dom0 のハードウェア要件
+
+ホスト上で Xen™ ハイパーバイザを実行するには、特定のハードウェア機能が必要です。
+FreeBSD を Xen ホスト（Dom0）として実行するには、ホストプロセッサが Intel Extended Page Tables（[EPT](https://en.wikipedia.org/wiki/Extended_Page_Table)）または AMD Nested Page Tables（[NPT](https://en.wikipedia.org/wiki/Rapid_Virtualization_Indexing)）、および Input/Output Memory Management Unit（[IOMMU](https://en.wikipedia.org/wiki/List_of_IOMMU-supporting_hardware)）をサポートしている必要があります。
+
+> **注記**: FreeBSD 13 の Xen™ Dom0 を実行するには、マシンをレガシーブート（BIOS）で起動する必要があります。
+> FreeBSD 14 以降では、BIOS モードと UEFI モードの両方で Xen™ Dom0 としての起動に対応しています。
+
+<a id="virtualization-host-xen-dom0-setup"></a>
+### Xen™ Dom0 制御ドメインのセットアップ
+
+Xen™ 4.18 をベースとした `emulators/xen-kernel` および `sysutils/xen-tools` パッケージをインストールしてください。
+
+Xen パッケージをインストールした後、Dom0 統合に向けてホストを準備するため設定ファイルを編集する必要があります。
+`/etc/sysctl.conf` にエントリを追加して、固定（wired）できるメモリページ数の上限を無効化します。
+これを行わないと、より多くのメモリを必要とする DomU 仮想マシンが起動しません。
+
+```shell
+# echo 'vm.max_wired=-1' >> /etc/sysctl.conf
+```
+
+もう 1 つのメモリ関連の設定として、`/etc/login.conf` を変更し、`memorylocked` オプションを `unlimited` に設定します。
+そうしないと、DomU ドメインの作成が `Cannot allocate memory` エラーで失敗する場合があります。
+`/etc/login.conf` を変更した後は、`cap_mkdb` を実行してケーパビリティデータベースを更新してください。
+詳細は[リソース制限（Resource Limits）](https://docs.freebsd.org/en/books/handbook/security/#security-resourcelimits)を参照してください。
+
+```shell
+# sed -i '' -e 's/memorylocked=64K/memorylocked=unlimited/' /etc/login.conf
+# cap_mkdb /etc/login.conf
+```
+
+`/etc/ttys` に Xen™ コンソール用のエントリを追加します。
+
+```shell
+# echo 'xc0     "/usr/libexec/getty Pc"         xterm   onifconsole  secure' >> /etc/ttys
+```
+
+`/boot/loader.conf` で Xen™ カーネルを選択することで Dom0 が有効になります。
+Xen™ は自身および他の DomU ドメインのために、ホストマシンから CPU やメモリなどのリソースも必要とします。
+必要な CPU とメモリの量は、個々の要件やハードウェア性能によって異なります。
+この例では、8 GB のメモリと 4 個の仮想 CPU を Dom0 に割り当てています。
+また、シリアルコンソールを有効化し、ログ記録オプションも定義しています。
+
+Xen 4.7 パッケージの場合は次のコマンドを使用します。
+
+```shell
+# echo 'hw.pci.mcfg=0' >> /boot/loader.conf
+# echo 'if_tap_load="YES"' >> /boot/loader.conf
+# echo 'xen_kernel="/boot/xen"' >> /boot/loader.conf
+# echo 'xen_cmdline="dom0_mem=8192M dom0_max_vcpus=4 dom0pvh=1 console=com1,vga com1=115200,8n1 guest_loglvl=all loglvl=all"' >> /boot/loader.conf
+```
+
+Xen バージョン 4.11 以降の場合は、代わりに次のコマンドを使用してください。
+
+```shell
+# echo 'if_tap_load="YES"' >> /boot/loader.conf
+# echo 'xen_kernel="/boot/xen"' >> /boot/loader.conf
+# echo 'xen_cmdline="dom0_mem=8192M dom0_max_vcpus=4 dom0=pvh console=com1,vga com1=115200,8n1 guest_loglvl=all loglvl=all"' >> /boot/loader.conf
+```
+
+> **ヒント**: Xen™ が DomU 仮想マシン用に作成するログファイルは `/var/log/xen` に保存されます。
+> 問題が発生した場合は、必ずそのディレクトリの内容を確認してください。
+
+システム起動時に `xencommons` サービスを有効化します。
+
+```shell
+# sysrc xencommons_enable=yes
+```
+
+ここまでの設定で Dom0 が有効なシステムを起動することはできますが、DomU マシン向けのネットワーク機能がありません。
+これを解消するため、DomU 仮想マシンがネットワーク接続に使えるよう、システムのメイン NIC を含むブリッジインターフェースを定義します。
+_em0_ はホストのネットワークインターフェース名に置き換えてください。
+
+```shell
+# sysrc cloned_interfaces="bridge0"
+# sysrc ifconfig_bridge0="addm em0 SYNCDHCP"
+# sysrc ifconfig_em0="up"
+```
+
+Xen™ カーネルを読み込んで Dom0 を起動するため、ホストを再起動します。
+
+```shell
+# shutdown -r now
+```
+
+Xen™ カーネルの起動に成功して再びシステムへログインしたら、Xen™ 管理ツール `xl` を使ってドメインに関する情報を表示します。
+
+```shell
+# xl list
+Name                                        ID   Mem VCPUs      State   Time(s)
+Domain-0                                     0  8192     4     r-----     962.0
+```
+
+この出力から、Dom0（`Domain-0`）が ID `0` で実行中であることが確認できます。
+また、先ほど `/boot/loader.conf` で定義したメモリと仮想 CPU が割り当てられていることもわかります。
+詳細は [Xen™ Documentation](https://www.xenproject.org/help/documentation.html) を参照してください。
+これで DomU ゲスト仮想マシンを作成できるようになりました。
+
+<a id="virtualization-host-xen-domu-setup"></a>
+### Xen™ DomU ゲスト仮想マシンの設定
+
+非特権ドメインは、設定ファイルと仮想または物理ハードディスクで構成されます。
+DomU 用の仮想ディスクストレージには、`truncate(1)` で作成したファイルか、[ボリュームの作成と破棄](23-zfs.md#zfs-zfs-volume)で説明している ZFS ボリュームを使用できます。
+この例では 20 GB のボリュームを使用します。
+ZFS ボリューム、FreeBSD ISO イメージ、1 GB の RAM、2 個の仮想 CPU を使って仮想マシンを作成します。
+ISO インストールファイルは `fetch(1)` で取得し、`freebsd.iso` というファイル名でローカルに保存します。
+
+```shell
+# fetch https://download.freebsd.org/releases/ISO-IMAGES/14.0/FreeBSD-14.0-RELEASE-amd64-bootonly.iso -o freebsd.iso
+```
+
+仮想マシンのディスク領域として使用する `xendisk0` という 20 GB の ZFS ボリュームを作成します。
+
+```shell
+# zfs create -V20G -o volmode=dev zroot/xendisk0
+```
+
+新しい DomU ゲスト仮想マシンはファイルで定義します。
+名前、キーマップ、VNC 接続の詳細などの具体的な定義もここに記述します。
+次の `freebsd.cfg` には、この例における最小限の DomU 設定が含まれています。
+
+```shell
+# cat freebsd.cfg
+builder = "hvm"
+name = "freebsd"
+memory = 1024
+vcpus = 2
+vif = [ 'mac=00:16:3E:74:34:32,bridge=bridge0' ]
+disk = [
+'/dev/zvol/tank/xendisk0,raw,hda,rw',
+'/root/freebsd.iso,raw,hdc:cdrom,r'
+  ]
+vnc = 1
+vnclisten = "0.0.0.0"
+serial = "pty"
+usbdevice = "tablet"
+```
+
+> **訳注**: 原文の `freebsd.cfg` ではディスクパスが `/dev/zvol/tank/xendisk0` となっていますが、直前の手順で作成したプール名は `zroot`（`/dev/zvol/zroot/xendisk0`）です。環境に合わせてプール名を揃えてください。
+
+各行の詳細は次のとおりです。
+
+1. `builder = "hvm"`: 使用する仮想化の種類を定義します。`hvm` はハードウェア支援仮想化（Hardware Virtual Machine）を指します。仮想化拡張機能を備えた CPU 上でゲストオペレーティングシステムを無変更のまま実行でき、物理ハードウェア上で実行する場合とほぼ同等の性能を発揮します。`generic` が既定値であり、PV ドメインを作成します。
+2. `name = "freebsd"`: 同じ Dom0 上で動作する他の仮想マシンと区別するための仮想マシン名です。必須項目です。
+3. `memory = 1024`: 仮想マシンに割り当てる RAM 容量（メガバイト単位）です。この量は Dom0 のメモリではなく、ハイパーバイザが利用できる総メモリから差し引かれます。
+4. `vcpus = 2`: ゲスト仮想マシンが利用できる仮想 CPU 数です。最高の性能を得るためには、ホストの物理 CPU 数を超える仮想 CPU をゲストに割り当てないでください。
+5. `vif = [ 'mac=00:16:3E:74:34:32,bridge=bridge0' ]`: 仮想ネットワークアダプタです。ホストのネットワークインターフェースに接続されたブリッジを指定します。`mac` パラメータは仮想ネットワークインターフェースに設定する MAC アドレスです。このパラメータは省略可能で、MAC を指定しない場合は Xen™ がランダムに生成します。
+6. `'/dev/zvol/tank/xendisk0,raw,hda,rw'`: この仮想マシン用のディスクストレージとなるディスク、ファイル、または ZFS ボリュームのフルパスです。オプションや複数のディスク定義はカンマで区切ります。
+7. `'/root/freebsd.iso,raw,hdc:cdrom,r'`: 最初のオペレーティングシステムをインストールするためのブートメディアを定義します。この例では、先ほどダウンロードした ISO イメージです。その他の種類のデバイスや設定可能なオプションについては Xen™ のドキュメントを参照してください。
+8. `vnc = 1` 以下: DomU のシリアルコンソールへの VNC 接続を制御するオプションです。順に、VNC サポートの有効化、待ち受ける IP アドレスの定義、シリアルコンソール用のデバイスノード、マウスなどの入力デバイスを正確に位置合わせするための入力方式を指定します。`keymap` は使用するキーマップを定義し、既定値は `english` です。
+
+必要なオプションをすべて含めてファイルを作成したら、`xl create` に引数として渡して DomU を作成します。
+
+```shell
+# xl create freebsd.cfg
+```
+
+> **注記**: Dom0 を再起動するたびに、DomU を再作成するには設定ファイルを再び `xl create` に渡す必要があります。
+> 既定では、再起動後に作成されるのは Dom0 のみであり、個々の仮想マシンは自動作成されません。
+> 仮想マシンは仮想ディスク上にオペレーティングシステムを保存しているため、中断した状態から続行できます。
+> 仮想マシンの構成は時間とともに変化することがあります（たとえばメモリを増設する場合など）。
+> 必要なときにゲスト仮想マシンを再作成できるよう、仮想マシンの設定ファイルは適切にバックアップして保管しておいてください。
+
+`xl list` の出力により、DomU が作成されたことを確認できます。
+
+```shell
+# xl list
+Name                                        ID   Mem VCPUs      State   Time(s)
+Domain-0                                     0  8192     4     r-----  1653.4
+freebsd                                      1  1024     1     -b----   663.9
+```
+
+ベースオペレーティングシステムのインストールを開始するには、VNC クライアントを起動し、ホストのメインネットワークアドレスまたは `freebsd.cfg` の `vnclisten` 行で定義した IP アドレスへ接続します。
+オペレーティングシステムのインストールが完了したら、DomU をシャットダウンし、VNC ビューアを切断します。
+`freebsd.cfg` を編集し、`cdrom` 定義の行を削除するか、行頭に `#` 文字を挿入してコメントアウトします。
+この新しい設定を読み込むには、`xl destroy` に名前または ID を引数として渡して古い DomU を削除する必要があります。
+その後、修正した **freebsd.cfg** を使って再作成します。
+
+```shell
+# xl destroy freebsd
+# xl create freebsd.cfg
+```
+
+すると、VNC ビューアを使って再びマシンへアクセスできるようになります。
+今回はオペレーティングシステムがインストールされた仮想ディスクから起動し、仮想マシンとして使用できます。
+
+<a id="virtualization-host-xen-troubleshooting"></a>
+### トラブルシューティング
+
+この節には、FreeBSD を Xen™ ホストまたはゲストとして使用する際に見つかった問題を切り分けるための基本的な情報が含まれています。
+
+<a id="virtualization-host-xen-troubleshooting-host"></a>
+#### ホスト起動のトラブルシューティング
+
+以下のトラブルシューティングのヒントは Xen™ 4.11 以降を対象としている点に注意してください。
+引き続き Xen™ 4.7 を使用していて問題が発生している場合は、より新しいバージョンの Xen™ への移行を検討してください。
+
+ホスト起動時の問題を切り分けるには、シリアルケーブルまたはデバッグ用 USB ケーブルが必要です。
+`loader.conf` にある `xen_cmdline` オプションに引数を追加することで、Xen™ の詳細な起動出力を得ることができます。
+関連するデバッグオプションの例を挙げます。
+
+* `iommu=debug`: iommu に関する追加の診断情報を出力するために使用できます。
+* `dom0=verbose`: dom0 の構築プロセスに関する追加の診断情報を出力するために使用できます。
+* `sync_console`: 同期コンソール出力を強制するフラグです。レート制限によってメッセージが失われるのを防ぐためデバッグ時に有用です。ただし、悪意あるゲストがコンソールを使って Xen™ に対する DoS 攻撃を行えるようになるため、本番環境では決してこのオプションを使用しないでください。
+
+問題を特定するため、FreeBSD も verbose モードで起動する必要があります。
+verbose 起動を有効にするには次のコマンドを実行します。
+
+```shell
+# echo 'boot_verbose="YES"' >> /boot/loader.conf
+```
+
+これらのオプションのいずれも問題の解決に役立たない場合は、シリアル起動ログを [freebsd-xen@FreeBSD.org](mailto:freebsd-xen@FreeBSD.org) および [xen-devel@lists.xenproject.org](mailto:xen-devel@lists.xenproject.org) へ送付して詳細な解析を依頼してください。
+
+<a id="virtualization-host-xen-troubleshooting-guest"></a>
+#### ゲスト作成のトラブルシューティング
+
+ゲストを作成する際にも問題が発生することがあります。以下では、ゲスト作成の問題を診断しようとする際に役立つ情報を紹介します。
+
+ゲスト作成が失敗する最も一般的な原因は、`xl` コマンドが何らかのエラーを出力して 0 以外の終了コードで終了することです。
+表示されたエラーだけでは問題を特定するのに不十分な場合は、`v` オプションを繰り返し指定することで `xl` からより詳細な出力を得ることができます。
+
+```shell
+# xl -vvv create freebsd.cfg
+Parsing config from freebsd.cfg
+libxl: debug: libxl_create.c:1693:do_domain_create: Domain 0:ao 0x800d750a0: create: how=0x0 callback=0x0 poller=0x800d6f0f0
+libxl: debug: libxl_device.c:397:libxl__device_disk_set_backend: Disk vdev=xvda spec.backend=unknown
+libxl: debug: libxl_device.c:432:libxl__device_disk_set_backend: Disk vdev=xvda, using backend phy
+libxl: debug: libxl_create.c:1018:initiate_domain_create: Domain 1:running bootloader
+libxl: debug: libxl_bootloader.c:328:libxl__bootloader_run: Domain 1:not a PV/PVH domain, skipping bootloader
+libxl: debug: libxl_event.c:689:libxl__ev_xswatch_deregister: watch w=0x800d96b98: deregister unregistered
+domainbuilder: detail: xc_dom_allocate: cmdline="", features=""
+domainbuilder: detail: xc_dom_kernel_file: filename="/usr/local/lib/xen/boot/hvmloader"
+domainbuilder: detail: xc_dom_malloc_filemap    : 326 kB
+libxl: debug: libxl_dom.c:988:libxl__load_hvm_firmware_module: Loading BIOS: /usr/local/share/seabios/bios.bin
+...
+```
+
+詳細な出力を見ても問題の診断に役立たない場合は、`/var/log/xen` に QEMU および Xen™ ツールスタックのログもあります。
+ログ名にはドメイン名が付加されるため、ドメイン名が `freebsd` であれば `/var/log/xen/xl-freebsd.log` や、多くの場合 `/var/log/xen/qemu-dm-freebsd.log` が見つかります。
+どちらのログファイルにもデバッグに有用な情報が含まれている場合があります。
+これらすべてを試しても問題が解決しない場合は、問題の説明とできる限り多くの情報を [freebsd-xen@FreeBSD.org](mailto:freebsd-xen@FreeBSD.org) および [xen-devel@lists.xenproject.org](mailto:xen-devel@lists.xenproject.org) へ送付して助けを求めてください。
