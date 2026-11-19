@@ -1164,3 +1164,278 @@ cu -l $PTS
 
 Bluetooth パケットを表示するには、`comms/hcidump` パッケージまたは port からインストールできるサードパーティ製パッケージ `hcidump` を使用します。
 このユーティリティは `tcpdump(1)` に似ており、Bluetooth パケットの内容を端末に表示したり、ファイルへダンプしたりするために使用できます。
+
+<a id="network-bridging"></a>
+## ブリッジ（Bridging）
+
+IP サブネットを分けてルータで相互接続することなく、イーサネットセグメントなどのネットワークを複数のセグメントへ分割すると便利な場合があります。
+このように 2 つのネットワークを相互に接続する装置を「ブリッジ（bridge）」と呼びます。
+
+ブリッジは、各ネットワークインタフェースに接続されたデバイスの MAC アドレスを学習することで動作します。
+送信元と宛先の MAC アドレスが異なるネットワーク側に存在する場合にのみ、ネットワーク間でトラフィックを転送します。
+多くの点で、ブリッジはポート数の非常に少ないイーサネットスイッチのようなものです。
+複数のネットワークインタフェースを備えた FreeBSD システムは、ブリッジとして動作するように構成できます。
+
+ブリッジは次のような場面で役立ちます。
+
+* **ネットワークの接続**: ブリッジの基本的な役割は、2 つ以上のネットワークセグメントを結合することです。配線の制約やファイアウォール設置など、専用ネットワーク機器の代わりにホストベースのブリッジを使う理由はさまざまです。また、hostap モードで動作する無線インタフェースと有線ネットワークをブリッジで接続し、アクセスポイントとして動作させることもできます。
+* **フィルタリング／トラフィックシェーピング機能付きファイアウォール**: ルーティングやネットワークアドレス変換（NAT）を行わずにファイアウォール機能が必要な場合にブリッジを利用できます。
+  たとえば、DSL や ISDN で ISP に接続している小規模企業を考えます。ISP から 13 個のグローバル IP アドレスが割り当てられており、ネットワーク上には 10 台のコンピュータがあるとします。このような状況では、サブネット分割の問題からルータ型のファイアウォールを使うのは困難です。ブリッジ型のファイアウォールであれば、IP アドレッシングの問題を起こさずに構成できます。
+* **ネットワークタップ（Network Tap）**: ブリッジで 2 つのネットワークセグメントを接続し、ブリッジインタフェース上で `bpf(4)` と `tcpdump(1)` を用いて通過するすべてのイーサネットフレームを検査したり、スパンポート（span port）と呼ばれる追加のインタフェースへ全フレームのコピーを送出したりできます。
+* **レイヤ 2 VPN**: 2 つのイーサネットネットワークを EtherIP トンネルや OpenVPN などの `tap(4)` ベースのソリューションへブリッジすることで、IP リンク越しに結合できます。
+* **レイヤ 2 冗長化**: 複数のリンクでネットワークを接続し、Spanning Tree Protocol（STP）を用いて冗長経路をブロックできます。
+
+この節では、`if_bridge(4)` を使用して FreeBSD システムをブリッジとして設定する方法を説明します。
+netgraph ベースのブリッジドライバも用意されており、`ng_bridge(4)` で解説されています。
+
+> **注記**: パケットフィルタリングは、`pfil(9)` フレームワークにフックする任意のファイアウォールパッケージと組み合わせて使用できます。また、`altq(4)` や `dummynet(4)` と組み合わせることで、ブリッジをトラフィックシェーパとして利用することもできます。
+
+<a id="chapter-35-heading-33"></a>
+### ブリッジの有効化（Enabling the Bridge）
+
+FreeBSD では、`if_bridge(4)` はカーネルモジュールとして提供されており、`ifconfig(8)` でブリッジインタフェースを作成する際に自動的に読み込まれます。
+カスタムカーネル設定ファイルに `device if_bridge` を追加して、ブリッジサポートをカスタムカーネルに組み込むこともできます。
+
+ブリッジはインタフェースのクローニング（cloning）によって作成します。
+ブリッジインタフェースを作成するには次のように実行します。
+
+```shell
+# ifconfig bridge create
+bridge0
+# ifconfig bridge0
+bridge0: flags=8802<BROADCAST,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:00:00:00:00:00 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:00:00:00:00:00 priority 0 ifcost 0 port 0
+```
+
+ブリッジインタフェースを作成すると、ランダムに生成されたイーサネットアドレスが自動的に割り当てられます。
+`maxaddr` と `timeout` パラメータは、ブリッジが転送テーブルに保持する MAC アドレスの最大数と、最後に観測されてから各エントリが削除されるまでの秒数を制御します。
+その他のパラメータは STP の動作を制御します。
+
+次に、ブリッジのメンバーとして追加するネットワークインタフェースを指定します。
+ブリッジがパケットを転送するには、すべてのメンバーインタフェースとブリッジ自体が有効（up）になっている必要があります。
+
+```shell
+# ifconfig bridge0 addm fxp0 addm fxp1 up
+# ifconfig fxp0 up
+# ifconfig fxp1 up
+```
+
+これでブリッジは `fxp0` と `fxp1` の間でイーサネットフレームを転送できるようになりました。
+起動時にブリッジが自動作成されるようにするには、`/etc/rc.conf` に次の行を追加します。
+
+```
+cloned_interfaces="bridge0"
+ifconfig_bridge0="addm fxp0 addm fxp1 up"
+ifconfig_fxp0="up"
+ifconfig_fxp1="up"
+```
+
+ブリッジホスト自身に IP アドレスが必要な場合は、メンバーインタフェースではなくブリッジインタフェースに設定します。
+アドレスは静的にも DHCP 経由でも設定できます。
+次の例では静的な IP アドレスを設定しています。
+
+```shell
+# ifconfig bridge0 inet 192.168.0.1/24
+```
+
+ブリッジインタフェースに IPv6 アドレスを割り当てることも可能です。
+
+設定を永続化するには、アドレス情報を `/etc/rc.conf` に追記します。
+
+次の例では動的な IPv6 アドレスを使用しています。
+
+```
+ifconfig_bridge0_ipv6="inet6 auto_linklocal accept_rtadv"
+```
+
+> **注記**: パケットフィルタリングが有効になっている場合、ブリッジを通過するパケットは、着信元のメンバーインタフェース上のインバウンド、ブリッジインタフェース上、および適切なインタフェース上のアウトバウンドでそれぞれフィルタを通過します。どの段階も無効化することができます。パケットの流れる方向が重要になる場合は、ブリッジ自体ではなくメンバーインタフェース上でファイアウォールを適用するのが最善です。
+>
+> ブリッジには、非 IP パケットおよび IP パケットの通過や、`ipfw(8)` を用いたレイヤ 2 ファイアウォールに関する設定項目がいくつか用意されています。詳細は `if_bridge(4)` を参照してください。
+
+<a id="chapter-35-heading-34"></a>
+### スパニングツリーの有効化（Enabling Spanning Tree）
+
+イーサネットネットワークが正常に機能するには、2 つのデバイス間に存在するアクティブな経路は 1 つだけでなければなりません。
+STP プロトコルはループを検出し、冗長なリンクをブロック（blocked）状態にします。
+アクティブなリンクのいずれかに障害が発生すると、STP は別のツリーを計算し、ブロックしていた経路の 1 つを有効化してネットワーク上のすべての地点への接続性を復旧させます。
+
+Rapid Spanning Tree Protocol（RSTP、または 802.1w）は、従来の STP との後方互換性を備えています。
+RSTP は収束がより高速であり、隣接スイッチと情報を交換することで、ループを発生させずに素早く転送（forwarding）モードへ移行します。
+FreeBSD は動作モードとして RSTP と STP の両方をサポートしており、既定のモードは RSTP です。
+
+STP は `ifconfig(8)` を使ってメンバーインタフェース上で有効にできます。
+現在のインタフェースが `fxp0` と `fxp1` であるブリッジで STP を有効にするには、次のように実行します。
+
+```shell
+# ifconfig bridge0 stp fxp0 stp fxp1
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether d6:cf:d5:a0:94:6d
+        id 00:01:02:4b:d4:50 priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 0 port 0
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 3 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+```
+
+このブリッジのスパニングツリー ID は `00:01:02:4b:d4:50`、プライオリティは `32768` です。
+`root id` が同じ値になっていることから、このブリッジがこのツリーのルートブリッジであることが分かります。
+
+ネットワーク上の別のブリッジでも STP が有効になっています。
+
+```shell
+bridge0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
+        ether 96:3d:4b:f1:79:7a
+        id 00:13:d4:9a:06:7a priority 32768 hellotime 2 fwddelay 15
+        maxage 20 holdcnt 6 proto rstp maxaddr 100 timeout 1200
+        root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4
+        member: fxp0 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 4 priority 128 path cost 200000 proto rstp
+                role root state forwarding
+        member: fxp1 flags=1c7<LEARNING,DISCOVER,STP,AUTOEDGE,PTP,AUTOPTP>
+                port 5 priority 128 path cost 200000 proto rstp
+                role designated state forwarding
+```
+
+`root id 00:01:02:4b:d4:50 priority 32768 ifcost 400000 port 4` の行は、ルートブリッジが `00:01:02:4b:d4:50` であり、このブリッジからのパスコストが `400000` であることを示しています。
+ルートブリッジへの経路は `port 4`、すなわち `fxp0` を経由しています。
+
+<a id="chapter-35-heading-35"></a>
+### ブリッジインタフェースのパラメータ（Bridge Interface Parameters）
+
+`ifconfig` には、ブリッジインタフェースに固有のパラメータがいくつか存在します。
+この節では、それらのパラメータの一般的な用途をまとめます。
+利用可能なパラメータの完全な一覧は `ifconfig(8)` を参照してください。
+
+* **`private`**: プライベートインタフェースは、同じくプライベートインタフェースとして指定されている他のどのポートに対してもトラフィックを転送しません。トラフィックは無条件にブロックされるため、ARP パケットを含めイーサネットフレームは一切転送されません。トラフィックを選択的にブロックする必要がある場合は、代わりにファイアウォールを使用してください。
+* **`span`**: スパンポート（span port）は、ブリッジが受信したすべてのイーサネットフレームのコピーを送出します。1 つのブリッジに設定できる span ポートの数に制限はありませんが、span ポートとして指定されたインタフェースは通常のブリッジポートとしては使用できません。これは、ブリッジの span ポートの 1 つに接続した別ホスト上で、ブリッジされたネットワークをパッシブに監視（スヌーピング）したい場合に最も有用です。たとえば、`fxp4` という名前のインタフェースへ全フレームのコピーを送出するには次のようにします。
+
+```shell
+# ifconfig bridge0 span fxp4
+```
+
+* **`sticky`**: ブリッジのメンバーインタフェースを sticky に設定すると、動的に学習されたアドレスエントリが転送キャッシュ内で静的エントリとして扱われます。sticky エントリは、別のインタフェースで同じアドレスが観測されたとしても、キャッシュからタイムアウトで消去されたり置き換えられたりしません。これにより、転送テーブルを事前登録することなく静的アドレスエントリの利点を得られます。ブリッジの特定のセグメントで学習されたクライアントは、別のセグメントへ移動（roam）できなくなります。
+  sticky アドレスの活用例の 1 つに、ブリッジと VLAN を組み合わせて IP アドレス空間を無駄にせず顧客ネットワークを分離する構成があります。`CustomerA` が `vlan100`、`CustomerB` が `vlan101` にあり、ブリッジがアドレス `192.168.0.1` を持つ場合を考えます。
+
+```shell
+# ifconfig bridge0 addm vlan100 sticky vlan100 addm vlan101 sticky vlan101
+# ifconfig bridge0 inet 192.168.0.1/24
+```
+
+  この例では、双方のクライアントが `192.168.0.1` をデフォルトゲートウェイとして認識します。ブリッジキャッシュが sticky であるため、一方のホストが他方の顧客の MAC アドレスを偽装してトラフィックを傍受することはできません。
+  VLAN 間のあらゆる通信は、ファイアウォールを使うか、この例のようにプライベートインタフェースを用いてブロックできます。
+
+```shell
+# ifconfig bridge0 private vlan100 private vlan101
+```
+
+  これで顧客同士は完全に分離され、サブネット分割を行わずに `/24` のアドレス範囲全体を割り当てることができます。
+  さらに、あるインタフェースの背後に置ける一意な送信元 MAC アドレスの数を制限することもできます。上限に達すると、既存のホストキャッシュエントリが期限切れになるか削除されるまで、未知の送信元アドレスを持つパケットは破棄されます。
+  次の例では、`vlan100` 上の `CustomerA` に対するイーサネットデバイスの最大数を 10 に設定しています。
+
+```shell
+# ifconfig bridge0 ifmaxaddr vlan100 10
+```
+
+ブリッジインタフェースはモニターモード（monitor mode）にも対応しており、`bpf(4)` での処理後にパケットを破棄し、それ以上の処理や転送を行いません。
+これは、2 つ以上のインタフェースからの入力を単一の `bpf(4)` ストリームへ多重化するために利用できます。
+RX と TX の信号を 2 つの別々のインタフェースから出力するネットワークタップのトラフィックを再構成したい場合に便利です。
+たとえば、4 つのネットワークインタフェースからの入力を 1 つのストリームとして読み取るには次のようにします。
+
+```shell
+# ifconfig bridge0 addm fxp0 addm fxp1 addm fxp2 addm fxp3 monitor up
+# tcpdump -i bridge0
+```
+
+<a id="chapter-35-heading-36"></a>
+### SNMP による監視（SNMP Monitoring）
+
+ブリッジインタフェースと STP パラメータは、FreeBSD ベースシステムに含まれる `bsnmpd(1)` を介して監視できます。
+エクスポートされるブリッジ MIB は IETF 標準に準拠しているため、任意の SNMP クライアントや監視パッケージを使ってデータを取得できます。
+
+ブリッジの監視を有効にするには、`/etc/snmpd.config` 内の次の行の先頭にある `#` 記号を削除してコメントを解除します。
+
+```
+begemotSnmpdModulePath."bridge" = "/usr/lib/snmp_bridge.so"
+```
+
+このファイルでは、コミュニティ名やアクセスリストなど、その他の設定項目も変更が必要になる場合があります。
+詳細は `bsnmpd(1)` および `snmp_bridge(3)` を参照してください。
+これらの編集内容を保存したら、`/etc/rc.conf` に次の行を追加します。
+
+```
+bsnmpd_enable="YES"
+```
+
+その後、`bsnmpd(1)` を起動します。
+
+```shell
+# service bsnmpd start
+```
+
+以下の例では、クライアントシステムからブリッジへ問い合わせるために Net-SNMP ソフトウェア（`net-mgmt/net-snmp`）を使用しています。
+`net-mgmt/bsnmptools` port を使用することもできます。
+Net-SNMP が動作している SNMP クライアント側で、ブリッジ MIB 定義を読み込むために `$HOME/.snmp/snmp.conf` へ次の行を追加します。
+
+```
+mibdirs +/usr/share/snmp/mibs
+mibs +BRIDGE-MIB:RSTP-MIB:BEGEMOT-MIB:BEGEMOT-BRIDGE-MIB
+```
+
+IETF BRIDGE-MIB（RFC4188）を使って単一のブリッジを監視するには次のようにします。
+
+```shell
+% snmpwalk -v 2c -c public bridge1.example.com mib-2.dot1dBridge
+BRIDGE-MIB::dot1dBaseBridgeAddress.0 = STRING: 66:fb:9b:6e:5c:44
+BRIDGE-MIB::dot1dBaseNumPorts.0 = INTEGER: 1 ports
+BRIDGE-MIB::dot1dStpTimeSinceTopologyChange.0 = Timeticks: (189959) 0:31:39.59 centi-seconds
+BRIDGE-MIB::dot1dStpTopChanges.0 = Counter32: 2
+BRIDGE-MIB::dot1dStpDesignatedRoot.0 = Hex-STRING: 80 00 00 01 02 4B D4 50
+...
+BRIDGE-MIB::dot1dStpPortState.3 = INTEGER: forwarding(5)
+BRIDGE-MIB::dot1dStpPortEnable.3 = INTEGER: enabled(1)
+BRIDGE-MIB::dot1dStpPortPathCost.3 = INTEGER: 200000
+BRIDGE-MIB::dot1dStpPortDesignatedRoot.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedCost.3 = INTEGER: 0
+BRIDGE-MIB::dot1dStpPortDesignatedBridge.3 = Hex-STRING: 80 00 00 01 02 4B D4 50
+BRIDGE-MIB::dot1dStpPortDesignatedPort.3 = Hex-STRING: 03 80
+BRIDGE-MIB::dot1dStpPortForwardTransitions.3 = Counter32: 1
+RSTP-MIB::dot1dStpVersion.0 = INTEGER: rstp(2)
+```
+
+`dot1dStpTopChanges.0` の値が 2 になっており、STP ブリッジトポロジが 2 回変化したことを示しています。
+トポロジ変化とは、ネットワーク内の 1 つ以上のリンクに変化または障害が発生し、新しいツリーが計算されたことを意味します。
+`dot1dStpTimeSinceTopologyChange.0` の値は、それがいつ起きたかを示します。
+
+複数のブリッジインタフェースを監視するには、プライベートな BEGEMOT-BRIDGE-MIB を使用できます。
+
+```shell
+% snmpwalk -v 2c -c public bridge1.example.com
+enterprises.fokus.begemot.begemotBridge
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge0" = STRING: bridge0
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseName."bridge2" = STRING: bridge2
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge0" = STRING: e:ce:3b:5a:9e:13
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseAddress."bridge2" = STRING: 12:5e:4d:74:d:fc
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge0" = INTEGER: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeBaseNumPorts."bridge2" = INTEGER: 1
+...
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge0" = Timeticks: (116927) 0:19:29.27 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTimeSinceTopologyChange."bridge2" = Timeticks: (82773) 0:13:47.73 centi-seconds
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge0" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpTopChanges."bridge2" = Counter32: 1
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge0" = Hex-STRING: 80 00 00 40 95 30 5E 31
+BEGEMOT-BRIDGE-MIB::begemotBridgeStpDesignatedRoot."bridge2" = Hex-STRING: 80 00 00 50 8B B8 C6 A9
+```
+
+`mib-2.dot1dBridge` サブツリー経由で監視対象となるブリッジインタフェースを切り替えるには次のようにします。
+
+```shell
+% snmpset -v 2c -c private bridge1.example.com
+BEGEMOT-BRIDGE-MIB::begemotBridgeDefaultBridgeIf.0 s bridge2
+```
