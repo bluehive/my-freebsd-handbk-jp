@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Appendix C Resources on the Internet (C-eresources) only; legacy TOC ID C; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": "C",
+      "slug": "eresources",
+      "upstream_chapter_number": null,
+      "legacy_toc_id": "C",
+      "upstream_path": "documentation/content/en/books/handbook/eresources/_index.adoc",
+      "source_path": "handbook/en/appC/C-eresources.adoc.txt",
+      "translation_path": "handbook/ja/C-eresources.md",
+      "source_sha256": "d4b2b63ce017b73f720be55668257a544c214a674005f41669867aeab4efb1b6",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Draft setup; translation in progress",
+      "counts": {
+        "headings": 10,
+        "anchors": 11,
+        "code_blocks": 0,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}
