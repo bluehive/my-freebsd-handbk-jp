@@ -104,3 +104,7 @@
 ## 公式Chapter 21（Storage）の意訳用スナップショット
 
 2026-11-19に、公式Chapter 21 Storage（`documentation/content/en/books/handbook/disks/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch21/21-disks.adoc.txt`（97404バイト、SHA-256: `cc2047bb41f820515868d31b13119b8cc7d38a431428877dbaf13bf83a837d0b`）、出典・進捗は [マニフェスト](docs/translation-ch21.json)と[作業記録](docs/translation-ch21.md)に保存しています。既存TOCのID 20に対応します。
+
+## 公式Chapter 16（Security）の意訳用スナップショット
+
+2026-11-19に、公式Chapter 16 Security（`documentation/content/en/books/handbook/security/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch16/16-security.adoc.txt`（94868バイト、SHA-256: `ffdcea842b969971bc80f65443abb850d21eacc059c15296aff8bbb8b2862404`）、出典・進捗は [マニフェスト](docs/translation-ch16.json)と[作業記録](docs/translation-ch16.md)に保存しています。既存TOCのID 15に対応し、既存の `handbook/en/15-security.adoc.txt` は履歴としてそのまま残しています。
