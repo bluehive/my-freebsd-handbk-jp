@@ -120,3 +120,7 @@
 ## 公式Appendix A（Obtaining FreeBSD）の意訳用スナップショット
 
 2026-11-20に、公式Appendix A Obtaining FreeBSD（`documentation/content/en/books/handbook/mirrors/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/appA/A-mirrors.adoc.txt`（20806バイト、SHA-256: `d4398bc07c55b1cb0a6b24606f9ff98cb18f1e1787c14582bd14701f6782b6a5`）、出典・進捗は [マニフェスト](docs/translation-appA.json)と[作業記録](docs/translation-appA.md)に保存しています。既存TOCのID Aに対応します。ミラー連絡先メールアドレス（`{mirrors-*-email}`）および `{committers-guide}` は同じ固定コミットの `shared/mirrors.adoc` および `shared/en/urls.adoc` を参照して解決しています。
+
+## 公式Chapter 28（DTrace）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 28 DTrace（`documentation/content/en/books/handbook/dtrace/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch28/28-dtrace.adoc.txt`（13316バイト、SHA-256: `1852b9a5ea44fa362c82617656e31707206cecf4bcdd3e968053f3780bf5bdc8`）、出典・進捗は [マニフェスト](docs/translation-ch28.json)と[作業記録](docs/translation-ch28.md)に保存しています。既存TOCのID 27に対応します。

@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Chapter 28 DTrace (28-dtrace) only; legacy TOC ID 27; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 28,
+      "slug": "dtrace",
+      "upstream_chapter_number": 28,
+      "legacy_toc_id": 27,
+      "upstream_path": "documentation/content/en/books/handbook/dtrace/_index.adoc",
+      "source_path": "handbook/en/ch28/28-dtrace.adoc.txt",
+      "translation_path": "handbook/ja/28-dtrace.md",
+      "source_sha256": "1852b9a5ea44fa362c82617656e31707206cecf4bcdd3e968053f3780bf5bdc8",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Pinned source snapshot acquired; translation in progress",
+      "counts": {
+        "headings": 6,
+        "anchors": 6,
+        "code_blocks": 9,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}
