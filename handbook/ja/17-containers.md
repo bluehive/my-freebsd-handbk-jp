@@ -157,3 +157,129 @@ FreeBSD の STABLE または CURRENT スナップショットそのものをベ�
 アーキテクチャに依存しないイメージは、[Official FreeBSD Releases](https://download.freebsd.org/releases) サイトからダウンロードして自身のレジストリへ直接インポートすることも、FreeBSD プロジェクトの [Docker Hub](https://hub.docker.com/u/freebsd) または [GitHub Container Registry](https://github.com/orgs/freebsd/packages) からプルすることもできます。
 
 [Alpine Linux](https://hub.docker.com/_/alpine/) および [Debian](https://hub.docker.com/_/debian/) プロジェクトも、同様の手法でタグ付きイメージと可変イメージを公開しています。
+
+<a id="containers-podman-intro"></a>
+## Podman の紹介
+
+Podman スイートは 3 つの主要ツールといくつかの補助ツールから構成されています。
+
+* [podman](https://podman.io/): Docker 互換コマンドを備えたデーモンレスのコンテナエンジン
+* [buildah](https://buildah.io/): OCI 形式のコンテナイメージを生成するツール
+* [skopeo](https://github.com/containers/skopeo): リモートの OCI イメージレジストリを操作するツール
+
+<a id="containers-preparing"></a>
+## Podman コンテナ向けシステムの準備
+
+> **警告**: SSH などのリモートセッション経由でコマンドを実行している場合は、ファイアウォール再起動時に接続が切断されないよう、`screen(1)` や `tmux(1)` などのツールを使用してください。
+
+ZFS を利用できない場合は UFS ストレージに切り替え、後続の ZFS コマンドはスキップしてください。
+
+```shell
+# sed -I .bak -e 's/driver = "zfs"/driver = "vfs"/' \
+    /usr/local/etc/containers/storage.conf
+```
+
+ZFS を利用できる場合は、コンテナストレージ用のデータセットを作成します。
+
+```shell
+# zfs create -o mountpoint=/var/db/containers zroot/containers
+# zfs snapshot zroot/containers@empty
+```
+
+ファイル記述子ファイルシステム（fdescfs）が必要です。
+
+```shell
+# mount -t fdescfs fdesc /dev/fd
+```
+
+再起動後も有効にするため、`/etc/fstab` に次の行を追加してください。
+
+```shell
+fdescfs  /dev/fd  fdescfs  rw  0  0
+```
+
+<a id="containers-installing"></a>
+## Podman のインストール
+
+必須なのはメタパッケージ `sysutils/podman-suite` のみですが、追加で `emulators/qemu-user-static` パッケージをインストールすると、`amd64` ホスト上で `arm64` など他アーキテクチャ向けイメージをビルド・テストできるようになります。
+
+```shell
+# pkg install -r FreeBSD -y podman-suite emulators/qemu-user-static
+```
+
+<a id="containers-networking"></a>
+## ネットワークの設定
+
+コンテナのネットワーキングでは、VNET jail がホストのネットワークへアクセスできるようにするため、ネットワークアドレス変換（NAT）を使用します。これは `pf(4)` によって行われるため、パケットフィルタのカーネルモジュールを読み込んでおく必要があります。
+
+`/usr/local/etc/containers/pf.conf.sample` の設定を `/etc/pf.conf` に統合し、egress インターフェースのマクロをデフォルトネットワークインターフェースに合わせて設定します。
+
+```text
+# Change these to your interface(s) with the default route
+v4egress_if = "vtnet0"
+v6egress_if = "vtnet0"
+
+nat on $v4egress_if inet from <cni-nat> to any -> ($v4egress_if)
+nat on $v6egress_if inet6 from <cni-nat> to !ff00::/8 -> ($v6egress_if)
+
+rdr-anchor "cni-rdr/*"
+nat-anchor "cni-rdr/*"
+table <cni-nat>
+```
+
+`rdr-anchor` と `nat-anchor "cni-rdr/*"` の各行は、`cni-rdr` 配下にネストされたアンカーとしてポートリダイレクトを実装します。特に `nat-anchor "cni-rdr/*"` の行は、宛先が `localhost`（`127.0.0.1` または `::1`）の場合も含め、コンテナホストからコンテナ内で動作するサービスへの接続をリダイレクトするために必要です。
+
+ファイアウォールを有効化して起動します。
+
+```shell
+# service pf enable
+# service pf start
+```
+
+コンテナホスト自身からコンテナ内で動作するサービスへの接続をリダイレクトするには、ローカルリダイレクトのサポートも有効にする必要があります。
+
+```shell
+# sysctl net.pf.filter_local=1
+```
+
+再起動後も設定を維持するため、`/etc/sysctl.conf` に追記します。
+
+```text
+net.pf.filter_local=1
+```
+
+<a id="containers-config-files"></a>
+## その他の設定ファイル
+
+パッケージをインストールすると多数のテンプレート設定ファイルが配置されますが、直ちに編集する必要はありません。必要に応じて内容を確認・修正してください。
+
+```shell
+# pkg list | grep /etc/containers/
+/usr/local/etc/containers/containers.conf.sample
+/usr/local/etc/containers/policy.json.sample
+/usr/local/etc/containers/registries.conf.sample
+/usr/local/etc/containers/storage.conf.sample
+/usr/local/etc/containers/pf.conf.sample
+```
+
+<a id="containers-first"></a>
+## 最初のコンテナの実行
+
+各種フラグの詳細は `podman-run(1)` に記載されています。次の実行例では新しいコンテナを作成して対話型端末を接続し、終了時にコンテナを自動削除します。
+
+```shell
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+# top -b
+last pid: 24414;  load averages:    0.47,    0.51,    0.53; battery: 23%  up 0+18:48:46    23:30:12
+2 processes:   1 running, 1 sleeping
+CPU:  6.9% user,  0.0% nice,  2.2% system,  0.7% interrupt, 90.2% idle
+Mem: 2619M Active, 6587M Inact, 1813M Laundry, 4552M Wired, 56K Buf, 334M Free
+ARC: 2526M Total, 802M MFU, 1219M MRU, 3586K Anon, 29M Header, 467M Other
+     1625M Compressed, 4234M Uncompressed, 2.61:1 Ratio
+Swap: 10G Total, 219M Used, 10G Free, 2% Inuse
+
+  PID USERNAME    THR PRI NICE   SIZE    RES STATE    C   TIME    WCPU COMMAND
+17963 root          1   1    0    14M  3120K wait     1   0:00   0.44% sh
+24414 root          1   3    0    15M  2992K CPU0     0   0:00   0.00% top
+# exit
+```
