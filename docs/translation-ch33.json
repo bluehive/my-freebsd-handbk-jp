@@ -13,13 +13,13 @@
       "source_path": "handbook/en/ch33/33-network-servers.adoc.txt",
       "translation_path": "handbook/ja/33-network-servers.md",
       "source_sha256": "bd0c56b2ef912bf049cceb1d7ed1718047e195677591e92573e7c9cdade5621a",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "In progress: pinned source snapshot saved; translating section by section; runtime and third-party review not performed",
+      "status": "translated",
+      "reviewed_at": "2026-11-19",
+      "review": "Interpretive translation self-checked against all 69 headings, 70 anchors, 143 code/output blocks, 7 tables, and cross-references in the pinned source; legacy examples (DES passwd_format, mod_php74, mod_python, samba_enable, /host/foobar/usr, crossref to moved config-network-setup) annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 69,
         "anchors": 70,
-        "code_blocks": 136,
+        "code_blocks": 143,
         "images": 0,
         "tables": 7
       }

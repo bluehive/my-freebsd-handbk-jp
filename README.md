@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-19 — 公式Chapter 33 Network Servers を意訳
+
+- 公式の章番号に従い、[Network Servers](handbook/ja/33-network-servers.md)を追加し、`handbook/TOC.md`（既存ID 32）を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全69見出し・70アンカー・143コード例・7表を意訳・自己校正しました。
+- 原文のコードと出力は保持し、古い記述や上流の表記ゆれ（`passwd_format=des`、`mod_php74`、`mod_python`、`samba_enable`、`/host/foobar/usr`、`config-network-setup` の移設先リンク等）は訳注で区別しています。
+- [作業・検証記録](docs/translation-ch33.md) / [原文ハッシュと状態](docs/translation-ch33.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-19 — 00 Preface（序文）を意訳
 
 - [序文（Preface）](handbook/ja/00-preface.md)を追加し、`handbook/TOC.md` を更新しました。
