@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-20",
+  "scope": "Official Chapter 18 OCI Containers (17-containers) only; legacy TOC ID 17; pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 18,
+      "slug": "containers",
+      "upstream_chapter_number": 18,
+      "legacy_toc_id": 17,
+      "upstream_path": "documentation/content/en/books/handbook/containers/_index.adoc",
+      "source_path": "handbook/en/ch18/18-containers.adoc.txt",
+      "translation_path": "handbook/ja/17-containers.md",
+      "source_sha256": "e666506444b45f33115e8a6de8fc65062ff38388eae3a9dc3cfe718bcb9baf5e",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "Pinned upstream source captured; draft translation in progress against pinned commit a39743a3b0535f4498735119317889ea2bdfeb28",
+      "counts": {
+        "headings": 50,
+        "anchors": 50,
+        "code_blocks": 60,
+        "images": 0,
+        "tables": 0
+      }
+    }
+  ]
+}
