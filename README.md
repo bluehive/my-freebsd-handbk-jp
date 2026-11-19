@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 22 GEOM（既存TOC ID 21）を意訳
+
+- 公式Chapter 22 [GEOM](handbook/ja/22-geom.md)（既存TOC ID 21）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全25見出し・25アンカー・85コード例・1画像・全相互参照を意訳・自己校正しました。
+- 原文のコマンド例（`/dev/ad2`・`/dev/ad3` 等の旧 ATA デバイス名を含む）は保持し、近年の `adaX` との違いを訳注で区別しています。
+- [作業記録](docs/translation-ch22.md) / [原文ハッシュと状態](docs/translation-ch22.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Chapter 16 Security（既存TOC ID 15）を意訳・改稿
 
 - 既存ドラフト [Security](handbook/ja/15-security.md)（公式 Chapter 16 / 既存 TOC ID 15）を固定原文へ全面照合・改稿し、`handbook/TOC.md` を更新しました。

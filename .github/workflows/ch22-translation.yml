@@ -33,4 +33,4 @@ jobs:
         with:
           persist-credentials: false
       - name: Check Chapter 22 GEOM translation and pinned source
-        run: python3 scripts/check_ch22_translation.py
+        run: python3 scripts/check_ch22_translation.py --require-complete
