@@ -36,7 +36,7 @@
 - [x] `#network-apache`（Apache HTTP Server）
 - [x] `#network-ftp`（File Transfer Protocol (FTP)）
 - [x] `#network-samba`（File and Print Services for Microsoft Windows Clients (Samba)）
-- [ ] `#network-ntp`（Clock Synchronization with NTP）
+- [x] `#network-ntp`（Clock Synchronization with NTP）
 - [ ] `#network-iscsi`（iSCSI Initiator and Target Configuration）
 - [ ] 全節自己校正・最終検査
 

@@ -1954,3 +1954,127 @@ Samba はいつでも次のコマンドで停止できます。
 ```
 
 Samba は、Microsoft® Windows® ネットワークと幅広く統合できる機能を備えた多機能なソフトウェアスイートです。ここで説明した基本設定を超える機能の詳細については、[https://www.samba.org](https://www.samba.org) を参照してください。
+
+<a id="network-ntp"></a>
+## NTP による時刻同期（Clock Synchronization with NTP）
+
+コンピュータの時計は時間の経過とともにずれていく傾向があります。ネットワーク上の多くのサービスでは、ネットワーク内のコンピュータが同じ正確な時刻を共有している必要があるため、時刻のずれは問題になります。また、ファイルのタイムスタンプの一貫性を保つためにも正確な時刻が必要です。Network Time Protocol（NTP）は、ネットワーク上で時刻の正確さを維持する手段の 1 つです。
+
+FreeBSD には `ntpd(8)` が含まれており、他の NTP サーバへ問い合わせてそのマシン自身の時計を同期させたり、ネットワーク上の他のコンピュータへ時刻サービスを提供したりするように設定できます。
+
+この節では、FreeBSD で `ntpd` を設定する方法を説明します。さらに詳しいドキュメントは、HTML 形式で `/usr/share/doc/ntp/` に収録されています。
+
+<a id="chapter-33-heading-59"></a>
+### NTP の設定（NTP Configuration）
+
+FreeBSD では、組み込みの `ntpd` を使ってシステムの時計を同期できます。`ntpd` の設定は、以下の節で詳しく説明するように `rc.conf(5)` の変数と `/etc/ntp.conf` を使って行います。
+
+`ntpd` はネットワーク上のピア（peer）と UDP パケットで通信します。マシンと NTP ピアの間にあるすべてのファイアウォールでは、ポート 123 の UDP パケットの送受信を許可するよう設定しておく必要があります。
+
+<a id="chapter-33-heading-60"></a>
+#### `/etc/ntp.conf` ファイル（The `/etc/ntp.conf` file）
+
+`ntpd` は `/etc/ntp.conf` を読み込んで、どの NTP サーバへ問い合わせるかを決定します。いずれかのサーバに到達できなくなったり、そのサーバの時計が信頼できなくなったりした場合に備え、複数の NTP サーバを指定しておくことが推奨されます。`ntpd` は応答を受け取るにつれて、信頼性の低いサーバよりも信頼性の高いサーバを優先して使うようになります。問い合わせ先のサーバには、ローカルネットワーク内のサーバ、ISP が提供するサーバ、あるいは [公開 NTP サーバのオンライン一覧](http://support.ntp.org/bin/view/Servers/WebHome) から選んだサーバを指定できます。公開 NTP サーバを選ぶ際は、地理的に近いものを選び、利用ポリシーを確認してください。`pool` 設定キーワードを使うと、サーバプールから 1 台以上のサーバを自動選択します。地域別に整理された [公開 NTP プールのオンライン一覧](http://support.ntp.org/bin/view/Servers/NTPPoolServers) も利用できます。さらに FreeBSD は、プロジェクトが提供するプール `0.freebsd.pool.ntp.org` を用意しています。
+
+**例: `/etc/ntp.conf` のサンプル**
+
+以下は `ntp.conf` ファイルのシンプルな例です。公開ネットワーク接続上で運用する際に推奨される `restrict` オプションが含まれているため、このまま安全に使用できます。
+
+```
+
+# Disallow ntpq control/query access.  Allow peers to be added only
+# based on pool and server statements in this file.
+restrict default limited kod nomodify notrap noquery nopeer
+restrict source  limited kod nomodify notrap noquery
+
+# Allow unrestricted access from localhost for queries and control.
+restrict 127.0.0.1
+restrict ::1
+
+# Add a specific server.
+server ntplocal.example.com iburst
+
+# Add FreeBSD pool servers until 3-6 good servers are available.
+tos minclock 3 maxclock 6
+pool 0.freebsd.pool.ntp.org iburst
+
+# Use a local leap-seconds file.
+leapfile "/var/db/ntpd.leap-seconds.list"
+```
+
+このファイルの書式は `ntp.conf(5)` に記載されています。以下では、上記のサンプルファイルで使われているキーワードだけを簡単に説明します。
+
+既定では、NTP サーバはネットワーク上のどのホストからもアクセス可能です。`restrict` キーワードは、どのシステムがサーバへアクセスできるかを制御します。複数の `restrict` エントリを記述でき、それぞれが前の文で指定された制限をさらに絞り込みます。上記の例では、ローカルシステムに対しては問い合わせと制御のフルアクセスを許可しつつ、リモートシステムに対しては時刻の問い合わせのみを許可しています。詳細は `ntp.conf(5)` の `Access Control Support` サブセクションを参照してください。
+
+`server` キーワードは、問い合わせ先の単一サーバを指定します。ファイルには複数の `server` キーワードを記述でき、1 行に 1 台のサーバを記載します。`pool` キーワードはサーバのプールを指定します。`ntpd` は `tos minclock` で指定されたピア数に達するまで、必要に応じてこのプールから 1 台以上のサーバを追加します。`iburst` キーワードは、最初に接続を確立した際に 8 回の高速なパケット交換バーストを実行してシステム時刻を素早く同期するよう `ntpd` に指示します。
+
+`leapfile` キーワードは、うるう秒（leap seconds）に関する情報を含むファイルの場所を指定します。このファイルは `periodic(8)` によって自動的に更新されます。このキーワードで指定するファイルの場所は、`/etc/rc.conf` の `ntp_db_leapfile` 変数で設定する場所と一致していなければなりません。
+
+<a id="chapter-33-heading-61"></a>
+#### `/etc/rc.conf` の NTP エントリ（NTP entries in `/etc/rc.conf`）
+
+起動時に `ntpd` を開始するには `ntpd_enable=YES` を設定します。`/etc/rc.conf` に `ntpd_enable=YES` を追加したら、システムを再起動しなくても次のように入力すれば今すぐ `ntpd` を起動できます。
+
+```shell
+# service ntpd start
+```
+
+`ntpd` を使うために必須の設定は `ntpd_enable` だけです。必要に応じて、以下に挙げる `rc.conf` 変数も設定できます。
+
+`ntpd_sync_on_start=YES` を設定すると、起動時に 1 回だけ、ずれの大きさにかかわらず時計を一気に合わせる（step する）ことを `ntpd` に許可します。通常、`ntpd` は時計が 1000 秒以上ずれているとエラーメッセージをログに出力して終了します。このオプションは、バッテリーバックアップ付きのリアルタイムクロック（RTC）を持たないシステムで特に有用です。
+
+`ntpd_oomprotect=YES` を設定すると、システムがメモリ不足（Out Of Memory: OOM）状態から回復しようとする際に `ntpd` デーモンが強制終了（kill）されないよう保護します。
+
+`ntpd_config=` には、別の場所にある `ntp.conf` ファイルのパスを指定します。
+
+`ntpd_flags=` には必要に応じてその他の `ntpd` フラグを指定できますが、`/etc/rc.d/ntpd` が内部で管理する次のフラグは指定しないでください。
+
+* `-p`（PID ファイルの場所）
+* `-c`（代わりに `ntpd_config=` を設定してください）
+
+<a id="chapter-33-heading-62"></a>
+#### `ntpd` と非特権 `ntpd` ユーザー（`ntpd` and the unprivileged `ntpd` user）
+
+FreeBSD 上の `ntpd` は、非特権ユーザーとして起動・実行することができます。これを行うには `mac_ntpd(4)` ポリシーモジュールが必要です。`/etc/rc.d/ntpd` 起動スクリプトは最初に NTP の設定を確認します。可能であれば `mac_ntpd` モジュールをロードし、非特権ユーザー `ntpd`（ユーザー ID 123）として `ntpd` を起動します。ファイルやディレクトリへのアクセス権の問題を避けるため、設定にファイル関連のオプションが含まれている場合は、起動スクリプトは自動的に `ntpd` ユーザーとして起動することはありません。
+
+`ntpd_flags` に次のいずれかが含まれている場合は、`ntpd` ユーザーとして実行するために後述の手動設定が必要になります。
+
+* `-f` または `--driftfile`
+* `-i` または `--jaildir`
+* `-k` または `--keyfile`
+* `-l` または `--logfile`
+* `-s` または `--statsdir`
+
+`ntp.conf` に次のキーワードのいずれかが含まれている場合も、`ntpd` ユーザーとして実行するために後述の手動設定が必要になります。
+
+* `crypto`
+* `driftfile`
+* `key`
+* `logdir`
+* `statsdir`
+
+`ntpd` ユーザーとして実行するよう手動設定するには、次の手順を行います。
+
+* 設定で指定したすべてのファイルとディレクトリに対して、`ntpd` ユーザーがアクセス権を持っていることを確認します。
+* `mac_ntpd` モジュールをロードするか、カーネルへ組み込むように設定します。詳細は `mac_ntpd(4)` を参照してください。
+* `/etc/rc.conf` に `ntpd_user="ntpd"` を設定します。
+
+<a id="chapter-33-heading-63"></a>
+### PPP 接続での NTP の利用（Using NTP with a PPP Connection）
+
+`ntpd` が正常に動作するために、インターネットへの常時接続は必須ではありません。ただし、オンデマンドでダイヤルアウトするよう設定された PPP 接続環境では、NTP トラフィックがきっかけでダイヤルアウトが始まったり、接続が維持されたりしないようにする必要があります。これは `/etc/ppp/ppp.conf` の `filter` ディレクティブで設定できます。たとえば次のように記述します。
+
+```
+set filter dial 0 deny udp src eq 123
+# Prevent NTP traffic from initiating dial out
+set filter dial 1 permit 0 0
+set filter alive 0 deny udp src eq 123
+# Prevent incoming NTP traffic from keeping the connection open
+set filter alive 1 deny udp dst eq 123
+# Prevent outgoing NTP traffic from keeping the connection open
+set filter alive 2 permit 0/0 0/0
+```
+
+詳細は `ppp(8)` の `PACKET FILTERING` セクションおよび `/usr/share/examples/ppp/` 内の設定例を参照してください。
+
+> **注記（NOTE）**: インターネットアクセスプロバイダによっては番号の小さいポートを遮断している場合があり、応答がマシンに届かないため NTP が機能しないことがあります。
