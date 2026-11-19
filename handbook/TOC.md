@@ -27,7 +27,7 @@
 | 18 | MAC（公式Chapter 19） | [19-mac.md](ja/19-mac.md) | **自己校正済（意訳）** | 2026-11-04 原文27見出し・35コード例を照合。実機検証は未実施 |
 | 19 | Security Event Auditing（公式Chapter 20） | [20-audit.md](ja/20-audit.md) | **自己校正済（意訳）** | 2026-11-04 原文11見出し・14コード例・2表を照合。実機検証は未実施 |
 | 20 | Storage（公式Chapter 21） | [21-disks.md](ja/21-disks.md) | **自己校正済（意訳）** | 2026-11-19 原文50見出し・51アンカー・153コード例を照合。実機検証は未実施 |
-| 21 | GEOM | — | 未着手 | |
+| 21 | GEOM（公式Chapter 22） | [22-geom.md](ja/22-geom.md) | **ドラフト** | 2026-11-20 意訳着手（固定原文 `a39743a`）。実機検証は未実施 |
 | 22 | OpenZFS（公式Chapter 23） | [23-zfs.md](ja/23-zfs.md) | **自己校正済（意訳）** | 2026-11-04 原文81見出し・192コード例を照合。実機検証は未実施 |
 | 23 | Other File Systems（公式Chapter 24） | [24-filesystems.md](ja/24-filesystems.md) | **自己校正済（意訳）** | 2026-11-04 原文10見出し・14コード例を照合。実機検証は未実施 |
 | 24 | Virtualization（公式Chapter 25） | [25-virtualization.md](ja/25-virtualization.md) | **自己校正済（意訳）** | 2026-11-19 原文58見出し・76アンカー・126コード例・38画像・1表を照合。実機検証は未実施 |
