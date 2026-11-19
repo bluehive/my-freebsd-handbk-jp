@@ -13,7 +13,7 @@
 - 訳文：`handbook/ja/32-mail.md`
 - マニフェスト：`docs/translation-ch32.json`
 
-## 構成（固定原文）
+## 構成と照合結果
 
 - 見出し：22（`#` 1、`##` 7、`###` 11、`####` 3）
 - アンカー：22（原文の明示ID 22、生成ID 0）
@@ -21,7 +21,19 @@
 - 画像：8
 - 表：0
 
-## 進捗状況
+原文の AsciiDoc ヘッダ・共有 `include::` は翻訳対象外とし、本文の全節を意訳・自己校正してその旨を訳注で明記しました。
 
-- 状態：ドラフト（翻訳作業中）
-- FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
+## 訳注で区別した原文の仕様・注意点
+
+- **冒頭訳注**：原文の AsciiDoc フロントマター・文書属性・共有 `include::` が翻訳対象外であること、掲載コマンドが実機実行したものではないこと、および `#` / `%` プロンプトの意味を明記しました。
+- **`/etc/sendmail.cf` の表記**：「ドメイン宛てのメール（Mail for a Domain）」節の原文に記載されている `/etc/sendmail.cf` はそのまま保持し、FreeBSD の Sendmail マスター設定ファイルは通常 `/etc/mail/sendmail.cf` に配置される旨を訳注で補足しました。
+- **相互参照**：章内リンクは明示アンカー（`#mail-agents`、`#configuring-dragonfly-mail-agent`）へリンクし、未翻訳の付録（`bibliography`）は公式 FreeBSD Handbook（英語版）の該当ページへリンクしました。
+
+## 検証
+
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch32_translation.py --require-complete`（rc=0）
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py`（rc=0）
+- `pandoc --from=gfm --to=json handbook/ja/32-mail.md` による GFM 構文解析とブロック数確認（Header 22、CodeBlock 49、Table 0、Image 8）
+- `git diff --check origin/main...HEAD`（rc=0、警告なし）
+
+FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。

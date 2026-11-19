@@ -1,7 +1,7 @@
 <a id="mail"></a>
-# 第32章 電子メール（Electronic Mail）【ドラフト】
+# 第32章 電子メール（Electronic Mail）
 
-本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/mail/)の「Chapter 32. Electronic Mail」（既存 TOC ID 31）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/mail/_index.adoc`）に基づいて日本語へ意訳したものです（現在ドラフト作成中）。
+本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/mail/)の「Chapter 32. Electronic Mail」（既存 TOC ID 31）を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/mail/_index.adoc`）に基づいて日本語へ意訳したものです。
 
 > **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。掲載されているコマンドや設定例は説明のための例であり、翻訳作業中に実機で実行したものではありません。実行例中の `#` は root ユーザー、`%` は一般ユーザーのプロンプトを示します。
 
@@ -30,16 +30,20 @@
 メールのやり取りには、メールユーザーエージェント（MUA）、メール転送エージェント（MTA）、メールホスト、リモートまたはローカルのメールボックス、そして DNS という 5 つの主要な要素が関わります。この節では、これらの構成要素の概要を説明します。
 
 **メールユーザーエージェント（Mail User Agent: MUA）**
-: メールユーザーエージェント（MUA）は、メールの作成・送信・受信を行うアプリケーションです。FreeBSD に組み込まれている `mail` ユーティリティや、Ports Collection（ポート集）から導入できる `alpine`・`elm`・`mutt` のようなコマンドラインプログラムもあれば、Claws Mail・Evolution・Thunderbird をはじめとする多数のグラフィカルなメールクライアントも Ports Collection に用意されています。また、Web ブラウザから利用できる Web メールを提供している組織もあります。FreeBSD での MUA のインストールと使い方については、[メールユーザーエージェント（MUA）](#mail-agents)を参照してください。
+
+メールユーザーエージェント（MUA）は、メールの作成・送信・受信を行うアプリケーションです。FreeBSD に組み込まれている `mail` ユーティリティや、Ports Collection（ポート集）から導入できる `alpine`・`elm`・`mutt` のようなコマンドラインプログラムもあれば、Claws Mail・Evolution・Thunderbird をはじめとする多数のグラフィカルなメールクライアントも Ports Collection に用意されています。また、Web ブラウザから利用できる Web メールを提供している組織もあります。FreeBSD での MUA のインストールと使い方については、[メールユーザーエージェント（MUA）](#mail-agents)を参照してください。
 
 **メール転送エージェント（Mail Transfer Agent: MTA）**
-: メール転送エージェント（MTA）は、外部からのメールの受信と送信メールの配送を担います。FreeBSD 14.0 以降のデフォルト MTA は DragonFly Mail Agent（`dma(8)`）であり、それ以前のバージョンでは `sendmail(8)` です。Exim、Postfix、qmail などの他の MTA をインストールして、デフォルトの MTA と置き換えることもできます。
+
+メール転送エージェント（MTA）は、外部からのメールの受信と送信メールの配送を担います。FreeBSD 14.0 以降のデフォルト MTA は DragonFly Mail Agent（`dma(8)`）であり、それ以前のバージョンでは `sendmail(8)` です。Exim、Postfix、qmail などの他の MTA をインストールして、デフォルトの MTA と置き換えることもできます。
 
 **メールホストとメールボックス（Mail Host and Mailboxes）**
-: メールホストは、あるホストやネットワーク宛てのメールの配送と受信を担当するサーバーです。メールホストはそのドメイン宛てに送られたメールをすべて受け取り、設定に応じてデフォルトの `mbox` 形式、または別の Maildir 形式で保存します。保存されたメールは、ローカル環境で MUA を使って直接読むことも、POP や IMAP などのプロトコル経由でリモートからアクセスして取得することもできます。メールをローカルで読む場合は、POP や IMAP のサーバーをインストールする必要はありません。
+
+メールホストは、あるホストやネットワーク宛てのメールの配送と受信を担当するサーバーです。メールホストはそのドメイン宛てに送られたメールをすべて受け取り、設定に応じてデフォルトの `mbox` 形式、または別の Maildir 形式で保存します。保存されたメールは、ローカル環境で MUA を使って直接読むことも、POP や IMAP などのプロトコル経由でリモートからアクセスして取得することもできます。メールをローカルで読む場合は、POP や IMAP のサーバーをインストールする必要はありません。
 
 **ドメインネームシステム（Domain Name System: DNS）**
-: ドメインネームシステム（DNS）とそのデーモンである `named(8)` は、メール配送において大きな役割を果たします。あるサイトから別のサイトへメールを配送する際、MTA は宛先サイトを DNS で問い合わせ、その宛先のメールを受け取るホストを特定します。リモートホストからこちらの MTA へメールが送られてくる際にも、同じ仕組みが働きます。
+
+ドメインネームシステム（DNS）とそのデーモンである `named(8)` は、メール配送において大きな役割を果たします。あるサイトから別のサイトへメールを配送する際、MTA は宛先サイトを DNS で問い合わせ、その宛先のメールを受け取るホストを特定します。リモートホストからこちらの MTA へメールが送られてくる際にも、同じ仕組みが働きます。
 
 <a id="dragonFly-mail-agent"></a>
 ## DragonFly Mail Agent（DMA）
@@ -191,7 +195,7 @@ postmaster@example.com          postmaster@noc.example.net
 @example.com                    joe
 ```
 
-このファイルは先頭から順に最初に一致した規則（first match）で処理されます。メールアドレスが左側のアドレスに一致すると、右側に記載されたメールボックスへ対応付けられます。この例の 1 行目は特定のメールアドレスをローカルメールボックスへ対応付ける書式、2 行目は特定のメールアドレスをリモートメールボックスへ対応付ける書式です。最後に、それまでのエントリのいずれにも一致しなかった `example.com` のメールアドレスはすべて最後の対応付けに一致し、ローカルメールボックス `joe` へ送られます。独自のエントリを作成するときは、この書式で `/etc/mail/virtusertable` に追加してください。このファイルを編集したときは、その都度データベースを更新して Sendmail を再起動します。
+このファイルは先頭から順に最初に一致した規則（first match）で処理されます。メールアドレスが左側のアドレスに一致すると、右側に記載されたローカルメールボックスへ対応付けられます。この例の 1 行目は特定のメールアドレスをローカルメールボックスへ対応付ける書式、2 行目は特定のメールアドレスをリモートメールボックスへ対応付ける書式です。最後に、それまでのエントリのいずれにも一致しなかった `example.com` のメールアドレスはすべて最後の対応付けに一致し、ローカルメールボックス `joe` へ送られます。独自のエントリを作成するときは、この書式で `/etc/mail/virtusertable` に追加してください。このファイルを編集したときは、その都度データベースを更新して Sendmail を再起動します。
 
 ```shell
 # makemap hash /etc/mail/virtusertable < /etc/mail/virtusertable
