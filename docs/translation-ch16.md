@@ -29,12 +29,21 @@
 
 ## 進捗
 
-- 状態：ドラフト（固定原文取得・検査基盤整備完了、各節の改稿・自己校正を順次実施）
+- 状態：自己校正済（意訳）。全53見出し・53アンカー・119コード例・1表を固定原文と照合し、欠落していた節（`mtree` 検証、TCP Wrappers、ACL、Capsicum、Process Accounting、Resource Limits、セキュリティ勧告末尾）とコード例を復元しました。
+
+## 訳注で区別した原文の仕様・注意点
+
+- **冒頭訳注**：AsciiDoc フロントマター・文書属性・共有 `include::` を翻訳対象外としていること、コマンド例は説明用であり実機実行していないこと、プロンプト記号（`#` / `%` / `$`）の意味を明記しました。
+- **`crypt(3)` のハッシュプレフィックス**：原文では MD5 を `$`、SHA256 と SHA512 の双方を `$6$` と記載していますが、原文どおり保持したうえで `crypt(3)` における実際の識別プレフィックス（MD5 は `$1$`、SHA256 は `$5$`、SHA512 は `$6$`）を訳注で補足しました。
+- **`mtree` 検証の出力先パス**：直前のコマンド例では `/home/user/.bin_chksum_output` へ出力している一方、確認コマンド例では `/root/.bin_chksum_output` を参照している点を原文どおり保持し、訳注で区別しました。
+- **自己署名証明書の出力先**：本文ではカレントディレクトリに作成する旨が書かれている一方、コマンド例では `-keyout` / `-out` で `/etc/ssl/` 配下を直接指定している点を原文どおり保持し、訳注で補足しました。
+- **相互参照**：本リポジトリで自己校正済みの章（`19-mac.md`、`20-audit.md`、`33-network-servers.md`、`34-firewalls.md`）は相対パス＋明示アンカーへリンクし、未翻訳章（`pgpkeys`、記事 `vpn-ipsec`）は公式 FreeBSD ドキュメント（英語版）へリンクしました。
 
 ## 検証
 
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch16_translation.py`
 - `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch16_translation.py --require-complete`
+- `pandoc --from=gfm --to=json handbook/ja/15-security.md` による GFM 構文解析とブロック数確認（Header 53、CodeBlock 119、Table 1）
 - `git diff --check origin/main...HEAD`
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
