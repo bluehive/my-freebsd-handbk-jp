@@ -34,7 +34,7 @@
 | 25 | Localization（公式Chapter 26） | [26-l10n.md](ja/26-l10n.md) | **自己校正済（意訳）** | 2026-11-04 原文13見出し・27コード例を照合。実機検証は未実施 |
 | 26 | Updating and Upgrading（公式Chapter 27） | [27-cutting-edge.md](ja/27-cutting-edge.md) | **自己校正済（意訳）** | 2026-11-04 原文45見出し・78コード例を照合。実機検証は未実施 |
 | 27 | DTrace（公式Chapter 28） | [28-dtrace.md](ja/28-dtrace.md) | **自己校正済（意訳）** | 2026-11-20 原文6見出し・6アンカー・9コード例を照合。実機検証・第三者専門校閲は未実施 |
-| 28 | USB Device Mode（公式Chapter 29） | [29-usb-device-mode.md](ja/29-usb-device-mode.md) | **ドラフト** | 2026-11-20 着手（原文固定済・翻訳中）。実機検証・第三者専門校閲は未実施 |
+| 28 | USB Device Mode（公式Chapter 29） | [29-usb-device-mode.md](ja/29-usb-device-mode.md) | **自己校正済（意訳）** | 2026-11-20 原文12見出し・12アンカー・19コード例を照合。実機検証・第三者専門校閲は未実施 |
 | 29 | Serial Communications（公式Chapter 30） | [30-serialcomms.md](ja/30-serialcomms.md) | **自己校正済（意訳）** | 2026-11-20 原文28見出し・33アンカー・37コード例・5表を照合。実機検証・第三者専門校閲は未実施 |
 | 30 | PPP | — | 未着手 | |
 | 31 | Electronic Mail | — | 未着手 | |

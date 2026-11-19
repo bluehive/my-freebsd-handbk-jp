@@ -124,3 +124,7 @@
 ## 公式Chapter 28（DTrace）の意訳用スナップショット
 
 2026-11-20に、公式Chapter 28 DTrace（`documentation/content/en/books/handbook/dtrace/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch28/28-dtrace.adoc.txt`（13316バイト、SHA-256: `1852b9a5ea44fa362c82617656e31707206cecf4bcdd3e968053f3780bf5bdc8`）、出典・進捗は [マニフェスト](docs/translation-ch28.json)と[作業記録](docs/translation-ch28.md)に保存しています。既存TOCのID 27に対応します。
+
+## 公式Chapter 29（USB Device Mode / USB OTG）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 29 USB Device Mode / USB OTG（`documentation/content/en/books/handbook/usb-device-mode/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch29/29-usb-device-mode.adoc.txt`（11215バイト、SHA-256: `36ea6729de7bd258730c3290fd72d85a68ce40dc26b9bb2737c6a306d591d568`）、出典・進捗は [マニフェスト](docs/translation-ch29.json)と[作業記録](docs/translation-ch29.md)に保存しています。既存TOCのID 28に対応します。NAA 識別子の桁数に関する訳注では [FreeBSD 15.0 ctl.conf(5)](https://github.com/freebsd/freebsd-src/blob/releng/15.0/usr.sbin/ctld/ctl.conf.5) を参照しています。
