@@ -47,3 +47,29 @@ FreeBSD には Solaris™ とは異なるプロバイダも存在します。最
 セキュリティ上の違いにより、FreeBSD では `root` のみが DTrace を使用できます。Solaris™ には FreeBSD にまだ実装されていない低レベルのセキュリティチェックがいくつか備わっています。そのため、`/dev/dtrace/dtrace` へのアクセスは厳格に `root` に限定されています。
 
 DTrace は Common Development and Distribution License（`CDDL`）ライセンスの下で提供されています。FreeBSD 上でこのライセンスを確認するには、`/usr/src/cddl/contrib/opensolaris/OPENSOLARIS.LICENSE` を参照するか、オンラインの [https://opensource.org/licenses/CDDL-1.0](https://opensource.org/licenses/CDDL-1.0) をご覧ください。DTrace サポートを含む FreeBSD カーネル自体は `BSD` ライセンスですが、モジュールがバイナリ形式で配布される場合や、バイナリが読み込まれる場合には `CDDL` が適用されます。
+
+<a id="dtrace-enable"></a>
+## DTrace サポートの有効化
+
+FreeBSD 9.2 および 10.0 では、DTrace サポートは `GENERIC` カーネルにあらかじめ組み込まれています。それ以前のバージョンの FreeBSD を使用している場合や、DTrace サポートをカーネルに静的に組み込みたい場合は、カスタムカーネル設定ファイルに次の行を追加し、[FreeBSD カーネルのコンフィギュレーション](09-kernelconfig.md#kernelconfig)の手順に従ってカーネルを再コンパイルしてください。
+
+```
+options         KDTRACE_HOOKS
+options         DDB_CTF
+makeoptions	DEBUG=-g
+makeoptions	WITH_CTF=1
+```
+
+AMD64 アーキテクチャを使用している場合は、次の行も追加してください。
+
+```
+options         KDTRACE_FRAME
+```
+
+このオプションは `dtrace_fbt(4)` のサポートを提供します。このオプションがなくても DTrace は動作しますが、関数境界トレースのサポートは制限されます。
+
+新しいカーネルで FreeBSD システムを再起動するか、`kldload dtraceall` を使って DTrace カーネルモジュールを読み込んだら、システム情報を収集するための既製スクリプト集である最新の DTrace Toolkit（`sysutils/dtrace-toolkit`）をインストールします。ここには、開いているファイル、メモリ、CPU 使用率などを確認するためのスクリプトが多数含まれています。FreeBSD のベースシステムにもいくつかのスクリプトが含まれており、`/usr/share/dtrace` で確認できます。
+
+> **注**: `/usr/share/dtrace` にあるスクリプトは、FreeBSD 向けに特別に移植されたものです。DTrace Toolkit に含まれるスクリプトのすべてが FreeBSD でそのまま動作するわけではなく、FreeBSD 上で動作させるために手直しが必要なものもあります。
+
+DTrace Toolkit には、DTrace 専用の言語で書かれたスクリプトが多数含まれています。この言語は D 言語と呼ばれ、C++ によく似ています。この言語の詳しい解説は本書の範囲を超えています。FreeBSD 上での D 言語の概要については、FreeBSD の `d(7)` man ページを参照してください。また、D 言語は [illumos Dynamic Tracing Guide](https://www.illumos.org/books/dtrace/bookinfo.html) でも詳しく解説されています。
