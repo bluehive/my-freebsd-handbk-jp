@@ -31,8 +31,8 @@
 - [x] `#network-nis`（Network Information System (NIS)）
 - [x] `#network-ldap`（Lightweight Directory Access Protocol (LDAP)）
 - [x] `#network-dhcp`（Dynamic Host Configuration Protocol (DHCP)）
-- [ ] `#network-dns`（Domain Name System (DNS)）
-- [ ] `#network-zeroconf`（Zeroconf）
+- [x] `#network-dns`（Domain Name System (DNS)）
+- [x] `#network-zeroconf`（Zeroconf）
 - [ ] `#network-apache`（Apache HTTP Server）
 - [ ] `#network-ftp`（File Transfer Protocol (FTP)）
 - [ ] `#network-samba`（File and Print Services for Microsoft Windows Clients (Samba)）

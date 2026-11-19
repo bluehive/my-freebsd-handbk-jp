@@ -1388,3 +1388,125 @@ DHCP サーバは次のファイルを使用します。マニュアルページ
 * `/usr/local/sbin/dhcrelay`
 
   このデーモンは、1 つの DHCP サーバがクライアントからの要求を別ネットワーク上の別の DHCP サーバへ転送する高度な環境で使用します。この機能が必要な場合は、`net/isc-dhcp44-relay` のパッケージまたは Port をインストールしてください。インストールされる `dhcrelay(8)` に詳細が記載されています。
+
+<a id="network-dns"></a>
+## Domain Name System（DNS）
+
+Domain Name System（DNS）は、ドメイン名と IP アドレスを相互に対応付ける（名前解決する）ためのプロトコルです。DNS はインターネット全体において、権威ルートネームサーバ、トップレベルドメイン（TLD）ネームサーバ、および個別のドメイン情報をホスト・キャッシュする小規模なネームサーバ群からなる、やや複雑な階層構造によって連携して運用されています。なお、システム上で DNS 参照を行うためにネームサーバを自前で稼働させる必要はありません。
+
+次の表に、DNS に関連する主な用語をまとめます。
+
+**表: DNS の用語**
+
+| 用語 | 定義 |
+|---|---|
+| 正引き DNS（Forward DNS） | ホスト名から IP アドレスへの対応付け。 |
+| オリジン（Origin） | 特定のゾーンファイルが対象としているドメインを指す。 |
+| リゾルバ（Resolver） | マシンがゾーン情報を得るためにネームサーバへ問い合わせを行うシステムプロセス。 |
+| 逆引き DNS（Reverse DNS） | IP アドレスからホスト名への対応付け。 |
+| ルートゾーン（Root zone） | インターネットのゾーン階層の最上位。ファイルシステムですべてのファイルがルートディレクトリ配下にあるのと同様、すべてのゾーンはルートゾーン配下に位置する。 |
+| ゾーン（Zone） | 同一の管理権限によって管理される個別のドメイン、サブドメイン、または DNS の一部領域。 |
+
+ゾーンの例は次のとおりです。
+
+* `.` は、ドキュメント上でルートゾーンを指す際によく使われる表記です。
+* `org.` はルートゾーン配下のトップレベルドメイン（TLD）です。
+* `example.org.` は `org.` TLD 配下のゾーンです。
+* `1.168.192.in-addr.arpa` は、`192.168.1.*` の IP アドレス空間に属するすべての IP アドレスを参照する逆引きゾーンです。
+
+見てわかるとおり、ホスト名ではより具体的な部分が左側に現れます。たとえば `example.org.` は `org.` より具体的であり、`org.` はルートゾーンより具体的です。ホスト名の各部分の配置はファイルシステムによく似ており、`/dev` ディレクトリがルート配下にあるのと同じ構造です。
+
+<a id="chapter-33-heading-34"></a>
+### ネームサーバを運用する理由（Reasons to Run a Name Server）
+
+ネームサーバには大きく分けて 2 つの形態があります。権威ネームサーバ（authoritative name server）と、キャッシュ（またはリゾルバ）ネームサーバ（caching / resolving name server）です。
+
+権威ネームサーバが必要になるのは、次のような場合です。
+
+* 外部へ向けて DNS 情報を配信し、問い合わせに対して権威ある応答を返したい場合。
+* `example.org` のようなドメインを登録し、その配下のホスト名に IP アドレスを割り当てる必要がある場合。
+* IP アドレスブロックに対して逆引き DNS エントリ（IP アドレスからホスト名への変換）が必要な場合。
+* バックアップまたは 2 台目のネームサーバ（スレーブ）を用意して問い合わせに応答させたい場合。
+
+キャッシュネームサーバが必要になるのは、次のような場合です。
+
+* ローカルの DNS サーバで結果をキャッシュし、外部のネームサーバへ問い合わせるよりも高速に応答させたい場合。
+
+`www.FreeBSD.org` を問い合わせると、通常はリゾルバが上位 ISP のネームサーバへ問い合わせて応答を取得します。ローカルにキャッシュ DNS サーバがあれば、外部への問い合わせはキャッシュ DNS サーバが行う最初の 1 回だけで済みます。情報がローカルにキャッシュされるため、以降の問い合わせではローカルネットワークの外へ出る必要がなくなります。
+
+<a id="chapter-33-heading-35"></a>
+### DNS サーバの設定（DNS Server Configuration）
+
+FreeBSD のベースシステムには Unbound が含まれています。既定では、ローカルマシンに対してのみ DNS 名前解決を提供します。ベースシステムの Unbound をローカルマシン以外にも名前解決を提供するように設定することも可能ですが、そのような用途には FreeBSD Ports Collection から Unbound をインストールして対応することが推奨されます。
+
+Unbound を有効にするには、`/etc/rc.conf` に次の行を追加します。
+
+```
+local_unbound_enable="YES"
+```
+
+`/etc/resolv.conf` にすでに記載されているネームサーバは、新しい Unbound の設定内でフォワーダ（forwarder）として構成されます。
+
+> **注記（NOTE）**: 記載されているネームサーバの中に DNSSEC に対応していないものがあると、ローカルの DNS 名前解決は失敗します。各ネームサーバを必ずテストし、テストに失敗するものは取り除いてください。次のコマンドを実行すると、`192.168.1.1` で稼働しているネームサーバの信頼ツリー（trust tree）または失敗結果が表示されます。
+>
+> ```shell
+> % drill -S FreeBSD.org @192.168.1.1
+> ```
+
+すべてのネームサーバが DNSSEC に対応していることを確認したら、Unbound を起動します。
+
+```shell
+# service local_unbound onestart
+```
+
+これにより `/etc/resolv.conf` が自動的に更新され、DNSSEC で保護されたドメインへの問い合わせが機能するようになります。たとえば、次のように実行して `FreeBSD.org` の DNSSEC 信頼ツリーを検証できます。
+
+```shell
+% drill -S FreeBSD.org
+;; Number of trusted keys: 1
+;; Chasing: freebsd.org. A
+
+DNSSEC Trust tree:
+freebsd.org. (A)
+|---freebsd.org. (DNSKEY keytag: 36786 alg: 8 flags: 256)
+    |---freebsd.org. (DNSKEY keytag: 32659 alg: 8 flags: 257)
+    |---freebsd.org. (DS keytag: 32659 digest type: 2)
+        |---org. (DNSKEY keytag: 49587 alg: 7 flags: 256)
+            |---org. (DNSKEY keytag: 9795 alg: 7 flags: 257)
+            |---org. (DNSKEY keytag: 21366 alg: 7 flags: 257)
+            |---org. (DS keytag: 21366 digest type: 1)
+            |   |---. (DNSKEY keytag: 40926 alg: 8 flags: 256)
+            |       |---. (DNSKEY keytag: 19036 alg: 8 flags: 257)
+            |---org. (DS keytag: 21366 digest type: 2)
+                |---. (DNSKEY keytag: 40926 alg: 8 flags: 256)
+                    |---. (DNSKEY keytag: 19036 alg: 8 flags: 257)
+;; Chase successful
+```
+
+<a id="chapter-33-heading-36"></a>
+### 権威ネームサーバの設定（Authoritative Name Server Configuration）
+
+FreeBSD のベースシステムには権威ネームサーバ用のソフトウェアは含まれていません。権威ネームサーバを運用する場合は、`dns/nsd` や `dns/bind918` などのサードパーティ製アプリケーションをパッケージまたは Port からインストールしてください。
+
+<a id="network-zeroconf"></a>
+## ゼロコンフィギュレーションネットワーキング（mDNS/DNS-SD）
+
+[ゼロコンフィギュレーションネットワーキング](https://en.wikipedia.org/wiki/Zero-configuration_networking)（*Zeroconf* とも呼ばれます）は、ネットワーク設定を簡素化する一連の技術です。Zeroconf の主な構成要素は次のとおりです。
+
+* Link-Local Addressing: 数値のネットワークアドレス（IP アドレス）を自動的に割り当てる仕組み。
+* Multicast DNS（*mDNS*）: ホスト名の配信と名前解決を自動的に行う仕組み。
+* DNS-Based Service Discovery（*DNS-SD*）: サービスインスタンスを自動的に発見する仕組み。
+
+<a id="chapter-33-heading-38"></a>
+### Avahi の設定と起動（Configuring and Starting Avahi）
+
+Zeroconf の代表的な実装の 1 つが [Avahi](https://avahi.org/) です。Avahi は次のコマンドでインストールおよび設定できます。
+
+```shell
+# pkg install avahi-app nss_mdns
+# grep -q '^hosts:.*\<mdns\>' /etc/nsswitch.conf || sed -i "" 's/^hosts: .*/& mdns/' /etc/nsswitch.conf
+# service dbus enable
+# service avahi-daemon enable
+# service dbus start
+# service avahi-daemon start
+```
