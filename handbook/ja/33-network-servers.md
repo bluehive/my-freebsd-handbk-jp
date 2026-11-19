@@ -1793,3 +1793,164 @@ Django の使い方の詳細は [https://docs.djangoproject.com](https://docs.dj
 Ruby on Rails もフルスタックの開発環境を提供するオープンソースの Web フレームワークです。Web 開発者の生産性を高め、強力なアプリケーションを素早く開発できるよう最適化されています。FreeBSD では、`www/rubygem-rails` のパッケージまたは Port を使ってインストールできます。
 
 Ruby on Rails の使い方の詳細は [http://guides.rubyonrails.org](http://guides.rubyonrails.org) を参照してください。
+
+<a id="network-ftp"></a>
+## File Transfer Protocol（FTP）
+
+File Transfer Protocol（FTP）は、FTP サーバとの間でファイルを送受信するためのシンプルな手段をユーザーに提供します。FreeBSD のベースシステムには FTP サーバソフトウェア `ftpd` が含まれています。
+
+FreeBSD には、FTP サーバへのアクセスを制御するための設定ファイルがいくつか用意されています。この節ではそれらの概要を説明します。組み込み FTP サーバの詳細は `ftpd(8)` を参照してください。
+
+<a id="chapter-33-heading-51"></a>
+### 設定（Configuration）
+
+設定の中で最も重要なのは、どのアカウントに FTP サーバへのアクセスを許可するかを決めることです。FreeBSD システムには、FTP アクセスを許可すべきではないシステムアカウントが多数存在します。FTP アクセスを一切禁止するユーザーの一覧は `/etc/ftpusers` に記載されており、既定ではシステムアカウントが含まれています。これ以外にも FTP アクセスを許可しないユーザーを追加できます。
+
+場合によっては、FTP の利用を完全に禁止するのではなく、一部ユーザーのアクセス範囲だけを制限したいことがあります。その場合は、`ftpchroot(5)` に記載されているとおり `/etc/ftpchroot` を作成します。このファイルには、FTP アクセス制限の対象となるユーザーとグループを列挙します。
+
+サーバへの匿名（anonymous）FTP アクセスを有効にするには、FreeBSD システム上に `ftp` という名前のユーザーを作成します。これにより、ユーザーは `ftp` または `anonymous` というユーザー名で FTP サーバへログインできるようになります。パスワードの入力を求められた際はどのような入力でも受け付けられますが、慣例としてパスワードにはメールアドレスを入力します。匿名ユーザーがログインすると、FTP サーバは `chroot(2)` を呼び出し、アクセス範囲を `ftp` ユーザーのホームディレクトリ内だけに制限します。
+
+FTP クライアントへ表示するウェルカムメッセージを指定するために作成できるテキストファイルが 2 つあります。`/etc/ftpwelcome` の内容は、ログインプロンプトに到達する前にユーザーへ表示されます。ログインが成功したあとは、`/etc/ftpmotd` の内容が表示されます。このファイルのパスはログイン環境に相対的であるため、匿名ユーザーに対しては `~ftp/etc/ftpmotd` の内容が表示される点に注意してください。
+
+FTP サーバの設定が完了したら、システム起動時にサービスを開始するよう `/etc/rc.conf` に適切な変数を設定します。
+
+```
+ftpd_enable="YES"
+```
+
+今すぐサービスを起動するには、次のように実行します。
+
+```shell
+# service ftpd start
+```
+
+次のコマンドを入力して FTP サーバへの接続をテストします。
+
+```shell
+% ftp localhost
+```
+
+`ftpd` デーモンはメッセージの記録に `syslog(3)` を使用します。既定では、システムログデーモンは FTP 関連のメッセージを `/var/log/xferlog` に書き込みます。FTP ログの出力先は、`/etc/syslog.conf` の次の行を変更することで変更できます。
+
+```
+ftp.info      /var/log/xferlog
+```
+
+> **注記（NOTE）**: 匿名 FTP サーバの運用に伴う潜在的な問題に注意してください。特に、匿名ユーザーによるファイルのアップロードを許可するかどうかは慎重に検討する必要があります。無許可の商用ソフトウェアやさらに悪質なデータのやり取りの場として FTP サイトが悪用されるおそれがあるためです。匿名 FTP でのアップロードが必要な場合は、管理者が確認するまで他の匿名ユーザーがそのファイルを読み取れないようパーミッションを設定してください。
+
+<a id="network-samba"></a>
+## Microsoft® Windows® クライアント向けファイル／プリントサービス（Samba）
+
+Samba は、SMB/CIFS プロトコルを使ってファイルサービスとプリントサービスを提供する人気のオープンソースソフトウェアパッケージです。このプロトコルは Microsoft® Windows® システムに標準で組み込まれています。Microsoft® Windows® 以外のシステムでも、Samba クライアントライブラリをインストールすることで利用できるようになります。このプロトコルにより、クライアントは共有されたデータやプリンタへアクセスできます。これらの共有リソースはローカルのディスクドライブとして割り当てたり、共有プリンタをローカルプリンタであるかのように使ったりできます。
+
+FreeBSD では、`net/samba416` の Port またはパッケージを使って Samba クライアントライブラリをインストールできます。クライアントを導入すると、FreeBSD システムから Microsoft® Windows® ネットワーク上の SMB/CIFS 共有へアクセスできるようになります。
+
+同じ `net/samba416` の Port またはパッケージをインストールすることで、FreeBSD システムを Samba サーバとして構成することもできます。これにより、管理者は FreeBSD システム上に SMB/CIFS 共有を作成し、Microsoft® Windows® や Samba クライアントライブラリを実行しているクライアントからアクセスさせることが可能になります。
+
+<a id="chapter-33-heading-53"></a>
+### サーバの設定（Server Configuration）
+
+Samba の設定は `/usr/local/etc/smb4.conf` で行います。Samba を使う前にこのファイルを作成しておく必要があります。
+
+ワークグループ内の Windows® クライアントとディレクトリやプリンタを共有するためのシンプルな `smb4.conf` の例を次に示します。LDAP や Active Directory を含むより複雑な構成では、`samba-tool(8)` を使って初期の `smb4.conf` を生成するほうが簡単です。
+
+```
+[global]
+workgroup = WORKGROUP
+server string = Samba Server Version %v
+netbios name = ExampleMachine
+wins support = Yes
+security = user
+passdb backend = tdbsam
+
+# Example: share /usr/src accessible only to 'developer' user
+[src]
+path = /usr/src
+valid users = developer
+writable  = yes
+browsable = yes
+read only = no
+guest ok = no
+public = no
+create mask = 0666
+directory mask = 0755
+```
+
+<a id="chapter-33-heading-54"></a>
+#### グローバル設定（Global Settings）
+
+ネットワーク全体に関する設定は `/usr/local/etc/smb4.conf` に記述します。
+
+* `workgroup`
+
+  サービスを提供するワークグループの名前です。
+
+* `netbios name`
+
+  Samba サーバを識別するための NetBIOS 名です。既定では、ホストの DNS 名の先頭要素と同じになります。
+
+* `server string`
+
+  `net view` の出力など、サーバの説明テキストを表示しようとする各種ネットワークツールで表示される文字列です。
+
+* `wins support`
+
+  Samba を WINS サーバとして動作させるかどうかを指定します。同じネットワーク上の 2 台以上のサーバで WINS サポートを有効にしないでください。
+
+<a id="chapter-33-heading-55"></a>
+#### セキュリティ設定（Security Settings）
+
+`/usr/local/etc/smb4.conf` において最も重要な設定は、セキュリティモデルとバックエンドのパスワード形式です。これらの設定は次のディレクティブで制御します。
+
+* `security`
+
+  クライアントが FreeBSD マシン上のユーザー名と同じユーザー名を使う場合は、ユーザーレベルのセキュリティを使用する必要があります。`security = user` が既定のセキュリティポリシーであり、共有リソースへアクセスする前にクライアントへログインを要求します。
+
+  `security` オプションで指定できるその他の設定については、`smb.conf(5)` を参照してください。
+
+* `passdb backend`
+
+  Samba には複数のバックエンド認証モデルがあります。クライアントは LDAP、NIS+、SQL データベース、または専用のパスワードファイルなどで認証できます。推奨される認証方式である `tdbsam` は小規模・単純なネットワークに最適であり、ここではこの方式を扱います。より大規模または複雑なネットワークでは `ldapsam` が推奨されます。かつての既定値であった `smbpasswd` は現在では時代遅れ（obsolete）となっています。
+
+<a id="chapter-33-heading-56"></a>
+#### Samba ユーザー（Samba Users）
+
+Windows® クライアントが共有にアクセスできるようにするには、FreeBSD のユーザーアカウントを `SambaSAMAccount` データベースへ登録（マッピング）する必要があります。既存の FreeBSD ユーザーアカウントを登録するには、`pdbedit(8)` を使用します。
+
+```shell
+# pdbedit -a -u username
+```
+
+この節では最もよく使われる設定項目のみを取り上げました。利用可能な設定オプションの詳細は、[Official Samba Wiki](https://wiki.samba.org) を参照してください。
+
+<a id="chapter-33-heading-57"></a>
+### Samba の起動（Starting Samba）
+
+起動時に Samba を有効にするには、`/etc/rc.conf` に次の行を追加します。
+
+```
+samba_server_enable="YES"
+```
+
+今すぐ Samba を起動するには、次のように実行します。
+
+```shell
+# service samba_server start
+Performing sanity check on Samba configuration: OK
+Starting nmbd.
+Starting smbd.
+```
+
+Samba は 3 つの独立したデーモンで構成されています。`nmbd` と `smbd` の両デーモンは `samba_enable` によって起動されます（訳注: 直前の `/etc/rc.conf` の設定例にあるとおり、Samba 4 系ポートの `rc.d` 変数名は `samba_server_enable` です）。`winbind` による名前解決も必要な場合は、次を設定します。
+
+```
+winbindd_enable="YES"
+```
+
+Samba はいつでも次のコマンドで停止できます。
+
+```shell
+# service samba_server stop
+```
+
+Samba は、Microsoft® Windows® ネットワークと幅広く統合できる機能を備えた多機能なソフトウェアスイートです。ここで説明した基本設定を超える機能の詳細については、[https://www.samba.org](https://www.samba.org) を参照してください。

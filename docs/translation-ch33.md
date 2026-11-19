@@ -34,8 +34,8 @@
 - [x] `#network-dns`（Domain Name System (DNS)）
 - [x] `#network-zeroconf`（Zeroconf）
 - [x] `#network-apache`（Apache HTTP Server）
-- [ ] `#network-ftp`（File Transfer Protocol (FTP)）
-- [ ] `#network-samba`（File and Print Services for Microsoft Windows Clients (Samba)）
+- [x] `#network-ftp`（File Transfer Protocol (FTP)）
+- [x] `#network-samba`（File and Print Services for Microsoft Windows Clients (Samba)）
 - [ ] `#network-ntp`（Clock Synchronization with NTP）
 - [ ] `#network-iscsi`（iSCSI Initiator and Target Configuration）
 - [ ] 全節自己校正・最終検査
