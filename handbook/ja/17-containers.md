@@ -283,3 +283,310 @@ Swap: 10G Total, 219M Used, 10G Free, 2% Inuse
 24414 root          1   3    0    15M  2992K CPU0     0   0:00   0.00% top
 # exit
 ```
+
+<a id="containers-terminal-tour"></a>
+## コンテナのインポートと実行
+
+> **注**: 現時点では、FreeBSD jail の仕様上、FreeBSD 上のすべての Podman コンテナは root として実行する必要があります。
+
+必要なツールとファイアウォールルールが整ったら、公式に公開されているイメージを [FreeBSD Releases](https://download.freebsd.org/releases/OCI-IMAGES/) から、環境に応じて [aarch64](https://download.freebsd.org/releases/OCI-IMAGES/15.1-RELEASE/aarch64/Latest/) または [amd64](https://download.freebsd.org/releases/OCI-IMAGES/15.1-RELEASE/amd64/Latest/) 向けに取得できます。
+
+<a id="containers-importing"></a>
+### FreeBSD OCI イメージのインポート
+
+前述のとおり、公開コンテナレジストリから直接イメージをプルするのが最も手軽ですが、最も強固な信頼の連鎖を確保したい場合は、[FreeBSD.org](https://download.freebsd.org/releases) から直接ダウンロードし、PGP 署名済みのリリースアナウンスと照合してチェックサムを検証してください。
+
+```shell
+# export OCIBASE=https://download.freebsd.org/releases/OCI-IMAGES/{rel-latest}-RELEASE/amd64/Latest
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-static.txz
+Getting image source signatures
+Copying blob 44defc6cee2e done   |
+Copying config 5921c62e76 done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-static:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-dynamic.txz
+Getting image source signatures
+Copying blob 6054dffc3887 done   |
+Copying config 33427d59f9 done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-dynamic:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-runtime.txz
+Getting image source signatures
+Copying blob dcbbfcb598fe done   |
+Copying config 90c4936754 done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-runtime:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-notoolchain.txz
+Getting image source signatures
+Copying blob a16c94176cc3 done   |
+Copying config 086572f35c done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-notoolchain:{rel-latest}-RELEASE-amd64
+
+# podman load -i=$OCIBASE/FreeBSD-{rel-latest}-RELEASE-amd64-container-image-toolchain.txz
+Getting image source signatures
+Copying blob b04531b7d93d done   |
+Copying config b927c11b2e done   |
+Writing manifest to image destination
+Loaded image: localhost/freebsd-toolchain:{rel-latest}-RELEASE-amd64
+```
+
+<a id="containers-listing"></a>
+### イメージの一覧表示
+
+```shell
+# podman images
+REPOSITORY                    TAG                   IMAGE ID      CREATED       SIZE
+localhost/freebsd-toolchain   {rel-latest}-RELEASE-amd64  b927c11b2e8d  13 days ago   660 MB
+localhost/freebsd-notoolchain {rel-latest}-RELEASE-amd64  086572f35cc9  13 days ago   152 MB
+localhost/freebsd-runtime     {rel-latest}-RELEASE-amd64  90c493675429  13 days ago   34.1 MB
+localhost/freebsd-dynamic     {rel-latest}-RELEASE-amd64  33427d59f990  13 days ago   14.5 MB
+localhost/freebsd-static      {rel-latest}-RELEASE-amd64  5921c62e76c1  13 days ago   2.92 MB
+```
+
+イメージ ID は毎回再現性があり、`IMAGE_ID` 列の値はイメージをインポートした際に表示されたハッシュと一致します。
+
+<a id="containers-listing-layers"></a>
+### レイヤーの一覧表示
+
+イメージを構成するレイヤーを表示できます。次の例では、`runtime` イメージが 3 つの要素から成り、それぞれが独立したレイヤーになっていることがわかります。
+
+```shell
+# podman image tree ghcr.io/freebsd/freebsd-runtime:14.2
+Image ID: c5f3e77557a9
+Tags:     [ghcr.io/freebsd/freebsd-runtime:14.2]
+Size:     35.07MB
+Image Layers
+├── ID: cd53fb07fb66 Size: 5.449MB Top Layer of: [ghcr.io/freebsd/freebsd-static:14.2]
+├── ID: a01d37f7777b Size:  10.4MB Top Layer of: [ghcr.io/freebsd/freebsd-dynamic:14.2]
+└── ID: 36b0c80ca1f7 Size: 19.21MB Top Layer of: [ghcr.io/freebsd/freebsd-runtime:14.2]
+```
+
+<a id="containers-public-registries"></a>
+### 公開レジストリの利用
+
+最も安全な出所確認方法は [Official FreeBSD Releases](https://download.freebsd.org/releases) からダウンロードすることですが、FreeBSD リリースチームおよびクラスタ管理チームが管理する 2 つの公開コンテナレジストリも用意されています。
+どちらのレジストリにあるイメージも同一ですが、よりシンプルでコンテナ向けのワークフローを利用できます。
+
+* [Docker Hub](https://hub.docker.com/u/freebsd)
+* [GitHub Container Registry](https://github.com/orgs/freebsd/packages)
+
+<a id="containers-fetching"></a>
+### コンテナイメージの取得
+
+公開レジストリからイメージを取得するには `podman pull` を使用します。
+
+```shell
+# podman pull ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+Trying to pull ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}...
+Getting image source signatures
+Copying blob 711cf0d3c0ef done   |
+Copying config 086572f35c done   |
+Writing manifest to image destination
+086572f35cc90b1a1d2b7904b63e8a849071b4ba89b15492f6da47a802372aa2
+```
+
+<a id="containers-running"></a>
+### コンテナの実行
+
+コンテナを起動するには `podman run` を使用します。
+`-it` フラグは対話型端末を割り当て、`--rm` は終了時にコンテナを削除します。
+コマンドを指定しない場合は、イメージのデフォルトエントリポイントが実行されます。
+
+```shell
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest}
+# exit
+```
+
+特定のコマンドを指定して実行することもできます。
+
+```shell
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest} uname -a
+FreeBSD c0038de70651 {rel-latest}-RELEASE FreeBSD {rel-latest}-RELEASE releng/{rel-latest}-n283562-96841ea08dcf GENERIC amd64
+```
+
+コンテナイメージにはカーネルが含まれないため、`freebsd-version(1)` を実行すると、稼働中のカーネルとインストールされているユーザーランドで異なる結果が表示されます。
+次の例では、15.1-RELEASE ホスト上で 15.0-RELEASE のコンテナを実行しています。
+
+```shell
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest-previous} /bin/sh
+# freebsd-version -ru
+{rel-latest}-RELEASE
+{rel-latest-previous}-RELEASE
+# exit
+```
+
+<a id="containers-variations"></a>
+## 便利な応用例とヒント
+
+`podman run ...` のパラメータのほとんどは `podman build` でもそのまま利用できます。
+詳細は `podman-run(1)` および `podman-build(1)` の man ページを参照してください。
+
+短命（ephemeral）なコンテナを終了後に自動クリーンアップするには、`--rm` フラグを使用します。
+
+ダウンロード済みのすべてのイメージを表示するには `podman images -a` を使用します。
+
+```shell
+# podman images -a
+REPOSITORY                       TAG            IMAGE ID      CREATED      SIZE
+ghcr.io/freebsd/freebsd-runtime  {rel-latest}   90c493675429  2 weeks ago  34.1 MB
+```
+
+実行中のコンテナを確認するには `podman ps -a` を使用します。
+
+```shell
+# podman ps -a
+CONTAINER ID  IMAGE                                          COMMAND  CREATED        STATUS        NAMES
+3123623bef9b  ghcr.io/freebsd/freebsd-runtime:{rel-latest}   /bin/sh  4 minutes ago  Up 4 minutes  admiring_brattain
+```
+
+<a id="containers-env-vars"></a>
+### 環境変数
+
+Podman は、各コンテナ内にいくつかのデフォルト環境変数を設定します。
+
+```shell
+# podman run -it --rm ghcr.io/freebsd/freebsd-notoolchain:{rel-latest} /usr/bin/env
+container=podman
+TERM=xterm
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOME=/root
+HOSTNAME=60bae3343e6b
+```
+
+`HOSTNAME` にはデフォルトでコンテナ ID が設定されます。
+コンテナ内のアプリケーションに安定したホスト名や意味のあるホスト名が必要な場合は、`--hostname` で上書きできます。
+
+任意の環境変数は `--env` で渡すことができます。
+
+```shell
+# podman run --env FOO=BAR -it --rm ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+# echo $FOO
+BAR
+```
+
+<a id="containers-volumes"></a>
+### ファイルとボリュームのマウント
+
+ファイルもボリュームも、`--volume` を使ってコンテナへ渡すことができます。
+たとえば、`runtime` イメージには `which(1)` が含まれていません。
+
+```shell
+# podman run -it --rm ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+# which
+/bin/sh: which: not found
+```
+
+ホストからコンテナ内へマウントして利用できます。
+
+```shell
+# podman run -it --rm --volume /usr/bin/which:/usr/bin/which \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+# which which
+/usr/bin/which
+```
+
+`freebsd-static` のような軽量イメージでは、ホストに既存の `pkg-static(8)` をマウントすることでコンテナ内に `pkg(8)` をブートストラップできます。
+`--volume /var/cache/pkg` でホストのパッケージキャッシュを共有すれば、取得済みパッケージの再ダウンロードを避けられるため、複数のコンテナをビルドする際に特に有用です。
+`--no-hosts` フラグは `/etc/hosts` のマウントを抑止し、パッケージのアップグレードと競合するのを防ぎます。
+
+> **注**: パッケージはバージョン固有であるため、パッケージキャッシュの共有はホストとコンテナが同じ FreeBSD メジャーバージョンで動作している場合にのみ機能します。
+
+```shell
+# podman run -it --rm \
+    --env ASSUME_ALWAYS_YES=true \
+    --no-hosts \
+    --volume /usr/local/sbin/pkg-static:/bin/pkg-static \
+    --volume /var/cache/pkg \
+    ghcr.io/freebsd/freebsd-static:{rel-latest}
+# pkg-static bootstrap -r FreeBSD
+Bootstrapping pkg from pkg+https://pkg.FreeBSD.org/FreeBSD:14:amd64/latest, please wait...
+Verifying signature with trusted certificate pkg.freebsd.org.2013102301... done
+[fd343e182fa5] Installing pkg-2.1.2...
+[fd343e182fa5] Extracting pkg-2.1.2: 100%
+```
+
+> **訳注**: 上記の出力例は固定原文のまま保持しています。コマンド行は `{rel-latest}`（15.1）を使用していますが、出力例は FreeBSD 14 環境で取得された内容になっています。
+
+ホスト上のファイルやディレクトリもコンテナ内へマウントできます。
+
+```shell
+# podman run -it --rm \
+    --volume /etc/fstab:/etc/fstab \
+    --volume /tmp:/var/tmp \
+    --volume /tmp \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest}
+```
+
+<a id="containers-inspecting"></a>
+### イメージ内容の調査
+
+シェルやツールを持たない最小イメージを含め、任意のイメージ内の全ファイルを一覧表示するには、コンテナのファイルシステムをエクスポートして内容を表示します。
+
+```shell
+# podman export $(podman create --rm ghcr.io/freebsd/freebsd-static:{rel-latest} /) | tar tf -
+```
+
+コンテナイメージ自体には `pkg(8)` が含まれていませんが、ホストから `pkg-static(8)` をマウントして、インストール済みのベースシステムパッケージを照会できます。
+パッケージ名の一覧を表示するには `pkg info -q`、パッケージが所有するすべてのファイルを表示するには `pkg info -ql` を使用します。
+
+```shell
+# podman run --rm \
+    -v /usr/local/sbin/pkg-static:/pkg \
+    ghcr.io/freebsd/freebsd-runtime:{rel-latest} /pkg info -q
+FreeBSD-audit-lib-{rel-latest}
+FreeBSD-bzip2-lib-{rel-latest}
+FreeBSD-certctl-{rel-latest}
+FreeBSD-clibs-{rel-latest}
+FreeBSD-fetch-{rel-latest}
+FreeBSD-kerberos-lib-{rel-latest}
+FreeBSD-libarchive-{rel-latest}
+FreeBSD-libcasper-{rel-latest}
+FreeBSD-libexecinfo-{rel-latest}
+FreeBSD-libucl-{rel-latest}
+FreeBSD-mtree-{rel-latest}
+FreeBSD-ncurses-lib-{rel-latest}
+FreeBSD-openssl-{rel-latest}
+FreeBSD-openssl-lib-{rel-latest}
+FreeBSD-pam-lib-{rel-latest}
+FreeBSD-pkg-bootstrap-{rel-latest}
+FreeBSD-rc-{rel-latest}
+FreeBSD-runtime-{rel-latest}
+FreeBSD-xz-lib-{rel-latest}
+FreeBSD-zlib-{rel-latest}
+FreeBSD-zoneinfo-{rel-latest}
+FreeBSD-zstd-lib-{rel-latest}
+```
+
+ホストとコンテナで異なる FreeBSD メジャーバージョンが動作している場合、`pkg(8)` はコンテナ内の `/bin/sh` を調べて ABI を検出し、不一致について警告を表示します。
+
+```shell
+# podman run -it --rm \
+    --env ASSUME_ALWAYS_YES=true \
+    --no-hosts \
+    --volume /usr/local/sbin/pkg-static:/usr/sbin/pkg \
+    --volume /var/cache/pkg \
+    ghcr.io/freebsd/freebsd-runtime:14.4 /bin/sh
+# pkg bootstrap
+pkg: Warning: Major OS version upgrade detected.  Running "pkg bootstrap -f" recommended
+```
+
+`freebsd-dynamic` のように `/bin/sh` を持たないイメージでは、`pkg-static(8)` はシステムの ABI をまったく検出できません。
+
+<a id="containers-name-resolution"></a>
+## ネットワークと名前解決
+
+デフォルトでは、Podman ツール群は `mount_nullfs(8)` を使用して、jail ホストから `/etc/resolv.conf` と加工済みの `/etc/hosts`、さらに `/var/run` 内に `.containerenv` ファイルをマウントします。
+
+この hosts ファイルはベースシステムパッケージのアップグレードと競合するため、`podman build` の実行時はマウントをスキップし、本番デプロイ時のみ有効にしておくことが推奨されます。
+
+```shell
+# podman run --dns 1.2.3.4 ...
+# podman build --no-hosts ...
+```
+
+`--dns` フラグは、ホストの `/etc/resolv.conf` をマウントする代わりに任意の DNS サーバを指定します。
+`--no-hosts` フラグは、ホストからの `/etc/hosts` マウントを抑止します。
