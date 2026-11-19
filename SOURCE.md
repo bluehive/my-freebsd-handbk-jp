@@ -148,3 +148,7 @@
 ## 公式Appendix C（Resources on the Internet）の意訳用スナップショット
 
 2026-11-20に、公式Appendix C Resources on the Internet（`documentation/content/en/books/handbook/eresources/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/appC/C-eresources.adoc.txt`（9853バイト、SHA-256: `d4b2b63ce017b73f720be55668257a544c214a674005f41669867aeab4efb1b6`）、出典・進捗は [マニフェスト](docs/translation-appC.json)と[作業記録](docs/translation-appC.md)に保存しています。既存TOCのID Cに対応します。メーリングリスト属性および外部記事リンクは、同じ固定コミットの `shared/en/mailing-lists.adoc` と `shared/en/urls.adoc` を参照して解決しています。
+
+## 公式Chapter 32（Electronic Mail）の意訳用スナップショット
+
+2026-11-20に、公式Chapter 32 Electronic Mail（`documentation/content/en/books/handbook/mail/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch32/32-mail.adoc.txt`（38378バイト、SHA-256: `68acd6aa52ac7a2ca5abaf5a9ae4ecadf6277a9cf17675212f09858b83f39385`）、出典・進捗は [マニフェスト](docs/translation-ch32.json)と[作業記録](docs/translation-ch32.md)に保存しています。既存TOCのID 31に対応します。画像は同じ固定コミットの `documentation/static/images/books/handbook/mail/`（8枚）を参照します。

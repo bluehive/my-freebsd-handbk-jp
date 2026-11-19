@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch32/32-mail.adoc.txt",
       "translation_path": "handbook/ja/32-mail.md",
       "source_sha256": "68acd6aa52ac7a2ca5abaf5a9ae4ecadf6277a9cf17675212f09858b83f39385",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft in progress; source pinned and structure analyzed",
+      "status": "translated",
+      "reviewed_at": "2026-11-20",
+      "review": "Interpretive translation self-checked against all 22 headings, 22 anchors, 49 code blocks, 8 images, and all cross-references in the pinned source; /etc/sendmail.cf path discrepancy annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 22,
         "anchors": 22,

@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Chapter 32 Electronic Mail（既存TOC ID 31）を意訳
+
+- 公式Chapter 32 [Electronic Mail](handbook/ja/32-mail.md)（既存TOC ID 31）を追加し、`handbook/TOC.md` と `SOURCE.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全22見出し・22アンカー・49コード例・8画像・全相互参照を意訳・自己校正しました。
+- 原文のコマンド・設定例・表記（`/etc/sendmail.cf` 等）はそのまま保持し、FreeBSD の標準パスとの差異は訳注で区別しています。
+- [作業記録](docs/translation-ch32.md) / [原文ハッシュと状態](docs/translation-ch32.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Appendix C Resources on the Internet（既存TOC ID C）を意訳
 
 - 公式Appendix C [Resources on the Internet](handbook/ja/C-eresources.md)（既存TOC ID C）を追加し、`handbook/TOC.md` を更新しました。
