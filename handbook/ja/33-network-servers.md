@@ -3,7 +3,7 @@
 
 本ファイルは、[FreeBSD Handbook（英語）](https://docs.freebsd.org/en/books/handbook/network-servers/)の「Chapter 33. Network Servers」を、[freebsd/freebsd-doc](https://github.com/freebsd/freebsd-doc) の固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`（`documentation/content/en/books/handbook/network-servers/_index.adoc`）に基づいて日本語へ意訳したものです。
 
-> **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。本ファイルは章単位の作業中ドラフトであり、コマンド例・設定例は原文のまま保持しています（実機検証・第三者専門校閲は未実施）。
+> **訳注**: 原文の AsciiDoc フロントマターおよび文書属性・共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しています。コマンド例・設定例・出力例は原文のまま保持しています（FreeBSD 実機での動作確認および第三者による専門校閲は未実施）。
 
 <a id="network-servers-synopsis"></a>
 ## 概要（Synopsis）
@@ -110,9 +110,9 @@ server-program-arguments
 
   設定例は `fingerd(8)` の既定エントリで確認できます。
 
-  ```
-  finger stream  tcp     nowait/3/10 nobody /usr/libexec/fingerd fingerd -k -s
-  ```
+```
+finger stream  tcp     nowait/3/10 nobody /usr/libexec/fingerd fingerd -k -s
+```
 
 * `user`: デーモンを実行するユーザー名です。通常は `root`、`daemon`、`nobody` のいずれかで実行します。
 * `server-program`: デーモンのフルパスです。`inetd` が内部で提供するサービスの場合は `internal` を指定します。
@@ -600,24 +600,24 @@ FreeBSD マシンを NIS クライアントとして構成する手順は次の�
 
 1. `/etc/rc.conf` を編集し、NIS ドメイン名を設定してネットワーク起動時に `ypbind(8)` を起動するため、次の行を追加します。
 
-   ```
-   nisdomainname="test-domain"
-   nis_client_enable="YES"
-   ```
+```
+nisdomainname="test-domain"
+nis_client_enable="YES"
+```
 
 2. NIS サーバから利用可能なすべてのパスワードエントリを取り込むため、`vipw` を使って `/etc/master.passwd` から 1 つを除いてすべてのユーザーアカウントを削除します。アカウントを削除する際は、少なくとも 1 つのローカルアカウントを残し、そのアカウントが `wheel` グループに所属しているようにしてください。NIS に問題が発生した場合でも、このローカルアカウントを使ってリモートログインし、スーパーユーザーになって問題を修復できます。編集を保存する前に、ファイルの末尾へ次の行を追加します。
 
-   ```
-   +:::::::::
-   ```
+```
++:::::::::
+```
 
    この行により、NIS サーバのパスワードマップに有効なアカウントを持つすべてのユーザーに対して、クライアント上でもアカウントが提供されるようになります。この行を書き換えることで NIS クライアントの挙動をさまざまに制御できます。その 1 つの方法が [ネットグループの利用（Using Netgroups）](#network-netgroups) で説明されています。さらに詳しくは、O'Reilly Media 刊の書籍『`Managing NFS and NIS`』を参照してください。
 
 3. NIS サーバから利用可能なすべてのグループエントリを取り込むため、`/etc/group` に次の行を追加します。
 
-   ```
-   +:*::
-   ```
+```
++:*::
+```
 
 すぐに NIS クライアントを起動するには、スーパーユーザーとして次のコマンドを実行します。
 
@@ -1284,7 +1284,7 @@ DHCP クライアントのサポートは FreeBSD インストーラに組み込
 ifconfig_fxp0="DHCP"
 ```
 
-インストール時に DHCP を使うよう設定した場合は、この行がすでに存在していることがあります。これらの例における *fxp0* は、[ネットワークインターフェイスカードの設定](13-config.md#config-network-setup)で説明されているとおり、動的設定を行いたいインターフェイス名に置き換えてください。
+インストール時に DHCP を使うよう設定した場合は、この行がすでに存在していることがあります。これらの例における *fxp0* は、[ネットワークインターフェイスカードの設定](https://docs.freebsd.org/en/books/handbook/network/#config-network-setup)で説明されているとおり、動的設定を行いたいインターフェイス名に置き換えてください（訳注: 原文の相互参照先は `config` 章になっていますが、上流で独立した `network` 章へ移設されており、本リポジトリでは未翻訳のため公式英語版へリンクしています）。
 
 代わりに同期モードを使い、DHCP が完了するまで起動時に待機させるには、`"SYNCDHCP"` を指定します。
 
@@ -1448,10 +1448,10 @@ local_unbound_enable="YES"
 `/etc/resolv.conf` にすでに記載されているネームサーバは、新しい Unbound の設定内でフォワーダ（forwarder）として構成されます。
 
 > **注記（NOTE）**: 記載されているネームサーバの中に DNSSEC に対応していないものがあると、ローカルの DNS 名前解決は失敗します。各ネームサーバを必ずテストし、テストに失敗するものは取り除いてください。次のコマンドを実行すると、`192.168.1.1` で稼働しているネームサーバの信頼ツリー（trust tree）または失敗結果が表示されます。
->
-> ```shell
-> % drill -S FreeBSD.org @192.168.1.1
-> ```
+
+```shell
+% drill -S FreeBSD.org @192.168.1.1
+```
 
 すべてのネームサーバが DNSSEC に対応していることを確認したら、Unbound を起動します。
 
@@ -2078,3 +2078,221 @@ set filter alive 2 permit 0/0 0/0
 詳細は `ppp(8)` の `PACKET FILTERING` セクションおよび `/usr/share/examples/ppp/` 内の設定例を参照してください。
 
 > **注記（NOTE）**: インターネットアクセスプロバイダによっては番号の小さいポートを遮断している場合があり、応答がマシンに届かないため NTP が機能しないことがあります。
+
+<a id="network-iscsi"></a>
+## iSCSI イニシエータとターゲットの設定（iSCSI Initiator and Target Configuration）
+
+iSCSI は、ネットワーク越しにストレージを共有するための仕組みです。ファイルシステムレベルで動作する NFS とは異なり、iSCSI はブロックデバイスレベルで動作します。
+
+iSCSI の用語では、ストレージを提供する側のシステムを*ターゲット（target）*と呼びます。提供するストレージには、物理ディスク全体、複数のディスクにまたがる領域、あるいは物理ディスクの一部を使用できます。たとえば、ディスクが ZFS でフォーマットされている場合は、zvol を作成して iSCSI ストレージとして利用できます。
+
+iSCSI ストレージへアクセスするクライアント側は*イニシエータ（initiator）*と呼ばれます。イニシエータから見ると、iSCSI 経由で利用可能になったストレージは LUN（Logical Unit Number）と呼ばれる未フォーマットの生のディスクとして見えます。ディスクのデバイスノードは `/dev/` 配下に現れ、個別にフォーマットとマウントを行う必要があります。
+
+FreeBSD には、カーネルベースのネイティブな iSCSI ターゲットとイニシエータが組み込まれています。この節では、FreeBSD システムをターゲットまたはイニシエータとして設定する方法を説明します。
+
+<a id="network-iscsi-target"></a>
+### iSCSI ターゲットの設定（Configuring an iSCSI Target）
+
+iSCSI ターゲットを設定するには、`/etc/ctl.conf` 設定ファイルを作成し、起動時に `ctld(8)` デーモンが自動起動するよう `/etc/rc.conf` に行を追加したうえで、デーモンを起動します。
+
+シンプルな `/etc/ctl.conf` 設定ファイルの例を次に示します。このファイルで指定できるオプションの完全な解説は `ctl.conf(5)` を参照してください。
+
+```
+portal-group pg0 {
+	discovery-auth-group no-authentication
+	listen 0.0.0.0
+	listen [::]
+}
+
+target iqn.2012-06.com.example:target0 {
+	auth-group no-authentication
+	portal-group pg0
+
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}
+```
+
+最初のエントリは `pg0` ポータルグループを定義しています。ポータルグループは、`ctld(8)` デーモンが待ち受けるネットワークアドレスを定義します。`discovery-auth-group no-authentication` という記述は、すべてのイニシエータが認証なしで iSCSI ターゲットディスカバリを実行できることを意味します。3 行目と 4 行目は、既定のポート 3260 上ですべての IPv4 アドレス（`listen 0.0.0.0`）および IPv6 アドレス（`listen [::]`）で待ち受けるよう `ctld(8)` を設定しています。
+
+`default` と呼ばれる組み込みのポータルグループがあるため、ポータルグループを独自に定義することは必須ではありません。この場合、`default` と `pg0` の違いは、`default` ではターゲットディスカバリが常に拒否されるのに対し、`pg0` では常に許可される点です。
+
+2 つ目のエントリは単一のターゲットを定義しています。「ターゲット」には iSCSI を提供するマシンを指す場合と、LUN に名前を付けたグループを指す場合の 2 通りの意味があります。この例では後者の意味で使っており、`iqn.2012-06.com.example:target0` がターゲット名になります。このターゲット名はテスト目的のものです。実際の運用では、`com.example` の部分を実際のドメイン名を逆順にしたものに書き換えてください。`2012-06` はそのドメイン名の管理権を取得した年月を表し、`target0` には任意の値を指定できます。この設定ファイルには任意の数のターゲットを定義できます。
+
+`auth-group no-authentication` 行はすべてのイニシエータが指定のターゲットへ接続できるようにし、`portal-group pg0` は `pg0` ポータルグループ経由でそのターゲットへ到達できるようにします。
+
+次のセクションでは LUN を定義しています。イニシエータからは、各 LUN が個別のディスクデバイスとして見えます。ターゲットごとに複数の LUN を定義できます。各 LUN は番号で識別され、LUN 0 は必須です。`path /data/target0-0` 行は LUN の実体となるファイルまたは zvol のフルパスを定義します。このパスは `ctld(8)` を起動する前に存在していなければなりません。2 行目は任意であり、LUN のサイズを指定します。
+
+次に、起動時に `ctld(8)` デーモンが開始されるよう `/etc/rc.conf` に次の行を追加します。
+
+```
+ctld_enable="YES"
+```
+
+今すぐ `ctld(8)` を起動するには、次のコマンドを実行します。
+
+```shell
+# service ctld start
+```
+
+`ctld(8)` デーモンは起動時に `/etc/ctl.conf` を読み込みます。デーモンの起動後にこのファイルを編集した場合は、次のコマンドを実行して変更を即座に反映させてください。
+
+```shell
+# service ctld reload
+```
+
+<a id="chapter-33-heading-66"></a>
+#### 認証（Authentication）
+
+前の例では認証を行っていないため、誰にでもすべてのターゲットへのフルアクセスを許可してしまい、本質的に安全ではありません。ターゲットへのアクセスにユーザー名とパスワードを要求するには、設定を次のように変更します。
+
+```
+auth-group ag0 {
+	chap username1 secretsecret
+	chap username2 anothersecret
+}
+
+portal-group pg0 {
+	discovery-auth-group no-authentication
+	listen 0.0.0.0
+	listen [::]
+}
+
+target iqn.2012-06.com.example:target0 {
+	auth-group ag0
+	portal-group pg0
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}
+```
+
+`auth-group` セクションでは、ユーザー名とパスワードの組を定義します。`iqn.2012-06.com.example:target0` へ接続しようとするイニシエータは、定義されたユーザー名とシークレットを先に指定する必要があります。ただし、この設定のままでは認証なしでのターゲットディスカバリは引き続き許可されています。ターゲットディスカバリにも認証を要求するには、`discovery-auth-group` に `no-authentication` ではなく定義済みの `auth-group` 名を指定してください。
+
+イニシエータごとに 1 つの公開ターゲットを定義する運用も一般的です。上記構文の省略記法として、ターゲットエントリ内にユーザー名とパスワードを直接記述することもできます。
+
+```
+target iqn.2012-06.com.example:target0 {
+	portal-group pg0
+	chap username1 secretsecret
+
+	lun 0 {
+		path /data/target0-0
+		size 4G
+	}
+}
+```
+
+<a id="network-iscsi-initiator"></a>
+### iSCSI イニシエータの設定（Configuring an iSCSI Initiator）
+
+> **注記（NOTE）**: この節で説明する iSCSI イニシエータは FreeBSD 10.0-RELEASE 以降でサポートされています。それ以前のバージョンで利用可能な iSCSI イニシエータを使う場合は、`iscontrol(8)` を参照してください。
+
+iSCSI イニシエータを利用するには、`iscsid(8)` デーモンが動作している必要があります。このデーモンは設定ファイルを使用しません。起動時に自動的に開始するには、`/etc/rc.conf` に次の行を追加します。
+
+```
+iscsid_enable="YES"
+```
+
+今すぐ `iscsid(8)` を起動するには、次のコマンドを実行します。
+
+```shell
+# service iscsid start
+```
+
+ターゲットへの接続は、`/etc/iscsi.conf` 設定ファイルを使う方法と使わない方法のどちらでも行えます。この節では両方の接続方法を紹介します。
+
+<a id="chapter-33-heading-68"></a>
+#### 設定ファイルを使わずにターゲットへ接続する（Connecting to a Target Without a Configuration File）
+
+イニシエータを単一のターゲットへ接続するには、ポータルの IP アドレスとターゲット名を指定します。
+
+```shell
+# iscsictl -A -p 10.10.10.10 -t iqn.2012-06.com.example:target0
+```
+
+接続に成功したかを確認するには、引数なしで `iscsictl` を実行します。次のような出力が表示されるはずです。
+
+```
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Connected: da0
+```
+
+この例では iSCSI セッションが正常に確立され、接続された LUN が `/dev/da0` として認識されています。`iqn.2012-06.com.example:target0` ターゲットが複数の LUN を公開している場合は、出力の該当箇所に複数のデバイスノードが表示されます。
+
+```shell
+Connected: da0 da1 da2.
+```
+
+エラーが発生した場合は、出力およびシステムログに報告されます。たとえば、次のメッセージは通常 `iscsid(8)` デーモンが動作していないことを意味します。
+
+```
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Waiting for iscsid(8)
+```
+
+次のメッセージは、IP アドレスやポート番号の誤りなどネットワーク上の問題を示唆しています。
+
+```
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.11     Connection refused
+```
+
+このメッセージは、指定したターゲット名が誤っていることを意味します。
+
+```
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Not found
+```
+
+このメッセージは、ターゲット側で認証が要求されていることを意味します。
+
+```
+Target name                                     Target portal   State
+iqn.2012-06.com.example:target0                 10.10.10.10     Authentication failed
+```
+
+CHAP のユーザー名とシークレットを指定するには、次の構文を使います。
+
+```shell
+# iscsictl -A -p 10.10.10.10 -t iqn.2012-06.com.example:target0 -u user -s secretsecret
+```
+
+<a id="chapter-33-heading-69"></a>
+#### 設定ファイルを使ってターゲットへ接続する（Connecting to a Target with a Configuration File）
+
+設定ファイルを使って接続するには、次のような内容で `/etc/iscsi.conf` を作成します。
+
+```
+t0 {
+	TargetAddress   = 10.10.10.10
+	TargetName      = iqn.2012-06.com.example:target0
+	AuthMethod      = CHAP
+	chapIName       = user
+	chapSecret      = secretsecret
+}
+```
+
+`t0` は設定ファイル内のセクションに対するニックネームを指定しています。イニシエータがどの設定を使うかを指定する際にこの名前を用います。残りの行では接続時に使用するパラメータを指定します。`TargetAddress` と `TargetName` は必須で、それ以外のオプションは任意です。この例では CHAP のユーザー名とシークレットも記載しています。
+
+定義したターゲットへ接続するには、ニックネームを指定します。
+
+```shell
+# iscsictl -An t0
+```
+
+あるいは、設定ファイル内に定義されたすべてのターゲットへ接続するには、次のように実行します。
+
+```shell
+# iscsictl -Aa
+```
+
+システム起動時に `/etc/iscsi.conf` 内のすべてのターゲットへイニシエータが自動接続するようにするには、`/etc/rc.conf` に次を追加します。
+
+```
+iscsictl_enable="YES"
+iscsictl_flags="-Aa"
+```

@@ -16,7 +16,7 @@
 
 - 見出し：69（`#` 1、`##` 13、`###` 31、`####` 24）
 - アンカー：70（原文の明示ID 25、自動付与アンカー 45）
-- コード例：136
+- コード例：143
 - 表：7
 - 画像：0
 
@@ -37,13 +37,21 @@
 - [x] `#network-ftp`（File Transfer Protocol (FTP)）
 - [x] `#network-samba`（File and Print Services for Microsoft Windows Clients (Samba)）
 - [x] `#network-ntp`（Clock Synchronization with NTP）
-- [ ] `#network-iscsi`（iSCSI Initiator and Target Configuration）
-- [ ] 全節自己校正・最終検査
+- [x] `#network-iscsi`（iSCSI Initiator and Target Configuration）
+- [x] 全節自己校正・最終検査
+
+## 訳注で区別した主な原文の仕様・古い記述
+
+- `autofs(5)` 節の本文中の `/host/foobar/usr` と、直前の例・既定の `/net` マウントポイントの違いを訳注で補足しました。
+- NIS 節の旧章番号に基づく表番号（表 28.1〜28.3）、`pw useradd smith` 表記、および `login.conf` の `passwd_format=des` の例を訳注で区別しました。
+- DHCP 節の `config-network-setup` への相互参照は、上流で独立した `network` 章へ移設されており本リポジトリでは未翻訳のため、公式英語版へリンクし訳注を付けました。
+- Apache 節の `mod_php74` / `php74-*`、`mod_python` の記述、`h2h2chttp/1.1` 表記、および Samba 節の `samba_enable` 表記を訳注で補足しました。
 
 ## 検証
 
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch33_translation.py`（ドラフト時）
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch33_translation.py --require-complete`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py --require-complete`
+- `pandoc --from=gfm --to=json handbook/ja/33-network-servers.md` による GFM 構文解析とブロック数確認（Header 69 / CodeBlock 143 / Table 7）
 - `git diff --check`
 
 FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
