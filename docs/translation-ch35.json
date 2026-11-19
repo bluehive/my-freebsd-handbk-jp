@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch35/35-advanced-networking.adoc.txt",
       "translation_path": "handbook/ja/35-advanced-networking.md",
       "source_sha256": "609f4547d7051f01f6681be04505d75b7b7f1c663fa07de1dd4457fd4bea1125",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft in progress; pinned source retrieved and structural manifest initialized; runtime and third-party review not performed",
+      "status": "translated",
+      "reviewed_at": "2026-11-19",
+      "review": "Interpretive translation self-checked against all 45 headings, 49 anchors, 130 code blocks, 2 pinned images, 1 table, and all cross-references in the pinned source; {rel121-current} resolved via shared/releases.adoc (12.1) and annotated; runtime and third-party review not performed",
       "counts": {
         "headings": 45,
         "anchors": 49,
