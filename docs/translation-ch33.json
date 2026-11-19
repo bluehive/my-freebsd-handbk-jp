@@ -1,0 +1,28 @@
+{
+  "upstream_repository": "https://github.com/freebsd/freebsd-doc",
+  "upstream_commit": "a39743a3b0535f4498735119317889ea2bdfeb28",
+  "retrieved_at": "2026-11-19",
+  "scope": "Official Chapter 33 Network Servers (legacy TOC ID 32); pinned to upstream commit a39743a3b0535f4498735119317889ea2bdfeb28",
+  "chapters": [
+    {
+      "id": 33,
+      "slug": "network-servers",
+      "upstream_chapter_number": 33,
+      "legacy_toc_id": 32,
+      "upstream_path": "documentation/content/en/books/handbook/network-servers/_index.adoc",
+      "source_path": "handbook/en/ch33/33-network-servers.adoc.txt",
+      "translation_path": "handbook/ja/33-network-servers.md",
+      "source_sha256": "bd0c56b2ef912bf049cceb1d7ed1718047e195677591e92573e7c9cdade5621a",
+      "status": "pending",
+      "reviewed_at": null,
+      "review": "In progress: pinned source snapshot saved; translating section by section; runtime and third-party review not performed",
+      "counts": {
+        "headings": 69,
+        "anchors": 70,
+        "code_blocks": 136,
+        "images": 0,
+        "tables": 7
+      }
+    }
+  ]
+}

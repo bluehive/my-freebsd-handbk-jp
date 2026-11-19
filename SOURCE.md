@@ -80,3 +80,11 @@
 ## Preface（序文）の意訳用スナップショット
 
 2026-11-19に、公式Handbookの Preface（`documentation/content/en/books/handbook/preface/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/preface/00-preface.adoc.txt`、出典・SHA-256・進捗は [マニフェスト](docs/translation-preface.json)と[作業記録](docs/translation-preface.md)に保存しています。同じ固定コミットの `book.adoc` には `network`・`containers`・`serialcomms` が含まれますが、原文の「Organization of This Book」からは欠落しているため、補完せず訳注で区別しています。
+
+## 公式Chapter 33 Network Serversの意訳用スナップショット
+
+- 取得日：2026-11-19（日本時間）。
+- 上流：`freebsd/freebsd-doc`、固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28`。
+- 公式Chapter 33：`documentation/content/en/books/handbook/network-servers/_index.adoc`（124644バイト）。
+- 原文保存先：`handbook/en/ch33/33-network-servers.adoc.txt`（SHA-256: `bd0c56b2ef912bf049cceb1d7ed1718047e195677591e92573e7c9cdade5621a`）。
+- 出典・進捗は [マニフェスト](docs/translation-ch33.json)と[作業記録](docs/translation-ch33.md)に保存しています。既存TOCのID 32に対応し、新しいファイル名は公式章番号の33を使用しています。

@@ -1,0 +1,36 @@
+name: Handbook Chapter 33 (Network Servers)
+
+on:
+  pull_request:
+    paths:
+      - 'handbook/en/ch33/**'
+      - 'handbook/ja/33-network-servers.md'
+      - 'docs/translation-ch33.json'
+      - 'scripts/check_ch33_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch33-translation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'handbook/en/ch33/**'
+      - 'handbook/ja/33-network-servers.md'
+      - 'docs/translation-ch33.json'
+      - 'scripts/check_ch33_translation.py'
+      - 'scripts/check_handbook_translations.py'
+      - 'scripts/check_jails_translation.py'
+      - '.github/workflows/ch33-translation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-ch33:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check Chapter 33 translation and pinned source
+        run: python3 scripts/check_ch33_translation.py
