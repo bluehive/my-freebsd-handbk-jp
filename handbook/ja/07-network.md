@@ -612,3 +612,107 @@ network={
 FreeBSD では、2 つ以上のネットワークインターフェースを「フェイルオーバー」方式でまとめることができます。この構成では、ネットワークインターフェースのグループから最も優先度が高く利用可能な接続を使用し、リンク状態が変化するとオペレーティングシステムが自動的に切り替えます。
 
 リンクアグリゲーションとフェイルオーバーについては[リンクアグリゲーションとフェイルオーバー（Link Aggregation and Failover）](35-advanced-networking.md#network-aggregation)で解説しており、有線接続と無線接続を併用する例は[イーサネットインターフェースと無線インターフェース間のフェイルオーバーモード（Failover Mode Between Ethernet and Wireless Interfaces）](35-advanced-networking.md#networking-lagg-wired-and-wireless)にあります。
+
+<a id="hostname"></a>
+## ホスト名
+
+ホスト名は、ネットワーク上におけるホストの完全修飾ドメイン名（FQDN: Fully Qualified Domain Name）を表します。
+
+> **ヒント**: ホストにホスト名が設定されていない場合、FreeBSD は自分自身を `Amnesiac` と呼びます。
+
+<a id="get-hostname"></a>
+### 現在のホスト名の確認
+
+現在のホスト名を確認するには `hostname(1)` を使います。
+
+```shell
+$ hostname
+```
+
+出力は次のようになります。
+
+```text
+freebsdhostname.example.com
+```
+
+<a id="change-hostname"></a>
+### ホスト名の変更
+
+ホストのホスト名を変更し、再起動後も維持するには、次のコマンドを実行します。
+
+```shell
+# sysrc hostname="freebsdhostname.example.com"
+```
+
+<a id="dns"></a>
+## DNS
+
+DNS は、IP アドレスをホスト名へ、またその逆へと対応付ける[電話帳](https://en.wikipedia.org/wiki/Telephone_directory)のようなものとして理解できます。
+
+FreeBSD システムが DNS とどのようにやり取りするかを扱うファイルは 3 つあります。`hosts(5)`、`resolv.conf(5)`、`nsswitch.conf(5)` です。
+
+`/etc/nsswitch.conf` ファイルで特に指定されていない限り、FreeBSD はまず `/etc/hosts` ファイルのアドレスを参照し、次に `/etc/resolv.conf` ファイルの DNS 情報を参照します。
+
+> **注**: `nsswitch.conf(5)` ファイルは、nsdispatch（name-service switch dispatcher）がどのように動作すべきかを指定します。
+>
+> デフォルトでは、`/etc/nsswitch.conf` ファイルの `hosts` 行は次のようになっています。
+
+```text
+hosts: files dns
+```
+
+> たとえば `nscd(8)` サービスを使用する場合は、次のように記述して優先順位を変更できます。
+
+```text
+hosts: files cache dns
+```
+
+<a id="local-addresses"></a>
+### ローカルアドレス
+
+`/etc/hosts` ファイルは、ホスト名と IP アドレスの対応付けを提供するシンプルなテキストデータベースです。LAN 経由で接続されたローカルコンピュータのエントリをこのファイルに追加することで、DNS サーバを構築せずに簡易的な名前解決を行うことができます。さらに、`/etc/hosts` を使ってインターネット上の名前のローカル記録を用意しておけば、頻繁にアクセスする名前について外部 DNS サーバへ問い合わせる必要を減らせます。
+
+たとえば、ローカル環境に `www/gitlab-ce` のローカルインスタンスがある場合、`/etc/hosts` ファイルに次のように追加できます。
+
+```text
+192.168.1.150 git.example.com git
+```
+
+<a id="configuring-nameserver"></a>
+### ネームサーバの設定
+
+FreeBSD システムがインターネットのドメインネームシステム（DNS）へどのようにアクセスするかは `resolv.conf(5)` によって制御されます。
+
+`/etc/resolv.conf` で最もよく使われるエントリは次のとおりです。
+
+| エントリ | 説明 |
+|---|---|
+| `nameserver` | リゾルバが問い合わせるネームサーバの IP アドレス。記述した順に最大 3 台まで問い合わせが行われる。 |
+| `search` | ホスト名検索時の検索リスト。通常はローカルホスト名のドメインによって決まる。 |
+| `domain` | ローカルドメイン名。 |
+
+典型的な `/etc/resolv.conf` は次のようになります。
+
+```text
+search example.com
+nameserver 147.11.1.11
+nameserver 147.11.100.30
+```
+
+> **注**: `search` と `domain` のオプションは、どちらか一方のみを使用してください。
+
+DHCP を使用している場合、`dhclient(8)` は通常、DHCP サーバから受け取った情報で `/etc/resolv.conf` を書き換えます。
+
+> **ヒント**: 設定を行っているマシンが DNS サーバでは**ない**場合、`local-unbound(8)` を使うと DNS の名前解決性能を向上させることができます。
+>
+> 起動時に有効にするには、次のコマンドを実行します。
+
+```shell
+# sysrc local_unbound_enable="YES"
+```
+
+> `local-unbound(8)` サービスを開始するには、次のコマンドを実行します。
+
+```shell
+# service local_unbound start
+```
