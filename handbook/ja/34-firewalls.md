@@ -100,3 +100,782 @@ RFC 1918 により、パブリックインターネットへ直接ルーティ�
 * `192.168.0.0/16`
 
 > **警告**: ファイアウォールのルールを操作するときは、**十分に注意してください**。設定によっては、**管理者自身がサーバーから締め出される（ロックアウトされる）** ことがあります。安全のため、初期のファイアウォール設定は SSH 越しのリモート作業ではなく、ローカルコンソールから行うことを検討してください。
+
+<a id="firewalls-pf"></a>
+## PF
+
+FreeBSD 5.3 以降、OpenBSD の PF ファイアウォールを移植したものがベースシステムの一部として組み込まれています。
+PF は高機能で完成度の高いファイアウォールであり、QoS（Quality of Service）を提供する ALTQ（Alternate Queuing）にもオプションで対応しています。
+
+OpenBSD プロジェクトは [PF FAQ](https://www.openbsd.org/faq/pf/) で PF の公式リファレンスを公開しています。
+また、Peter Hansteen 氏は [https://home.nuug.no/~peter/pf/](https://home.nuug.no/~peter/pf/) で網羅的な PF チュートリアルを公開しています。
+
+> **警告**: [PF FAQ](https://www.openbsd.org/faq/pf/) を読む際は、FreeBSD 版の PF が長年にわたり上流の OpenBSD 版から大きく分岐している点に注意してください。すべての機能が OpenBSD と同じように FreeBSD で動くわけではなく、その逆も同様です。
+
+PF ファイアウォールの設定や運用について質問したい場合は、FreeBSD PF メーリングリスト（`freebsd-pf`）が役立ちます。
+すでに回答済みのこともあるため、質問する前にメーリングリストのアーカイブを確認してください。
+
+本節では、FreeBSD における PF に焦点を当て、PF と ALTQ を有効にする方法を示します。
+あわせて、FreeBSD システムでルールセットを作成するための実例もいくつか紹介します。
+
+<a id="chapter-34-heading-05"></a>
+### PF を有効にする
+
+PF を使うには、まずカーネルモジュールを読み込む必要があります。
+ここでは、PF を有効にするために `/etc/rc.conf` へ追加できる設定項目を説明します。
+
+まず、`/etc/rc.conf` に `pf_enable=yes` を追加します。
+
+```shell
+# sysrc pf_enable=yes
+```
+
+PF の起動時には、`pfctl(8)` に記載されている追加オプションを渡すこともできます。
+`/etc/rc.conf` に次の行を追加または変更し、二重引用符（`""`）の間に必要なフラグを指定してください。
+
+```
+pf_flags=""                     # additional flags for pfctl startup
+```
+
+PF はルールセット設定ファイルが見つからないと起動しません。
+既定では FreeBSD にルールセットは同梱されておらず、`/etc/pf.conf` も存在しません。
+ルールセットの例は `/usr/share/examples/pf/` にあります。
+独自に作成したルールセットを別の場所に保存した場合は、そのファイルへのフルパスを `/etc/rc.conf` に追記してください。
+
+```
+pf_rules="/path/to/pf.conf"
+```
+
+PF のログ記録機能は `pflog(4)` が提供します。
+ログ記録を有効にするには、`/etc/rc.conf` に `pflog_enable=yes` を追加します。
+
+```shell
+# sysrc pflog_enable=yes
+```
+
+ログファイルの既定の保存先を変更したり、起動時に `pflog(4)` へ渡す追加フラグを指定したりするには、次の行も追加できます。
+
+```
+pflog_logfile="/var/log/pflog"  # where pflogd should store the logfile
+pflog_flags=""                  # additional flags for pflogd startup
+```
+
+最後に、ファイアウォールの背後に LAN があり、LAN 上のコンピュータのためにパケットを転送する必要がある場合や NAT が必要な場合は、次のオプションを有効にします。
+
+```
+gateway_enable="YES"            # Enable as LAN gateway
+```
+
+必要な編集を保存したら、次のコマンドを実行してログ機能付きで PF を起動できます。
+
+```shell
+# service pf start
+# service pflog start
+```
+
+既定では、PF は `/etc/pf.conf` から設定ルールを読み込み、そのファイルに指定されたルールや定義に従ってパケットを書き換え、破棄し、あるいは通過させます。
+FreeBSD をインストールすると、`/usr/share/examples/pf/` に複数のサンプルファイルが配置されます。
+PF ルールセットの網羅的な解説については、[PF FAQ](https://www.openbsd.org/faq/pf/) を参照してください。
+
+PF の制御には `pfctl` を使います。
+[pfctl の便利なオプション](#pfctl) に、このコマンドのよく使うオプションをまとめます。
+利用可能なすべてのオプションについては `pfctl(8)` を参照してください。
+
+<a id="pfctl"></a>
+| コマンド | 目的 |
+|---|---|
+| `pfctl -e` | PF を有効にする。 |
+| `pfctl -d` | PF を無効にする。 |
+| `pfctl -F all -f /etc/pf.conf` | すべての NAT、フィルタ、ステート、テーブルのルールを消去（flush）し、`/etc/pf.conf` を再読み込みする。 |
+| `pfctl -s [ rules \| nat \| states ]` | フィルタールール、NAT ルール、またはステートテーブルの状態を表示する。 |
+| `pfctl -vnf /etc/pf.conf` | `/etc/pf.conf` の構文エラーを検査するが、ルールセットは読み込まない。 |
+
+> **ヒント**: `pfctl` のように特権が必要なコマンドを実行する際は、`security/sudo` パッケージが便利です。Ports Collection からインストールできます。
+
+PF ファイアウォールを通過するトラフィックを監視したい場合は、`sysutils/pftop` のパッケージまたは port のインストールを検討してください。
+インストールすると、`pftop` を実行して `top(1)` に似た形式で通信状況のリアルタイムスナップショットを確認できます。
+
+<a id="pf-tutorial"></a>
+### PF ルールセット
+
+ここでは、目的に合わせたルールセットの作り方を説明します。
+最も単純なルールセットから始め、PF の多彩な機能の実用的な使い方を示すいくつかの例を通じて概念を広げていきます。
+
+最も単純なルールセットは、サービスを一切動かさず、インターネットなどの1つのネットワークへアクセスできればよい単体マシン向けのものです。
+この最小限のルールセットを作るには、`/etc/pf.conf` を次のように編集します。
+
+```
+block in all
+pass out all keep state
+```
+
+1行目のルールは、既定ですべての着信トラフィックを拒否します。
+2行目のルールは、このシステムが開始した接続が外へ出ていくのを許可しつつ、その接続のステート情報を保持します。
+このステート情報によってそれらの接続に対する戻りトラフィックの通過が許可されるため、信頼できるマシンでのみ使用してください。
+ルールセットは次のコマンドで読み込めます。
+
+```shell
+# pfctl -e ; pfctl -f /etc/pf.conf
+```
+
+PF ではステートの保持に加えて、ルール作成時に使える**リスト（list）**や**マクロ（macro）**を定義できます。
+マクロにはリストを含めることができ、使用する前に定義しておく必要があります。
+例として、ルールセットのいちばん先頭に次の行を挿入します。
+
+```
+tcp_services = "{ ssh, smtp, domain, www, pop3, auth, pop3s }"
+udp_services = "{ domain }"
+```
+
+PF は、`/etc/services` に記載されている名前であればポート番号だけでなくポート名も理解します。
+この例では2つのマクロを作成しています。
+1つ目は7つの TCP ポート名のリスト、2つ目は1つの UDP ポート名です。
+定義したマクロはルールの中で使えます。
+次の例では、このシステムから開始された指定の7つの TCP サービスと1つの UDP サービスへの接続を除き、すべてのトラフィックを遮断します。
+
+```
+tcp_services = "{ ssh, smtp, domain, www, pop3, auth, pop3s }"
+udp_services = "{ domain }"
+block all
+pass out proto tcp to any port $tcp_services keep state
+pass proto udp to any port $udp_services keep state
+```
+
+UDP はステートレスなプロトコルとみなされますが、PF は一部のステート情報を追跡できます。
+たとえば、ネームサーバーにドメイン名を問い合わせる UDP リクエストが通過すると、PF はその応答を待ち受けて通過させます。
+
+ルールセットを編集したら、そのたびに新しいルールを読み込んで反映させる必要があります。
+
+```shell
+# pfctl -f /etc/pf.conf
+```
+
+構文エラーがなければ、`pfctl` はルール読み込み中に何もメッセージを出力しません。
+また、実際に読み込む前にルールをテストすることもできます。
+
+```shell
+# pfctl -nf /etc/pf.conf
+```
+
+`-n` を付けると、ルールの解釈だけが行われ、実際には読み込まれません。
+これにより、エラーを事前に見つけて修正できます。
+PF が無効化されるか新しいルールセットが読み込まれるまでは、常に最後に正常に読み込まれたルールセットが適用され続けます。
+
+> **ヒント**: `pfctl` でルールセットの検証や読み込みを行う際に `-v` を追加すると、実際に読み込まれる形へ完全に展開・解析されたルールが表示されます。ルールのデバッグ時に非常に役立ちます。
+
+<a id="pftut-gateway"></a>
+#### NAT を使ったシンプルなゲートウェイ
+
+ここでは、PF を動かす FreeBSD システムを、少なくとも1台の別マシンのためのゲートウェイとして構成する方法を説明します。
+ゲートウェイには、それぞれ異なるネットワークに接続された少なくとも2つのネットワークインタフェースが必要です。
+この例では、`xl0` がインターネットに、`xl1` が内部ネットワークに接続されているものとします。
+
+まず、あるインタフェースで受信したネットワークトラフィックを別のインタフェースへ転送できるよう、ゲートウェイ機能を有効にします。
+次の sysctl 設定で IPv4 パケットを転送します。
+
+```shell
+# sysctl net.inet.ip.forwarding=1
+```
+
+IPv6 トラフィックを転送するには次のようにします。
+
+```shell
+# sysctl net.inet6.ip6.forwarding=1
+```
+
+システム起動時にこれらの設定を有効にするには、`sysrc(8)` を使って `/etc/rc.conf` に追記します。
+
+```shell
+# sysrc gateway_enable=yes
+# sysrc ipv6_gateway_enable=yes
+```
+
+両方のインタフェースが有効（up）で稼働していることを `ifconfig` で確認してください。
+
+次に、ゲートウェイがトラフィックを通過させられるように PF ルールを作成します。
+以下のルールは、内部ネットワークのホストからゲートウェイへ向かうステートフルなトラフィックを通過させますが、`to` キーワードだけでは送信元から宛先までの全経路の通過を保証しません。
+
+```
+pass in on xl1 from xl1:network to xl0:network port $ports keep state
+```
+
+このルールは、内部インタフェースからゲートウェイへ入ってくるトラフィックだけを許可します。
+パケットをさらに先へ通すには、対になるルールが必要です。
+
+```
+pass out on xl0 from xl1:network to xl0:network port $ports keep state
+```
+
+これら2つのルールでも動作しますが、ここまで細かく指定したルールが必要になることはめったにありません。
+忙しいネットワーク管理者にとっては、読みやすいルールセットほど安全なルールセットになります。
+この節の残りの部分では、読みやすさを保つためにルールをできる限り簡潔に書く方法を示します。
+たとえば、上の2つのルールは次の1つのルールに置き換えられます。
+
+```
+pass from xl1:network to any port $ports keep state
+```
+
+`interface:network` 表記をマクロに置き換えると、ルールセットをさらに読みやすくできます。
+たとえば、`$localnet` マクロを内部インタフェースに直接接続されたネットワーク（`$xl1:network`）として定義できます。
+あるいは、`$localnet` の定義を *IPアドレス/ネットマスク* 表記に変更し、プライベートアドレスのサブネットとして `192.168.100.1/24` のようにネットワークを表すこともできます。
+
+必要であれば、`$localnet` をネットワークのリストとして定義することさえ可能です。
+具体的な要件が何であれ、適切な `$localnet` 定義は次のように一般的な pass ルールで使えます。
+
+```
+pass from $localnet to any port $ports keep state
+```
+
+次のサンプルルールセットは、内部ネットワーク上のマシンから開始されたすべてのトラフィックを許可します。
+最初に、ゲートウェイの外部および内部の 3COM インタフェースを表す2つのマクロを定義しています。
+
+> **注記**: ダイヤルアップ接続の利用者の場合、外部インタフェースには `tun0` を使います。ADSL 接続、特に PPP over Ethernet（PPPoE）を使う接続でも、正しい外部インタフェースは物理イーサネットインタフェースではなく `tun0` です。
+
+```
+ext_if = "xl0"	# macro for external interface - use tun0 for PPPoE
+int_if = "xl1"	# macro for internal interface
+localnet = $int_if:network
+# ext_if IP address could be dynamic, hence ($ext_if)
+nat on $ext_if from $localnet to any -> ($ext_if)
+block all
+pass from { lo0, $localnet } to any keep state
+```
+
+このルールセットでは、`nat` ルールを導入しています。これにより、内部ネットワーク内のルーティング不能なアドレスから外部インタフェースに割り当てられた IP アドレスへのネットワークアドレス変換を行います。
+`nat` ルールの末尾にある `($ext_if)` の丸括弧は、外部インタフェースの IP アドレスが動的に割り当てられる場合に付けます。
+これにより、外部 IP アドレスが変わってもネットワークトラフィックが大きく途切れることなく動き続けます。
+
+なお、このルールセットはおそらく必要以上に多くのトラフィックをネットワーク外へ通過させてしまいます。
+妥当な設定の一例として、次のようなマクロを作成し、
+
+```
+client_out = "{ ftp-data, ftp, ssh, domain, pop3, auth, nntp, http, \
+    https, cvspserver, 2628, 5999, 8000, 8080 }"
+```
+
+主要な pass ルールで使うことができます。
+
+```
+pass inet proto tcp from $localnet to any port $client_out \
+    flags S/SA keep state
+```
+
+ほかにもいくつか pass ルールが必要になる場合があります。
+次は外部インタフェースで SSH を有効にするルールです。
+
+```
+pass in inet proto tcp to $ext_if port ssh
+```
+
+次のマクロ定義とルールは、内部クライアント向けに DNS と NTP を許可します。
+
+```
+udp_services = "{ domain, ntp }"
+pass quick inet proto { tcp, udp } to any port $udp_services keep state
+```
+
+このルールにある `quick` キーワードに注目してください。
+ルールセットは複数のルールから構成されるため、ルール間の関係を理解しておくことが重要です。
+ルールは記述された順に上から下へと評価されます。
+PF が評価する各パケットや接続に対しては、ルールセットの中で**最後に一致したルール**が適用されます。
+ただし、`quick` キーワードを含むルールにパケットが一致すると、その時点でルールの評価が打ち切られ、パケットはそのルールに従って処理されます。
+一般的なルールに対する例外を作りたいときに非常に便利です。
+
+<a id="pftut-ftp"></a>
+#### FTP プロキシの作成
+
+FTP プロトコルの性質上、正常に動作する FTP ルールを設定するのは厄介な場合があります。
+FTP はファイアウォールより何十年も前に作られており、設計上安全ではありません。
+FTP の使用を避けるべき主な理由には次の点があります。
+
+* パスワードが平文で転送される。
+* プロトコル上、別々のポートで少なくとも2本の TCP 接続（制御用とデータ用）が必要になる。
+* セッション確立後、ランダムに選ばれたポートを使ってデータが通信される。
+
+クライアントやサーバーソフトウェアに潜む脆弱性を考慮する以前の問題として、これらはいずれもセキュリティ上の課題になります。
+ファイル転送には、認証とデータ転送の両方を暗号化された接続上で行う `sftp(1)` や `scp(1)` のような、より安全な代替手段があります。
+
+どうしても FTP が必要な状況のために、PF では FreeBSD のベースシステムに含まれる `ftp-proxy(8)` という小さなプロキシプログラムへ FTP トラフィックをリダイレクトする機能が用意されています。
+このプロキシの役割は、FTP トラフィックを正しく処理するために、アンカー（anchor）の仕組みを使ってルールセット内のルールを動的に追加・削除することです。
+
+FTP プロキシを有効にするには、`/etc/rc.conf` に次の行を追加します。
+
+```
+ftpproxy_enable="YES"
+```
+
+次に、プロキシを起動します。
+
+```bash
+# service ftp-proxy start
+```
+
+基本的な構成では、`/etc/pf.conf` に3つの要素を追加する必要があります。
+1つ目は、FTP セッション用に生成したルールをプロキシが挿入するためのアンカーです。
+
+```
+nat-anchor "ftp-proxy/*"
+rdr-anchor "ftp-proxy/*"
+```
+
+2つ目は、プロキシへの FTP トラフィックの流入を許可する pass ルールです。
+
+3つ目に、リダイレクトルールと NAT ルールをフィルタリングルールより前に定義する必要があります。
+次の `rdr` ルールを `nat` ルールの直後に挿入してください。
+
+```
+rdr pass on $int_if proto tcp from any to any port ftp -> 127.0.0.1 port 8021
+```
+
+最後に、リダイレクトされたトラフィックが外へ出ていくのを許可します。
+
+```
+pass out proto tcp from $proxy to any port ftp
+```
+
+ここで `$proxy` はプロキシデーモンがバインドしているアドレスに展開されます。
+
+`/etc/pf.conf` を保存して新しいルールを読み込み、クライアントから FTP 接続が動作することを確認します。
+
+```shell
+# pfctl -f /etc/pf.conf
+```
+
+この例では、ローカルネットワーク内のクライアントが外部の FTP サーバーへ接続する必要がある基本的な構成を扱っています。
+この基本設定は、ほとんどの FTP クライアントとサーバーの組み合わせで問題なく動作するはずです。
+`ftp-proxy(8)` に記載されているとおり、`ftpproxy_flags=` 行にオプションを追加することでプロキシの挙動をさまざまに変更できます。
+クライアントやサーバー固有のクセを設定で補う必要がある場合や、FTP トラフィックを特定のキューに割り当てるなど特殊な連携が必要な場合もあります。
+
+PF と `ftp-proxy(8)` で保護された FTP サーバーを運用する方法については、別の `ftp-proxy` を `-R` によるリバースモードで、別のポートと専用のリダイレクト用 pass ルールを伴って設定してください。
+
+<a id="pftut-icmp"></a>
+#### ICMP の管理
+
+TCP/IP ネットワークのデバッグやトラブルシューティングに使うツールの多くは、まさにデバッグを念頭に設計された Internet Control Message Protocol（ICMP）に依存しています。
+
+ICMP プロトコルはホストとゲートウェイの間で**制御メッセージ**を送受信し、主に宛先ホストへの経路上で発生した異常や困難な状況について送信元へフィードバックを返します。
+ルーターは ICMP を使ってパケットサイズやその他の伝送パラメータを調整します。この処理は一般に**パス MTU 探索（path MTU discovery）**と呼ばれます。
+
+ファイアウォールの観点からは、一部の ICMP 制御メッセージが既知の攻撃手法に悪用されるおそれがあります。
+また、診断用トラフィックを無条件にすべて通すとデバッグは楽になりますが、第三者がネットワークに関する情報を収集するのも容易になってしまいます。
+そのため、次のようなルールは最適とは言えません。
+
+```
+pass inet proto icmp from any to any
+```
+
+1つの解決策は、ローカルネットワークからの ICMP トラフィックはすべて通し、ネットワーク外部からの探索（probe）はすべて止めることです。
+
+```
+pass inet proto icmp from $localnet to any keep state
+pass inet proto icmp from any to $ext_if keep state
+```
+
+PF の柔軟性を示すオプションはほかにもあります。
+たとえば、すべての ICMP メッセージを許可するのではなく、`ping(8)` や `traceroute(8)` が使うメッセージだけを指定できます。
+まず、その種類のメッセージを表すマクロを定義します。
+
+```
+icmp_types = "echoreq"
+```
+
+そして、そのマクロを使うルールを記述します。
+
+```
+pass inet proto icmp all icmp-type $icmp_types keep state
+```
+
+ほかの種類の ICMP パケットも必要な場合は、`icmp_types` をそれらのパケット種別のリストへ拡張してください。
+PF が対応している ICMP メッセージ種別の一覧は、`more /usr/src/sbin/pfctl/pfctl_parser.c` で確認できます。
+各メッセージ種別の解説については、[https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml](https://www.iana.org/assignments/icmp-parameters/icmp-parameters.xhtml) を参照してください。
+
+Unix の `traceroute` は既定で UDP を使うため、Unix の `traceroute` を許可するには別のルールが必要です。
+
+```
+# allow out the default range for traceroute(8):
+pass out on $ext_if inet proto udp from any to any port 33433 >< 33626 keep state
+```
+
+Microsoft Windows システムの `TRACERT.EXE` は ICMP エコー要求（echo request）メッセージを使うため、それらのシステムからの経路追跡を許可するには最初のルールだけで足ります。
+Unix の `traceroute` も別のプロトコルを使うように指定でき、`-I` を付けると ICMP エコー要求メッセージを使用します。
+詳しくは `traceroute(8)` のマニュアルページを確認してください。
+
+<a id="pftut-pathmtudisc"></a>
+##### パス MTU 探索（Path MTU Discovery）
+
+インターネットプロトコルはデバイスに依存しないように設計されており、その結果として、ある接続にとって最適なパケットサイズを常に確実に予測できるわけではありません。
+パケットサイズに対する主な制約は、インタフェースにおけるパケットサイズの上限を決める **Maximum Transmission Unit（MTU）** です。
+システムのネットワークインタフェースの MTU を確認するには `ifconfig` を実行します。
+
+TCP/IP は、接続に適したパケットサイズを求めるためにパス MTU 探索と呼ばれる処理を行います。
+この処理では、「フラグメント禁止（Do not fragment）」フラグを立てたさまざまなサイズのパケットを送信し、上限に達したときに返される「type 3, code 4」の ICMP 応答パケットを待ちます。
+type 3 は「宛先到達不能（destination unreachable）」、code 4 は「フラグメンテーションが必要だが、フラグメント禁止フラグが設定されている」という意味です。
+異なる MTU を持つ相手との接続に対応できるようパス MTU 探索を許可するには、`icmp_types` マクロに `destination unreachable`（`unreach`）種別を追加します。
+
+```
+icmp_types = "{ echoreq, unreach }"
+```
+
+pass ルールはすでにそのマクロを使っているため、新しい ICMP 種別に対応するためにルール側を変更する必要はありません。
+
+```
+pass inet proto icmp all icmp-type $icmp_types keep state
+```
+
+PF では、あらゆる組み合わせの ICMP type と code に基づいてフィルタリングできます。
+指定可能な type と code の一覧は `icmp(4)` と `icmp6(4)` に記載されています。
+
+<a id="pftut-tables"></a>
+#### テーブル（Tables）の利用
+
+フィルタリングやリダイレクトにおいて特定の時点で参照したいデータの中には、定義が長すぎてルールセットファイルへ直接書き込めないものがあります。
+PF はテーブル（table）をサポートしており、ルールセット全体を再読み込みせずに操作でき、高速な検索が可能なリストを定義できます。
+テーブル名は次のように必ず `< >` で囲みます。
+
+```
+table <clients> { 192.168.2.0/24, !192.168.2.5 }
+```
+
+この例では、`192.168.2.0/24` ネットワークがテーブルに含まれますが、`!` 演算子によって `192.168.2.5` のアドレスだけは除外されています。
+次の `/etc/clients` の例のように、各項目を1行ずつ書いたファイルからテーブルを読み込むことも可能です。
+
+```
+192.168.2.0/24
+!192.168.2.5
+```
+
+ファイルを参照するには、次のようにテーブルを定義します。
+
+```
+table <clients> persist file "/etc/clients"
+```
+
+テーブルを定義すれば、ルールから参照できます。
+
+```
+pass inet proto tcp from <clients> to any port $client_out flags S/SA keep state
+```
+
+テーブルの内容は `pfctl` を使って稼働中に動的に操作できます。
+次の例では、テーブルに別のネットワークを追加しています。
+
+```shell
+# pfctl -t clients -T add 192.168.1.0/16
+```
+
+この方法で行った変更は即座に反映されるためテストには最適ですが、電源断や再起動をまたいでは残りません。
+変更を永続化するには、ルールセット内のテーブル定義を修正するか、テーブルが参照しているファイルを編集してください。
+`pfctl -t clients -T show >/etc/clients` のようなコマンドを `cron(8)` ジョブで定期実行し、テーブルの内容をディスク上のコピーへ書き出して維持することもできます。
+また、次のようにしてメモリ上のテーブル内容を `/etc/clients` の内容で更新することもできます。
+
+```shell
+# pfctl -t clients -T replace -f /etc/clients
+```
+
+<a id="pftut-overload"></a>
+#### 過負荷（Overload）テーブルを使った SSH の保護
+
+外部インタフェースで SSH を動かしていると、認証ログに次のような記録を見たことがあるかもしれません。
+
+```
+Sep 26 03:12:34 skapet sshd[25771]: Failed password for root from 200.72.41.31 port 40992 ssh2
+Sep 26 03:12:34 skapet sshd[5279]: Failed password for root from 200.72.41.31 port 40992 ssh2
+Sep 26 03:12:35 skapet sshd[5279]: Received disconnect from 200.72.41.31: 11: Bye Bye
+Sep 26 03:12:44 skapet sshd[29635]: Invalid user admin from 200.72.41.31
+Sep 26 03:12:44 skapet sshd[24703]: input_userauth_request: invalid user admin
+Sep 26 03:12:44 skapet sshd[24703]: Failed password for invalid user admin from 200.72.41.31 port 41484 ssh2
+```
+
+これは、何者かまたはプログラムがシステムへ侵入するためのユーザー名とパスワードを探り出そうとしているブルートフォース攻撃の兆候です。
+
+正当な利用者のために外部からの SSH アクセスが必要な場合、SSH が使う既定のポート番号を変更することである程度の防御になります。
+しかし、PF にはより洗練された解決策があります。
+pass ルールに接続元ホストの振る舞いに対する上限を設定でき、上限を超えた違反者を、一部またはすべてのアクセスを拒否するアドレスのテーブルへ追放できます。
+上限を超えたマシンからの既存の接続をすべて切断することさえ可能です。
+
+これを設定するには、まずルールセットのテーブル定義部分に次のテーブルを作成します。
+
+```
+table <bruteforce> persist
+```
+
+次に、ルールセットの前半あたりに、正当なアクセスを許可しつつブルートフォース攻撃を遮断するルールを追加します。
+
+```
+block quick from <bruteforce>
+pass inet proto tcp from any to $localnet port $tcp_services \
+    flags S/SA keep state \
+    (max-src-conn 100, max-src-conn-rate 15/5, \
+    overload <bruteforce> flush global)
+```
+
+括弧内の部分は制限内容を定義しており、数値はローカル環境の要件に合わせて変更してください。
+各指定の意味は次のとおりです。
+
+`max-src-conn` は、1台のホストから許可される同時接続数の上限です。
+
+`max-src-conn-rate` は、単一のホストから許可される新規接続の頻度（*5* 秒あたり *15* 回）です。
+
+`overload <bruteforce>` は、これらの上限を超えたホストのアドレスを `bruteforce` テーブルに追加することを意味します。
+上のルールセットでは、`bruteforce` テーブル内のアドレスからのすべてのトラフィックを遮断します。
+
+最後の `flush global` は、ホストが上限に達した際、そのホストのすべての（`global`）接続を強制終了（`flush`）することを指示します。
+
+> **注記**: これらのルールは、[https://home.nuug.no/~peter/hailmary2013/](https://home.nuug.no/~peter/hailmary2013/) で解説されているような低速なブルートフォース攻撃（slow bruteforcer）は**遮断しません**。
+
+このルールセットの例は主に仕組みを示すためのものです。
+たとえば、一般的な接続数は多めに許可したいが、ssh に関してはより厳しく制限したい場合は、上のルールに加えてルールセットの前半に次のようなルールを補います。
+
+```
+pass quick proto { tcp, udp } from any to any port ssh \
+    flags S/SA keep state \
+    (max-src-conn 15, max-src-conn-rate 5/3, \
+    overload <bruteforce> flush global)
+```
+
+> **注記**: **上限超過者をすべて遮断する必要はない場合もあります**:
+>
+> 過負荷（overload）の仕組みは SSH 専用ではなく汎用的な手法であり、違反者からのすべてのトラフィックを完全に遮断するのが常に最適とは限りません。
+>
+> たとえば、メールサービスや Web サービスを保護するために overload ルールを使い、overload テーブルを参照するルールによって、違反者を最小帯域幅しか割り当てないキューへ振り分けたり、特定の Web ページへリダイレクトしたりすることもできます。
+
+時間が経つにつれて、テーブルは overload ルールによってエントリが追加され続け、徐々に大きくなってメモリを消費します。
+また、遮断された IP アドレスが動的割り当てのもので、その後、ローカルネットワーク内のホストと通信する正当な理由のある別のホストへ割り当て直されることもあります。
+
+このような状況のために、`pfctl` にはテーブルエントリを期限切れにして削除する機能があります。
+たとえば、次のコマンドは `86400` 秒間参照されていない `<bruteforce>` テーブルのエントリを削除します。
+
+```shell
+# pfctl -t bruteforce -T expire 86400
+```
+
+同様の機能は `security/expiretable` でも提供されており、指定した期間アクセスされていないテーブルエントリを削除します。
+
+インストール後、`expiretable` を実行して指定した経過時間より古い `<bruteforce>` テーブルのエントリを削除できます。
+次の例では、24時間より古いすべてのエントリを削除します。
+
+```
+/usr/local/sbin/expiretable -v -d -t 24h bruteforce
+```
+
+<a id="pftut-spamd"></a>
+#### SPAM 対策
+
+SpamAssassin に同梱されている `spamd` デーモンと混同しないよう注意が必要ですが、`mail/spamd` を PF と組み合わせて設定すると、SPAM に対する外郭防御を構築できます。
+この `spamd` はリダイレクト設定を使って PF の構成に組み込みます。
+
+スパマーは大量のメッセージを送信する傾向があり、SPAM は主に少数のスパマーに友好的なネットワークや多数の乗っ取られたマシンから送られます。これらはいずれも比較的早く**ブロックリスト（blocklist）**に報告されます。
+
+ブロックリストに載っているアドレスから SMTP 接続を受けると、`spamd` はバナーを返した直後に、SMTP トラフィックに対して1バイトずつ応答を返すモードへ切り替わります。
+送信側のスパマーにできるだけ多くの時間を浪費させることを狙ったこの手法は**ターピッティング（tarpitting）**と呼ばれます。
+1バイトずつ SMTP 応答を返す具体的な実装は、よく **スタッタリング（stuttering）** と呼ばれます。
+
+この例では、自動更新されるブロックリストとともに `spamd` を設定する基本手順を示します。
+詳しくは、`mail/spamd` とともにインストールされるマニュアルページを参照してください。
+
+**手順: spamd の設定**
+
+1. `mail/spamd` のパッケージまたは port をインストールします。`spamd` のグレイリスティング機能を使うには、`/dev/fd` に `fdescfs(5)` がマウントされている必要があります。`/etc/fstab` に次の行を追加してください。
+
+   ```
+    fdescfs /dev/fd fdescfs rw 0 0
+   ```
+
+   その後、ファイルシステムをマウントします。
+
+   ```
+   #  mount fdescfs
+   ```
+
+2. 次に、PF ルールセットを編集して以下を含めます。
+
+   ```
+   table <spamd> persist
+   table <spamd-white> persist
+   rdr pass on $ext_if inet proto tcp from <spamd> to \
+       { $ext_if, $localnet } port smtp -> 127.0.0.1 port 8025
+   rdr pass on $ext_if inet proto tcp from !<spamd-white> to \
+       { $ext_if, $localnet } port smtp -> 127.0.0.1 port 8025
+   ```
+
+   `<spamd>` と `<spamd-white>` の2つのテーブルが不可欠です。
+   `<spamd>` に含まれており、かつ `<spamd-white>` に含まれていないアドレスからの SMTP トラフィックは、ポート 8025 で待ち受けている `spamd` デーモンへリダイレクトされます。
+
+3. 続いて、`/usr/local/etc/spamd.conf` で `spamd` を設定し、`/etc/rc.conf` にいくつかのパラメータを追加します。
+
+   `mail/spamd` をインストールすると、サンプル設定ファイル（`/usr/local/etc/spamd.conf.sample`）と `spamd.conf` のマニュアルページが導入されます。
+   この例で示す項目以外の設定オプションについては、これらを参照してください。
+
+   設定ファイルの先頭付近にある、`#` コメント記号で始まらない最初の行の1つに、使用するリストを指定する `all` リストの定義ブロックがあります。
+
+   ```
+   all:\
+       :traplist:allowlist:
+   ```
+
+   この項目には、使いたいブロックリストをコロン（`:`）で区切って並べます。許可リスト（allowlist）を使ってブロックリストから特定のアドレスを除外したい場合は、そのブロックリスト名の**直後**に許可リストの名前を付けます（例: `:blocklist:allowlist:`）。
+
+   その後に、指定したブロックリストの定義が続きます。
+
+   ```
+   traplist:\
+       :black:\
+       :msg="SPAM. Your address %A has sent spam within the last 24 hours":\
+       :method=http:\
+       :file=www.openbsd.org/spamd/traplist.gz
+   ```
+
+   1行目がブロックリストの名前、2行目がリストの種類を指定しています。
+   `msg` フィールドには、ブロックリストに載っている送信者へ SMTP 対話中に表示するメッセージを指定します。
+   `method` フィールドには、`spamd-setup` がリストデータを取得する方法を指定します。対応している方法は `http`、`ftp`、マウントされたファイルシステム上の `file`、および外部プログラムの `exec` です。
+   最後の `file` フィールドには、`spamd` が受け取るファイル名を指定します。
+
+   指定した許可リストの定義も同様ですが、メッセージは不要なため `msg` フィールドは省略します。
+
+   ```
+   allowlist:\
+       :white:\
+       :method=file:\
+       :file=/var/mail/allowlist.txt
+   ```
+
+   > **ヒント**: **データソースは慎重に選ぶ**:
+   >
+   > サンプルの `spamd.conf` にあるブロックリストをすべて使うと、インターネットの広大な範囲を遮断してしまいます。管理者はファイルを編集し、適切なデータソースを使い、必要に応じて独自リストも組み込んだ最適な構成を作成する必要があります。
+
+   次に、この項目を `/etc/rc.conf` に追加します。追加のフラグについてはコメントに書かれたマニュアルページを参照してください。
+
+   ```
+   spamd_flags="-v" # use "" and see spamd-setup(8) for flags
+   ```
+
+   設定が終わったらルールセットを再読み込みし、`service obspamd start` を実行して `spamd` を起動し、`spamd-setup` で設定を完了させます。
+   最後に、適切な間隔で `spamd-setup` を呼び出してテーブルを更新する `cron(8)` ジョブを作成します。
+
+メールサーバーの手前にある一般的なゲートウェイでは、数秒から数分以内にホストが捕捉され始めるでしょう。
+
+PF は**グレイリスティング（greylisting）**もサポートしており、未知のホストからのメッセージを一時的に *45n* コードで拒否します。
+グレイリストに登録されたホストからのメッセージは、妥当な時間内に再試行された場合に通過が許可されます。
+RFC 1123 および RFC 2821 の規定に沿った振る舞いをする送信元からのトラフィックは、ただちに通過します。
+
+グレイリスティングという手法の詳しい情報は、[greylisting.org](http://www.greylisting.org/) の Web サイトにあります。
+グレイリスティングの最も驚くべき点は、その単純さもさることながら、現在でも有効に機能していることです。
+スパマーやマルウェア作成者は、この手法を回避するための対応が非常に遅れています。
+
+グレイリスティングを設定する基本手順は次のとおりです。
+
+**手順: グレイリスティングの設定**
+
+1. 前の手順のステップ 1 で説明したとおり、`fdescfs(5)` がマウントされていることを確認します。
+2. `spamd` をグレイリスティングモードで動かすため、`/etc/rc.conf` に次の行を追加します。
+
+   ```
+   spamd_grey="YES"  # use spamd greylisting if YES
+   ```
+
+   関連するその他のパラメータについては、`spamd` のマニュアルページを参照してください。
+
+3. 次のコマンドでグレイリスティングの設定を完了します。
+
+   ```
+   #  service obspamd restart
+   #  service obspamlogd start
+   ```
+
+舞台裏では、`spamdb` データベースツールと `spamlogd` ホワイトリスト更新デーモンが、グレイリスティング機能に不可欠な役割を担っています。
+`spamdb` は、`/var/db/spamdb` データベースの内容を通じてブロックリスト・グレイリスト・許可リストを管理するための管理者向け主要インタフェースです。
+
+<a id="pftut-hygiene"></a>
+#### ネットワークの健全性（Network Hygiene）
+
+ここでは、`block-policy`、`scrub`、`antispoof` を使ってルールセットを健全に動作させる方法を説明します。
+
+`block-policy` は、ルールセット内のリダイレクトルールやフィルタリングルールより前に置かれる `options` セクションで設定できるオプションです。
+このオプションは、ルールによって遮断されたホストに対して PF が何らかの応答を返すかどうかを決めます。
+指定できる値は2つあり、`drop` は遮断したパケットを何も応答せず破棄し、`return` は `Connection refused` などのステータスコードを返します。
+
+設定しない場合、既定のポリシーは `drop` です。
+`block-policy` を変更するには、希望する値を指定します。
+
+```
+set block-policy return
+```
+
+PF の `scrub` は、ネットワークパケットの正規化（normalization）を有効にするキーワードです。
+この処理では、フラグメント化されたパケットを再構成し、不正なフラグの組み合わせを持つ TCP パケットを破棄します。
+`scrub` を有効にすることで、パケットフラグメントの誤った処理につけ込む特定の種類の攻撃に対する一定の防御が得られます。
+多数のオプションが利用できますが、ほとんどの構成では最も単純な書式で十分です。
+
+```
+scrub in all
+```
+
+NFS などの一部のサービスでは、特定のフラグメント処理オプションが必要になります。
+詳しくは [https://home.nuug.no/~peter/pf/en/scrub.html](https://home.nuug.no/~peter/pf/en/scrub.html) を参照してください。
+
+次の例では、フラグメントを再構成し、「do not fragment」ビットをクリアして、最大セグメントサイズ（MSS）を 1440 バイトに設定します。
+
+```
+scrub in all fragment reassemble no-df max-mss 1440
+```
+
+`antispoof` 機構は、論理的にあり得ないインタフェースや方向から現れるパケットを主に遮断することで、なりすまし（spoofed）または偽造された IP アドレスからの通信を防ぎます。
+
+次のルールは、外部世界から入ってくるなりすましトラフィックだけでなく、ローカルネットワーク内で発生したなりすましパケットも排除します。
+
+```
+antispoof for $ext_if
+antispoof for $int_if
+```
+
+<a id="pftut-unrouteables"></a>
+#### ルーティング不能アドレスの扱い
+
+ネットワークアドレス変換を処理するゲートウェイを適切に設定していても、他者の設定ミスへの対処が必要になることがあります。
+よくある設定ミスの一つが、ルーティング不能なアドレスを持つトラフィックをインターネットへ流してしまうことです。
+ルーティング不能アドレスからのトラフィックは複数の DoS 攻撃手法に関与し得るため、外部インタフェースを通ってネットワークへ侵入するルーティング不能アドレスからの通信を明示的に遮断することを検討してください。
+
+この例では、ルーティング不能アドレスを含むマクロを定義し、それを遮断ルールで使用しています。
+ゲートウェイの外部インタフェースにおいて、これらのアドレス発着のトラフィックは黙って破棄されます。
+
+```
+martians = "{ 127.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, \
+	      10.0.0.0/8, 169.254.0.0/16, 192.0.2.0/24, \
+	      0.0.0.0/8, 240.0.0.0/4 }"
+
+block drop in quick on $ext_if from $martians to any
+block drop out quick on $ext_if from any to $martians
+```
+
+<a id="chapter-34-heading-16"></a>
+### ALTQ を有効にする
+
+FreeBSD では、PF とともに ALTQ を使って QoS（Quality of Service）を提供できます。
+ALTQ を有効にすると、ルールセット内にキュー（queue）を定義して送信パケットの処理優先度を決められるようになります。
+
+ALTQ を有効にする前に、`altq(4)` を参照してシステムに搭載されているネットワークカードのドライバが ALTQ に対応しているか確認してください。
+
+ALTQ は動的に読み込み可能なカーネルモジュールとしては提供されていません。
+システムのインタフェースが ALTQ に対応している場合は、[FreeBSD カーネルの設定](09-kernelconfig.md#kernelconfig) の手順に従ってカスタムカーネルを作成してください。
+次のカーネルオプションが利用できます。
+最初のオプションは ALTQ を有効にするために必須です。
+さらに、キューイングのスケジューリングアルゴリズムを指定するために、残りのオプションのうち少なくとも1つが必要です。
+
+```
+options         ALTQ
+options         ALTQ_CBQ        # Class Based Queuing (CBQ)
+options         ALTQ_RED        # Random Early Detection (RED)
+options         ALTQ_RIO        # RED In/Out
+options         ALTQ_HFSC       # Hierarchical Packet Scheduler (HFSC)
+options         ALTQ_PRIQ       # Priority Queuing (PRIQ)
+```
+
+次のスケジューラアルゴリズムが利用できます。
+
+* **CBQ**: Class Based Queuing（CBQ）は、接続の帯域幅を複数のクラスまたはキューに分割し、フィルタールールに基づいてトラフィックに優先順位を付けるために使います。
+* **RED**: Random Early Detection（RED）は、キューの長さを計測してキューの最小閾値および最大閾値と比較することで、ネットワークの輻輳を回避するために使います。キューが最大値を超えると、新しいパケットはすべてランダムに破棄されます。
+* **RIO**: Random Early Detection In and Out（RIO）モードでは、RED が QoS レベルごとに複数の平均キュー長と複数の閾値を管理します。
+* **HFSC**: Hierarchical Fair Service Curve Packet Scheduler（HFSC）については、[https://www-2.cs.cmu.edu/~hzhang/HFSC/main.html](https://www-2.cs.cmu.edu/~hzhang/HFSC/main.html) で解説されています。
+* **PRIQ**: Priority Queuing（PRIQ）は、より優先度の高いキューにあるトラフィックを常に先に通過させます。
+
+スケジューリングアルゴリズムやルールセットの例に関する詳しい情報は、[OpenBSD の Web アーカイブ](https://web.archive.org/web/20151109213426/http://www.openbsd.org/faq/pf/queueing.html) で入手できます。
