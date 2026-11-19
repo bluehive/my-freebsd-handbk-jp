@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-20 — 公式Appendix A Obtaining FreeBSD（既存TOC ID A）を意訳
+
+- 公式Appendix A [Obtaining FreeBSD](handbook/ja/A-mirrors.md)（既存TOC ID A、slug `mirrors`）を追加し、`handbook/TOC.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全11見出し・12アンカー・4コード例・3表（コミュニティミラー50行・プロトコルリンク185件・連絡先26件・SSHホスト鍵フィンガープリント6件を含む）・全相互参照を意訳・自己校正しました。
+- コミュニティミラー一覧の `{mirrors-*-email}` 属性は同じ固定コミットの `shared/mirrors.adoc` から解決し、訳注で明記しています。
+- [作業記録](docs/translation-appA.md) / [原文ハッシュと状態](docs/translation-appA.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-20 — 公式Chapter 30 Serial Communications（既存TOC ID 29）を意訳
 
 - 公式Chapter 30 [Serial Communications](handbook/ja/30-serialcomms.md)（既存TOC ID 29）を追加し、`handbook/TOC.md` を更新しました。

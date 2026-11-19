@@ -116,3 +116,7 @@
 ## 公式Chapter 30（Serial Communications）の意訳用スナップショット
 
 2026-11-20に、公式Chapter 30 Serial Communications（`documentation/content/en/books/handbook/serialcomms/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/ch30/30-serialcomms.adoc.txt`（49481バイト、SHA-256: `10508c90d2175ab5e9001bcd9354926a3c88ffc64b05013afd8f05fe5042d1ed`）、出典・進捗は [マニフェスト](docs/translation-ch30.json)と[作業記録](docs/translation-ch30.md)に保存しています。既存TOCのID 29に対応します。
+
+## 公式Appendix A（Obtaining FreeBSD）の意訳用スナップショット
+
+2026-11-20に、公式Appendix A Obtaining FreeBSD（`documentation/content/en/books/handbook/mirrors/_index.adoc`）を、`freebsd/freebsd-doc` の同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` から取得しました。原文は `handbook/en/appA/A-mirrors.adoc.txt`（20806バイト、SHA-256: `d4398bc07c55b1cb0a6b24606f9ff98cb18f1e1787c14582bd14701f6782b6a5`）、出典・進捗は [マニフェスト](docs/translation-appA.json)と[作業記録](docs/translation-appA.md)に保存しています。既存TOCのID Aに対応します。ミラー連絡先メールアドレス（`{mirrors-*-email}`）および `{committers-guide}` は同じ固定コミットの `shared/mirrors.adoc` および `shared/en/urls.adoc` を参照して解決しています。
