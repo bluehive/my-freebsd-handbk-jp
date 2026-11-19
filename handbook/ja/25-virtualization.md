@@ -1188,3 +1188,439 @@ QEMU がサポートする [Virtualization Accelerators](https://www.qemu.org/do
 * Linux およびその他の POSIX、Windows、MacOS 上の `Tiny Code Generator (tcg)`: Arm、x86、Loongarch64、MIPS、PPC、s390x、および Sparc64 をサポート
 
 この節のすべての例では、現時点で FreeBSD 上でサポートされている唯一のアクセラレータである `Tiny Code Generator (tcg)` アクセラレータを使用しました。
+
+<a id="virtualization-host-bhyve"></a>
+## bhyve をホストとする FreeBSD
+
+BSD ライセンスのハイパーバイザである bhyve は、FreeBSD 10.0-RELEASE からベースシステムの一部となりました。
+このハイパーバイザは、FreeBSD、OpenBSD、多くの Linux® ディストリビューション、Microsoft Windows® など複数のゲストをサポートしています。
+既定では、bhyve はシリアルコンソールへのアクセスを提供し、グラフィカルコンソールはエミュレートしません。
+新しい CPU の仮想化オフロード機能を利用することで、命令の変換やメモリマッピングの手動管理といった従来の手法を回避しています。
+
+bhyve の設計には次のいずれかが必要です。
+
+* Intel Extended Page Tables（EPT）をサポートする Intel® プロセッサ
+* AMD Rapid Virtualization Indexing（RVI）または Nested Page Tables（NPT）をサポートする AMD® プロセッサ
+* ARM® aarch64 CPU
+
+ARM では純粋な ARMv8.0 仮想化のみがサポートされており、Virtualization Host Extensions は現時点では使用されません。
+Linux® ゲストや複数の vCPU を持つ FreeBSD ゲストをホストするには、VMX unrestricted mode（UG）のサポートが必要です。
+
+Intel または AMD プロセッサが bhyve に対応しているかを確認する最も簡単な方法は、`dmesg` を実行するか `/var/run/dmesg.boot` を確認して、AMD® プロセッサなら `Features2` 行の `POPCNT` プロセッサ機能フラグ、Intel® プロセッサなら `VT-x` 行の `EPT` と `UG` があるかを見ることです。
+
+<a id="virtualization-bhyve-prep"></a>
+### ホストの準備
+
+bhyve で仮想マシンを作成する最初の手順は、ホストシステムを設定することです。
+まず、bhyve のカーネルモジュールを読み込みます。
+
+```shell
+# kldload vmm
+```
+
+仮想マシンゲストをホストのネットワークへ接続する方法はいくつかありますが、分かりやすい方法の 1 つは、仮想マシン内のネットワークデバイスが接続するための `tap` インターフェースを作成することです。
+そのネットワークデバイスがネットワークに参加できるように、`tap` インターフェースと物理インターフェースをメンバーに含むブリッジインターフェースも作成します。
+この例では、物理インターフェースは _igb0_ です。
+
+```shell
+# ifconfig tap0 create
+# sysctl net.link.tap.up_on_open=1
+net.link.tap.up_on_open: 0 -> 1
+# ifconfig bridge0 create
+# ifconfig bridge0 addm igb0 addm tap0
+# ifconfig bridge0 up
+```
+
+<a id="virtualization-bhyve-freebsd"></a>
+### FreeBSD ゲストの作成
+
+ゲストマシン用の仮想ディスクとして使用するファイルを作成します。
+仮想ディスクのサイズと名前を指定します。
+
+```shell
+# truncate -s 16G guest.img
+```
+
+インストールする FreeBSD のインストールイメージをダウンロードします。
+
+```shell
+# fetch https://download.freebsd.org/releases/ISO-IMAGES/14.0/FreeBSD-14.0-RELEASE-amd64-bootonly.iso
+FreeBSD-14.0-RELEASE-amd64-bootonly.iso                426 MB   16 MBps    22s
+```
+
+FreeBSD には、bhyve で仮想マシンを実行するためのサンプルスクリプト `vmrun.sh` が付属しています。
+このスクリプトは仮想マシンを起動してループ内で実行するため、クラッシュした場合でも自動的に再起動します。
+`vmrun.sh` にはマシンの構成を制御するためのいくつかのオプションがあります。
+
+* `-c`: 仮想 CPU 数を制御します
+* `-m`: ゲストが利用できるメモリ量を制限します
+* `-t`: 使用する `tap` デバイスを定義します
+* `-d`: 使用するディスクイメージを指定します
+* `-i`: ディスクではなく CD イメージから起動するよう bhyve に指示します
+* `-I`: 使用する CD イメージを定義します
+
+最後のパラメータは仮想マシンの名前で、実行中のマシンを追跡するために使われます。
+次のコマンドで、利用可能なすべてのプログラム引数オプションを一覧表示できます。
+
+```shell
+# sh /usr/share/examples/bhyve/vmrun.sh -h
+```
+
+次の例では、仮想マシンをインストールモードで起動します。
+
+```shell
+# sh /usr/share/examples/bhyve/vmrun.sh -c 1 -m 1024M -t tap0 -d guest.img \
+     -i -I FreeBSD-14.0-RELEASE-amd64-bootonly.iso guestname
+```
+
+仮想マシンが起動し、インストーラが開始されます。
+仮想マシンへのシステムインストールが終わり、最後にシェルへ抜けるかどうか尋ねられたら **Yes** を選択します。
+
+仮想マシンを再起動します。
+仮想マシンを再起動すると bhyve は終了しますが、`vmrun.sh` スクリプトは `bhyve` をループ内で実行しているため自動的に再起動します。
+再起動したら、ブートローダメニューから reboot オプションを選んでループから抜けてください。
+これで、仮想ディスクからゲストを起動できるようになります。
+
+```shell
+# sh /usr/share/examples/bhyve/vmrun.sh -c 4 -m 1024M -t tap0 -d guest.img guestname
+```
+
+<a id="virtualization-bhyve-linux"></a>
+### Linux® ゲストの作成
+
+Linux ゲストは、他の通常の [UEFI ベースのゲスト](#virtualization-bhyve-uefi)仮想マシンと同様に起動することも、代わりに `sysutils/grub2-bhyve` port を使用して起動することもできます。
+
+これを行うには、まずこの port がインストールされていることを確認し、次にゲストマシン用の仮想ディスクとして使うファイルを作成します。
+
+```shell
+# truncate -s 16G linux.img
+```
+
+`grub2-bhyve` を使って Linux 仮想マシンを起動するには、2 段階の手順を踏みます。
+
+1. まずカーネルを読み込み、その後でゲストを起動します。
+2. Linux® カーネルは `sysutils/grub2-bhyve` で読み込みます。
+
+grub が仮想デバイスをホストシステム上のファイルへマッピングするために使用する `device.map` を作成します。
+
+```
+(hd0) ./linux.img
+(cd0) ./somelinux.iso
+```
+
+`sysutils/grub2-bhyve` を使って、ISO イメージから Linux® カーネルを読み込みます。
+
+```shell
+# grub-bhyve -m device.map -r cd0 -M 1024M linuxguest
+```
+
+これにより grub が起動します。
+インストール CD に `grub.cfg` が含まれている場合はメニューが表示されます。
+含まれていない場合は、`vmlinuz` と `initrd` ファイルを探して手動で読み込む必要があります。
+
+```shell
+grub> ls
+(hd0) (cd0) (cd0,msdos1) (host)
+grub> ls (cd0)/isolinux
+boot.cat boot.msg grub.conf initrd.img isolinux.bin isolinux.cfg memtest
+splash.jpg TRANS.TBL vesamenu.c32 vmlinuz
+grub> linux (cd0)/isolinux/vmlinuz
+grub> initrd (cd0)/isolinux/initrd.img
+grub> boot
+```
+
+Linux® カーネルが読み込まれたので、ゲストを起動できます。
+
+```shell
+# bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,tap0 \
+    -s 3:0,virtio-blk,./linux.img -s 4:0,ahci-cd,./somelinux.iso \
+    -l com1,stdio -c 4 -m 1024M linuxguest
+```
+
+システムが起動し、インストーラが開始されます。
+仮想マシンへのシステムインストールが終わったら、仮想マシンを再起動します。
+これにより bhyve が終了します。
+再び起動する前に、仮想マシンのインスタンスを破棄する必要があります。
+
+```shell
+# bhyvectl --destroy --vm=linuxguest
+```
+
+これで仮想ディスクから直接ゲストを起動できるようになります。
+カーネルを読み込みます。
+
+```shell
+# grub-bhyve -m device.map -r hd0,msdos1 -M 1024M linuxguest
+grub> ls
+(hd0) (hd0,msdos2) (hd0,msdos1) (cd0) (cd0,msdos1) (host)
+(lvm/VolGroup-lv_swap) (lvm/VolGroup-lv_root)
+grub> ls (hd0,msdos1)/
+lost+found/ grub/ efi/ System.map-2.6.32-431.el6.x86_64 config-2.6.32-431.el6.x
+86_64 symvers-2.6.32-431.el6.x86_64.gz vmlinuz-2.6.32-431.el6.x86_64
+initramfs-2.6.32-431.el6.x86_64.img
+grub> linux (hd0,msdos1)/vmlinuz-2.6.32-431.el6.x86_64 root=/dev/mapper/VolGroup-lv_root
+grub> initrd (hd0,msdos1)/initramfs-2.6.32-431.el6.x86_64.img
+grub> boot
+```
+
+仮想マシンを起動します。
+
+```shell
+# bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,tap0 \
+    -s 3:0,virtio-blk,./linux.img -l com1,stdio -c 4 -m 1024M linuxguest
+```
+
+仮想マシン内で Linux® が起動し、やがてログインプロンプトが表示されます。
+ログインして仮想マシンを使用してください。
+作業が終わったら、仮想マシンを再起動して bhyve を終了します。
+仮想マシンインスタンスを破棄します。
+
+```shell
+# bhyvectl --destroy --vm=linuxguest
+```
+
+<a id="virtualization-bhyve-uefi"></a>
+### UEFI ファームウェアによる bhyve 仮想マシンの起動
+
+bhyve ハイパーバイザは、`bhyveload` や `grub-bhyve` に加えて、UEFI ファームウェアを使って仮想マシンを起動することもできます。
+このオプションにより、他のローダではサポートされていないゲストオペレーティングシステムを起動できる場合があります。
+
+bhyve の UEFI サポートを利用するには、まず UEFI ファームウェアイメージを入手します。
+これは `sysutils/bhyve-firmware` port またはパッケージをインストールすることで行えます。
+
+ファームウェアを配置したら、bhyve のコマンドラインに `-l bootrom,_/path/to/firmware_` フラグを追加します。
+実際の bhyve コマンドは次のようになります。
+
+```shell
+# bhyve -AHP -s 0:0,hostbridge -s 1:0,lpc \
+  	-s 2:0,virtio-net,tap1 -s 3:0,virtio-blk,./disk.img \
+	-s 4:0,ahci-cd,./install.iso -c 4 -m 1024M \
+	-l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI.fd \
+	guest
+```
+
+ゲストが UEFI 変数を保存できるようにするには、`-l` フラグに変数ファイルを追加します。
+bhyve はゲストによる変更を指定された変数ファイルに書き込む点に注意してください。
+そのため、最初に変数テンプレートファイルのゲストごとのコピーを必ず作成してください。
+
+```shell
+# cp /usr/local/share/uefi-firmware/BHYVE_UEFI_VARS.fd /path/to/vm-image/BHYVE_UEFI_VARS.fd
+```
+
+次に、その変数ファイルを bhyve の引数に追加します。
+
+```shell
+# bhyve -AHP -s 0:0,hostbridge -s 1:0,lpc \
+  	-s 2:0,virtio-net,tap1 -s 3:0,virtio-blk,./disk.img \
+	-s 4:0,ahci-cd,./install.iso -c 4 -m 1024M \
+	-l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI.fd,/path/to/vm-image/BHYVE_UEFI_VARS.fd \
+	guest
+```
+
+> **注記**: 一部の Linux ディストリビューションでは、UEFI ブートファイルのパス（たとえば `bootx64.efi` ではなく `linux64.efi` や `grubx64.efi`）を保存するために UEFI 変数を使用する必要があります。
+> そのため、ブートパーティション内のファイルを手動で変更しなくて済むよう、Linux 仮想マシンでは変数ファイルを使用することが推奨されます。
+
+変数ファイルの内容を表示または変更するには、ホストから `efivar(8)` を使用します。
+
+`sysutils/bhyve-firmware` には、UEFI に対応していないゲストをレガシー BIOS モードで起動するための CSM 対応ファームウェアも含まれています。
+
+```shell
+# bhyve -AHP -s 0:0,hostbridge -s 1:0,lpc \
+  	-s 2:0,virtio-net,tap1 -s 3:0,virtio-blk,./disk.img \
+	-s 4:0,ahci-cd,./install.iso -c 4 -m 1024M \
+	-l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI_CSM.fd \
+	guest
+```
+
+<a id="virtualization-bhyve-framebuffer"></a>
+### bhyve ゲスト用のグラフィカル UEFI フレームバッファ
+
+UEFI ファームウェアのサポートは、Microsoft Windows® のような主にグラフィカルなゲストオペレーティングシステムで特に有用です。
+
+`-s 29,fbuf,tcp=_0.0.0.0:5900_` フラグを指定すると、UEFI-GOP フレームバッファのサポートも有効にできます。
+フレームバッファの解像度は `w=_800_` と `h=_600_` で設定でき、`wait` を追加するとゲストを起動する前に VNC 接続を待機させることができます。
+フレームバッファには、ホストから、またはネットワーク経由で VNC プロトコルを使ってアクセスできます。
+さらに、`-s 30,xhci,tablet` を追加すると、ホストとマウスカーソルを正確に同期させることができます。
+
+結果として bhyve コマンドは次のようになります。
+
+```shell
+# bhyve -AHP -s 0:0,hostbridge -s 31:0,lpc \
+  	-s 2:0,virtio-net,tap1 -s 3:0,virtio-blk,./disk.img \
+	-s 4:0,ahci-cd,./install.iso -c 4 -m 1024M \
+	-s 29,fbuf,tcp=0.0.0.0:5900,w=800,h=600,wait \
+	-s 30,xhci,tablet \
+	-l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI.fd \
+	guest
+```
+
+BIOS エミュレーションモードでは、ファームウェアからゲストオペレーティングシステムへ制御が移るとフレームバッファの更新が停止する点に注意してください。
+
+<a id="virtualization-bhyve-windows"></a>
+### Microsoft Windows® ゲストの作成
+
+Windows 10 以前のバージョンのゲストの構築は、元のインストールメディアから直接行うことができ、比較的単純な手順です。
+最小リソース要件に加えて、Windows をゲストとして実行するには次のことが必要です。
+
+* 仮想マシンのメモリを固定（wire）すること（`-w` フラグ）
+* UEFI bootrom で起動すること
+
+Windows インストール ISO を使って仮想マシンゲストを起動する例を次に示します。
+
+```shell
+bhyve \
+      -c 2 \
+      -s 0,hostbridge \
+      -s 3,nvme,windows2016.img \
+      -s 4,ahci-cd,install.iso \
+      -s 10,virtio-net,tap0 \
+      -s 31,lpc \
+      -s 30,xhci,tablet \
+      -l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI.fd \
+      -m 8G -H -w \
+      windows2016
+```
+
+インストール中は 1 個または 2 個の VCPU のみを使用すべきですが、Windows のインストール後はこの数を増やすことができます。
+
+定義した `virtio-net` ネットワークインターフェースを使用するには、[VirtIO ドライバ](https://github.com/virtio-win/virtio-win-pkg-scripts/blob/master/README.md)をインストールする必要があります。
+代わりに上記のコマンドラインで `virtio-net` を `e1000` に変更して E1000（Intel E82545）エミュレーションへ切り替えることもできますが、性能は低下します。
+
+<a id="virtualization-bhyve-windows-win11"></a>
+#### Windows 11 ゲストの作成
+
+Windows 11 以降、Microsoft は TPM 2 モジュールのハードウェア要件を導入しました。
+bhyve はハードウェア TPM をゲストへパススルーすることに対応しています。
+関連するハードウェアチェックを無効にするためにインストールメディアを変更することもできます。
+この手順の詳細は [FreeBSD Wiki](https://wiki.freebsd.org/bhyve/Windows#iso-remaster) に記載されています。
+
+> **警告**: Windows インストールメディアの変更や、TPM モジュールなしでの Windows ゲストの実行はメーカーによってサポートされていません。
+> このような手法を採用する前に、用途とユースケースをよく検討してください。
+
+<a id="virtualization-bhyve-zfs"></a>
+### bhyve ゲストでの ZFS の使用
+
+ホストマシンで ZFS が利用できる場合、ディスクイメージファイルの代わりに ZFS ボリュームを使用すると、ゲスト仮想マシンの性能を大幅に向上させることができます。
+ZFS ボリュームは次のように作成できます。
+
+```shell
+# zfs create -V16G -o volmode=dev zroot/linuxdisk0
+```
+
+仮想マシンを起動する際、ディスクドライブとしてその ZFS ボリュームを指定します。
+
+```shell
+# bhyve -A -H -P -s 0:0,hostbridge -s 1:0,lpc -s 2:0,virtio-net,tap0 \
+  	-s3:0,virtio-blk,/dev/zvol/zroot/linuxdisk0 \
+	-l com1,stdio -c 4 -m 1024M linuxguest
+```
+
+ホストとゲスト内の両方で ZFS を使用する場合、両方のシステムが仮想マシンの内容をキャッシュすることによるメモリ圧迫の競合に注意してください。
+これを緩和するため、ホスト側の ZFS ファイルシステムではメタデータのみのキャッシュを使用するよう設定することを検討してください。
+これを行うには、`<name>` を仮想マシンの特定の zvol データセット名に置き換えて、ホスト上の ZFS ファイルシステムに次の設定を適用します。
+
+```shell
+# zfs set primarycache=metadata <name>
+```
+
+<a id="virtualiziation-bhyve-snapshot"></a>
+### 仮想マシンスナップショットの作成
+
+現代のハイパーバイザでは、状態の「スナップショット」を作成できます。
+このようなスナップショットには、ゲストのディスク、CPU、メモリの内容が含まれます。
+通常、スナップショットはゲストが実行中かシャットダウンされているかに関係なく取得できます。
+その後、スナップショットを取得したまさにその時点の状態へ仮想マシンをリセットして戻すことができます。
+
+<a id="virtualization-bhyve-snapshot-zfs"></a>
+#### ZFS スナップショット
+
+仮想マシンのバックエンドストレージとして ZFS ボリュームを使用すると、ゲストのディスクのスナップショットを取得できるようになります。たとえば次のように実行します。
+
+```shell
+zfs snapshot zroot/path/to/zvol@snapshot_name
+```
+
+このようにゲストの実行中に ZFS ボリュームのスナップショットを取得することも可能ですが、ゲストが動作している間は仮想ディスクの内容が不整合な状態になり得る点に注意してください。
+そのため、このコマンドを実行する前にまずゲストをシャットダウンするか一時停止することが推奨されます。
+ゲストの一時停止は既定ではサポートされておらず、事前に有効化する必要があります（[メモリと CPU のスナップショット](#virtualization-bhyve-snapshot-builtin)を参照）。
+
+> **警告**: 仮想マシンが ZFS zvol を使用中にスナップショットへロールバックすると、ファイルシステムの内容が破損し、ゲストがクラッシュするおそれがあります。
+> ゲスト内の未保存データはすべて失われ、前回のスナップショット以降の変更が破壊される可能性があります。
+>
+> ファイルシステムを使用可能な状態へ戻すために、仮想マシンをシャットダウンした後で 2 回目のロールバックが必要になる場合があります。
+> その結果、スナップショット以降に行われた変更は最終的にすべて失われます。
+
+<a id="virtualization-bhyve-snapshot-builtin"></a>
+#### メモリと CPU のスナップショット（実験的機能）
+
+FreeBSD 13 以降、bhyve にはゲストのメモリと CPU の状態をファイルへダンプして仮想マシンを停止する実験的な「スナップショット」機能があります。
+その後、スナップショットファイルの内容からゲストを再開できます。
+
+ただし、この機能は既定では有効になっておらず、システムをソースから再構築する必要があります。
+カスタムオプション付きでカーネルをコンパイルする手順の詳細は、[ソースからの構築](27-cutting-edge.md#updating-src-building)を参照してください。
+
+> **警告**: この機能は本番環境での利用には適しておらず、特定の仮想マシン構成でのみ動作するよう制限されています。
+> 複数の制限事項があります。
+>
+> * `nvme` および `virtio-blk` ストレージバックエンドはまだ動作しません
+> * スナップショットはゲストが各デバイスを 1 種類ずつ使用している場合にのみサポートされます。つまり、複数の `ahci-hd` ディスクが接続されている場合、スナップショットの作成は失敗します
+> * さらに、この機能は Intel CPU ではある程度安定しているかもしれませんが、AMD CPU では動作しない可能性が高いです。
+
+> **注記**: 以下の手順を実行する前に、`/usr/src` ディレクトリが最新であることを確認してください。詳しい手順は[ソースの更新](27-cutting-edge.md#updating-src-obtaining-src)を参照してください。
+
+まず、`/etc/src.conf` に以下を追加します。
+
+```
+WITH_BHYVE_SNAPHOT=yes
+BHYVE_SNAPSHOT=1
+MK_BHYVE_SNAPSHOT=yes
+```
+
+> **訳注**: 原文では `WITH_BHYVE_SNAPHOT=yes`（`SNAPSHOT` の `S` が抜けた綴り）となっていますが、原文どおり保持しています。
+
+> **注記**: システムを部分的または全面的に再構築したことがある場合は、先へ進む前に以下を実行することが推奨されます。
+
+```shell
+# cd /usr/src
+# make cleanworld
+```
+
+> 実行後、次の手順へ進んでください。
+
+その後、[ソースからの FreeBSD 更新のクイックスタート](27-cutting-edge.md#updating-src-quick-start)節の手順に従って world とカーネルを構築・インストールします。
+
+スナップショット機能が正常に有効化されたことを確認するには、次を入力します。
+
+```shell
+# bhyvectl --usage
+```
+
+そして、出力に `--suspend` フラグが含まれているか確認します。
+このフラグが見当たらない場合、機能は正しく有効化されていません。
+
+次に、任意の実行中の仮想マシンをスナップショットして一時停止（suspend）します。
+
+```shell
+# bhyvectl --vm=vmname --suspend=/path/to/snapshot/filename
+```
+
+> **注記**: `--suspend` には絶対パスとファイル名を指定してください。
+> そうしないと、bhyve は起動元のディレクトリにスナップショットデータを書き込みます。
+>
+> スナップショットデータは必ず安全なディレクトリに書き込んでください。
+> 生成される出力にはゲストの完全なメモリダンプが含まれるため、機密データ（パスワードなど）が含まれている可能性があります。
+
+これにより次の 3 つのファイルが作成されます。
+
+* メモリスナップショット — `--suspend` に指定した入力と同じ名前
+* カーネルファイル — `--suspend` に指定した入力に `.kern` の接尾辞を付けた名前
+* メタデータ — システム状態に関するメタデータを含み、`.meta` の接尾辞を付けた名前
+
+スナップショットからゲストを復元するには、`bhyve` に `-r` フラグを指定して使用します。
+
+```shell
+# bhyve -r /path/to/snapshot/filename
+```
+
+異なる CPU アーキテクチャ上でゲストスナップショットを復元することはできません。
+一般に、スナップショットを作成したシステムと同一でないシステム上で復元を試みると失敗する可能性が高いです。
