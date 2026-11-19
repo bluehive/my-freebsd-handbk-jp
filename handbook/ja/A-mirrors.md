@@ -89,3 +89,136 @@ http://ftp-archive.FreeBSD.org は GeoDNS インフラストラクチャには�
 > **訳注**: 上記の表における各国の連絡先メールアドレスは、同じ固定コミット `a39743a3b0535f4498735119317889ea2bdfeb28` の `shared/mirrors.adoc` の定義（`{mirrors-*-email}` 属性）を解決したものです。
 
 コミュニティミラーが対応するプロトコルの現行一覧は 2022-01-31 が最終更新日であり、現在の状況は保証されていません。
+
+<a id="git"></a>
+## Git の利用
+
+> **訳注**: 原文ではこの見出しの下に本文がなく、内容は以下の小節にあります。
+
+<a id="git-intro"></a>
+### はじめに
+
+2020 年 12 月以降、FreeBSD はベースシステムのソースコードとドキュメントすべてを格納する主要なバージョン管理システムとして Git を使用しています。
+2021 年 4 月以降、FreeBSD は Ports Collection すべてを格納する唯一のバージョン管理システムとして Git を使用しています。
+
+> **注**: Git は一般に開発者向けのツールです。FreeBSD ベースシステムの更新には、`freebsd-update`（[FreeBSD Update](27-cutting-edge.md#updating-upgrading-freebsdupdate)）の利用を好むユーザーも多いでしょう。
+
+この節では、FreeBSD システムに Git をインストールし、FreeBSD のソースコードリポジトリのローカルコピーを作成する方法を説明します。
+
+<a id="git-install"></a>
+### インストール
+
+Git は Ports Collection から、またはパッケージとしてインストールできます。
+
+```shell
+# pkg install git
+```
+
+<a id="git-usage"></a>
+### Git の実行
+
+ソースのクリーンなコピーをローカルディレクトリへ取得するには、`git clone` を使用します。
+このファイル群を格納するディレクトリを*作業ツリー（working tree）*と呼びます。
+
+Git はリポジトリの指定に URL を用います。
+リポジトリは 3 種類あり、FreeBSD システムのソースコード用の `src`、ドキュメント用の `doc`、FreeBSD Ports Collection 用の `ports` です。
+いずれも HTTPS と SSH の 2 種類のプロトコルで利用できます。
+たとえば、`https://git.FreeBSD.org/src.git` という URL は、`https` プロトコルを使って `src` リポジトリの `main` ブランチを指定します。
+
+<a id="git-url-table"></a>
+**表: FreeBSD Git リポジトリ URL 一覧**
+
+| 項目 | Git URL |
+|---|---|
+| HTTPS 経由の読み取り専用 src リポジトリ | `https://git.FreeBSD.org/src.git` |
+| 匿名 SSH（anon-ssh）経由の読み取り専用 src リポジトリ | `ssh://anongit@git.FreeBSD.org/src.git` |
+| HTTPS 経由の読み取り専用 doc リポジトリ | `https://git.FreeBSD.org/doc.git` |
+| 匿名 SSH（anon-ssh）経由の読み取り専用 doc リポジトリ | `ssh://anongit@git.FreeBSD.org/doc.git` |
+| HTTPS 経由の読み取り専用 ports リポジトリ | `https://git.FreeBSD.org/ports.git` |
+| 匿名 SSH（anon-ssh）経由の読み取り専用 ports リポジトリ | `ssh://anongit@git.FreeBSD.org/ports.git` |
+
+プロジェクトメンバーが維持している外部ミラーも利用できます。[外部ミラー](#external-mirrors)節を参照してください。
+
+FreeBSD システムのソースコードリポジトリのコピーをクローンするには、次のように実行します。
+
+```shell
+# git clone -o freebsd https://git.FreeBSD.org/src.git /usr/src
+```
+
+`-o freebsd` オプションはオリジン（リモート名）を指定するもので、FreeBSD ドキュメントの慣例ではオリジンを `freebsd` と想定しています。
+初回のチェックアウトではリモートリポジトリのブランチ全体をダウンロードする必要があるため、時間がかかることがあります。
+しばらくお待ちください。
+
+初期状態では、作業ツリーには CURRENT に対応する `main` ブランチのソースコードが含まれています。
+代わりに 13-STABLE へ切り替えるには、次のように実行します。
+
+```shell
+# cd /usr/src
+# git checkout stable/13
+```
+
+作業ツリーは `git pull` で更新できます。
+上記の例で作成した `/usr/src` を更新するには、次のように実行します。
+
+```shell
+# cd /usr/src
+# git pull --rebase
+```
+
+更新は変更されたファイルのみを転送するため、初回のチェックアウトよりもはるかに高速です。
+
+<a id="appendix-A-heading-07"></a>
+### Web ベースのリポジトリブラウザ
+
+FreeBSD プロジェクトでは、Web ベースのリポジトリブラウザとして cgit を使用しています（[https://cgit.FreeBSD.org/](https://cgit.FreeBSD.org/)）。
+
+<a id="appendix-A-heading-08"></a>
+### 開発者向け情報
+
+リポジトリへの書き込みアクセスについては、[Committer's Guide](https://docs.freebsd.org/en/articles/committers-guide/#git-mini-primer) を参照してください。
+
+<a id="external-mirrors"></a>
+### 外部ミラー
+
+以下のミラーは FreeBSD.org 上ではホストされていませんが、プロジェクトメンバーによって維持されています。
+ユーザーや開発者は、これらのミラーからリポジトリを pull したり閲覧したりすることができます。
+GitHub の `doc` および `src` リポジトリではプルリクエストを受け付けていますが、それ以外のミラーにおけるプロジェクトのワークフローは引き続き議論中です。
+
+**Codeberg**
+
+* doc: https://codeberg.org/FreeBSD/freebsd-doc
+* ports: https://codeberg.org/FreeBSD/freebsd-ports
+* src: https://codeberg.org/FreeBSD/freebsd-src
+
+**GitHub**
+
+* doc: https://github.com/freebsd/freebsd-doc
+* ports: https://github.com/freebsd/freebsd-ports
+* src: https://github.com/freebsd/freebsd-src
+
+**GitLab**
+
+* doc: https://gitlab.com/FreeBSD/freebsd-doc
+* ports: https://gitlab.com/FreeBSD/freebsd-ports
+* src: https://gitlab.com/FreeBSD/freebsd-src
+
+<a id="appendix-A-heading-10"></a>
+### メーリングリスト
+
+FreeBSD プロジェクトにおける Git の一般的な利用方法や質問に関する主要なメーリングリストは [freebsd-git](https://lists.freebsd.org/subscription/freebsd-git) です。
+コミットメッセージ用メーリングリストなどの詳細については、[メーリングリスト（Mailing Lists）](https://docs.freebsd.org/en/books/handbook/eresources/#eresources-mail)の章を参照してください。
+
+<a id="appendix-A-heading-11"></a>
+### SSH ホスト鍵
+
+* `gitrepo.FreeBSD.org` のホスト鍵フィンガープリント:
+  * ECDSA 鍵のフィンガープリント: `SHA256:seWO5D27ySURcx4bknTNKlC1mgai0whP443PAKEvvZA`
+  * ED25519 鍵のフィンガープリント: `SHA256:lNR6i4BEOaaUhmDHBA1WJsO7H3KtvjE2r5q4sOxtIWo`
+  * RSA 鍵のフィンガープリント: `SHA256:f453CUEFXEJAXlKeEHV+ajJfeEfx9MdKQUD7lIscnQI`
+
+* `git.FreeBSD.org` のホスト鍵フィンガープリント:
+  * ECDSA 鍵のフィンガープリント: `SHA256:/UlirUAsGiitupxmtsn7f9b7zCWd0vCs4Yo/tpVWP9w`
+  * ED25519 鍵のフィンガープリント: `SHA256:y1ljKrKMD3lDObRUG3xJ9gXwEIuqnh306tSyFd1tuZE`
+  * RSA 鍵のフィンガープリント: `SHA256:jBe6FQGoH4HjvrIVM23dcnLZk9kmpdezR/CvQzm7rJM`
+
+これらは DNS の SSHFP レコードとしても公開されています。
