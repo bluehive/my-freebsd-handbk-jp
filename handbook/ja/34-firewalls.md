@@ -1547,3 +1547,553 @@ options    IPDIVERT			# enables NAT through natd(8)
 ```
 
 > **注記**: IPFW はカーネルモジュールとして読み込むことができます。上記のオプションは既定でモジュールとしてビルドされるか、実行時にチューナブルを使って設定できます。
+
+<a id="firewalls-ipf"></a>
+## IPFILTER (IPF)
+
+IPFILTER（IPF とも呼ばれます）は、FreeBSD、NetBSD、OpenBSD、Solaris™ など複数のオペレーティングシステムに移植されているクロスプラットフォームのオープンソースファイアウォールです。
+
+IPFILTER はカーネル側のファイアウォールおよび NAT 機構であり、ユーザーランドのプログラムから制御・監視できます。
+`ipf` を使ってファイアウォールルールを設定・削除し、`ipnat` を使って NAT ルールを設定・削除し、`ipfstat` を使って IPFILTER のカーネル部分の実行時統計情報を表示し、`ipmon` を使って IPFILTER の動作をシステムログファイルへ記録できます。
+
+IPF はもともと「最後に一致したルールが勝つ（the last matching rule wins）」というルール処理ロジックとステートレスルールだけを使って書かれていました。
+その後、`quick` オプションや `keep state` オプションが追加され、機能が強化されています。
+
+IPF FAQ は [https://www.phildev.net/ipf/index.html](https://www.phildev.net/ipf/index.html) にあります。
+IPFilter メーリングリストの検索可能なアーカイブは [https://marc.info/?l=ipfilter](https://marc.info/?l=ipfilter) で利用できます。
+
+本節では、FreeBSD における IPF に焦点を当て、`quick` と `keep state` オプションを含むルールの例を紹介します。
+
+<a id="chapter-34-heading-30"></a>
+### IPF を有効にする
+
+IPF は FreeBSD の基本インストールに動的読み込み可能なカーネルモジュールとして含まれているため、IPF を有効にするためにカスタムカーネルをビルドする必要はありません。
+
+IPF サポートをカスタムカーネルへ静的に組み込みたい場合は、[FreeBSD カーネルの設定](09-kernelconfig.md#kernelconfig) の手順を参照してください。
+次のカーネルオプションが利用できます。
+
+```
+options IPFILTER
+options IPFILTER_LOG
+options IPFILTER_LOOKUP
+options IPFILTER_DEFAULT_BLOCK
+```
+
+ここで、`options IPFILTER` は IPFILTER のサポートを有効にし、`options IPFILTER_LOG` は `log` キーワードを持つすべてのルールについて `ipl` パケットログ用擬似デバイスを使った IPF のログ記録を有効にし、`IPFILTER_LOOKUP` は IP 検索を高速化するための IP プールを有効にし、`options IPFILTER_DEFAULT_BLOCK` はファイアウォールの `pass` ルールに一致しないパケットをすべて遮断するように既定の挙動を変更します。
+
+システム起動時に IPF を有効にするには、`/etc/rc.conf` に次の項目を追加します。
+これらの設定により、ログ記録と `default pass all`（既定ですべて通過）も有効になります。
+カスタムカーネルをコンパイルせずに既定のポリシーを `block all`（すべて遮断）へ変更するには、ルールセットの最後に `block all` ルールを追加するのを忘れないでください。
+
+```
+ipfilter_enable="YES"             # Start ipf firewall
+ipfilter_rules="/etc/ipf.rules"   # loads rules definition text file
+ipv6_ipfilter_rules="/etc/ipf6.rules" # loads rules definition text file for IPv6
+ipmon_enable="YES"                # Start IP monitor log
+ipmon_flags="-Ds"                 # D = start as daemon
+                                  # s = log to syslog
+                                  # v = log tcp window, ack, seq
+                                  # n = map IP & port to names
+```
+
+NAT 機能が必要な場合は、次の行も追加します。
+
+```
+gateway_enable="YES"              # Enable as LAN gateway
+ipnat_enable="YES"                # Start ipnat function
+ipnat_rules="/etc/ipnat.rules"    # rules definition file for ipnat
+```
+
+その後、今すぐ IPF を起動するには次のように実行します。
+
+```
+#  service ipfilter start
+```
+
+ファイアウォールルールを読み込むには、`ipf` を使ってルールセットファイル名を指定します。
+現在稼働中のファイアウォールルールを置き換えるには、次のコマンドを使用します。
+
+```shell
+# ipf -Fa -f /etc/ipf.rules
+```
+
+ここで `-Fa` は内部のルールテーブルをすべて消去（flush）し、`-f` は読み込むルールを記述したファイルを指定します。
+
+これにより、システムを再起動することなく独自のルールセットを変更し、稼働中のファイアウォールを最新のルールで更新できます。
+手順を何度でも実行できるため、新しいルールのテストにも便利です。
+
+このコマンドで使えるその他のフラグの詳細は `ipf(8)` を参照してください。
+
+<a id="chapter-34-heading-31"></a>
+### IPF ルール構文
+
+ここでは、ステートフルルールを作成するための IPF ルール構文を説明します。
+ルールを作成するときは、ルールに `quick` キーワードが含まれていない限り、すべてのルールが順番に読み込まれ、**最後に一致したルール**が適用される点に注意してください。
+つまり、パケットに最初に一致したルールが `pass` であっても、その後ろに一致する `block` ルールがあれば、そのパケットは破棄されます。
+サンプルのルールセットは `/usr/share/examples/ipfilter` にあります。
+
+ルールを書く際、`#` 文字はコメントの開始を示し、そのルールの機能を説明するためにルール末尾に置くことも、単独の行に置くこともできます。
+空行はすべて無視されます。
+
+ルール内で使うキーワードは、左から右へ決まった順序で記述する必要があります。
+必須のキーワードと省略可能なキーワードがあります。
+一部のキーワードにはサブオプションがあり、それら自体がキーワードとなってさらにサブオプションを持つこともあります。
+キーワードの順序は次のとおりです。大文字で示された語は変数（値）を表し、小文字で示された語は直後に続く変数の前に必ず置く必要があります。
+
+`*ACTION DIRECTION OPTIONS* proto *PROTO_TYPE* from *SRC_ADDR SRC_PORT* to *DST_ADDR DST_PORT TCP_FLAG|ICMP_TYPE* keep state *STATE*`
+
+ここでは、これらのキーワードとオプションをそれぞれ説明します。
+利用可能なすべてのオプションを網羅したものではありません。
+IPF ルールを作成する際に使える構文の完全な解説と各キーワードの使用例は `ipf(5)` を参照してください。
+
+* **ACTION**: アクションキーワードは、パケットがそのルールに一致したときに何をするかを指定します。すべてのルールにはアクションが**必須**です。次のアクションが認識されます。
+
+  `block`: パケットを破棄する。
+
+  `pass`: パケットを許可する。
+
+  `log`: ログレコードを生成する。
+
+  `count`: パケット数とバイト数を数える。ルールがどの程度の頻度で使われているかの目安になる。
+
+  `auth`: 別のプログラムによる追加処理のためにパケットをキューに入れる。
+
+  `call`: IPF に組み込まれた関数を呼び出し、より複雑なアクションを実行する。
+
+  `decapsulate`: パケットの内容を処理するためにヘッダを取り除く。
+
+* **DIRECTION**: 次に、各ルールでは次のいずれかのキーワードを使ってトラフィックの方向を明示する必要があります。
+
+  `in`: インバウンド（受信）パケットに対してルールを適用する。
+
+  `out`: アウトバウンド（送信）パケットに対してルールを適用する。
+
+  `all`: どちらの方向にもルールを適用する。
+
+  システムに複数のインタフェースがある場合は、方向とあわせてインタフェースを指定できます。たとえば `in on fxp0` のように書きます。
+
+* **OPTIONS**: オプションは省略可能です。ただし、複数のオプションを指定する場合は、ここに示す順序で記述する必要があります。
+
+  `log`: 指定された `ACTION` を実行する際、パケットのヘッダ内容を `ipl(4)` パケットログ用擬似デバイスへ書き出す。
+
+  `quick`: パケットがこのルールに一致した場合、ルールで指定された `ACTION` が実行され、このパケットに対する後続ルールの処理は一切行われない。
+
+  `on`: 後ろに `ifconfig(8)` で表示されるインタフェース名を続ける必要がある。パケットが指定されたインタフェースを指定された方向に通過する場合にのみルールに一致する。
+
+  `log` キーワードを使う場合、次の修飾子をこの順序で使用できます。
+
+  `body`: ヘッダに続いてパケット内容の先頭 128 バイトもログに記録することを指定する。
+
+  `first`: `log` キーワードを `keep state` オプションと併用する場合に推奨されるオプションで、ステートフル接続に一致するすべてのパケットではなく、きっかけとなった最初のパケットだけがログに記録されるようにする。
+
+  エラー応答メッセージを指定するためのオプションも追加で用意されています。詳細は `ipf(5)` を参照してください。
+
+* **PROTO_TYPE**: プロトコル種別は省略可能です。ただし、プロトコルの種類を定義するため、ルールで `SRC_PORT` または `DST_PORT` を指定する必要がある場合は必須になります。プロトコル種別を指定するときは、`proto` キーワードの後ろに `/etc/protocols` のプロトコル番号またはプロトコル名を続けます。プロトコル名の例としては `tcp`、`udp`、`icmp` などがあります。`PROTO_TYPE` を指定して `SRC_PORT` や `DST_PORT` を指定しない場合、そのプロトコルのすべてのポート番号がそのルールに一致します。
+
+* **SRC_ADDR**: `from` キーワードは必須であり、後ろにパケットの送信元を表すキーワードを続けます。送信元には、ホスト名、後ろに CIDR マスクを付けた IP アドレス、アドレスプール、または `all` キーワードを指定できます。例については `ipf(5)` を参照してください。
+
+  ドット区切りの数値表記 / マスク長表記で簡単に表せない IP アドレス範囲を一致させる方法はありません。CIDR マスクの計算を簡単にするには、`net-mgmt/ipcalc` のパッケージまたは port を使えます。詳しい情報はユーティリティの Web ページ（[https://jodies.de/ipcalc](https://jodies.de/ipcalc)）にあります。
+
+* **SRC_PORT**: 送信元のポート番号は省略可能です。ただし、使用する場合はルール内で先に `PROTO_TYPE` が定義されている必要があります。また、ポート番号の前には `proto` キーワードが必要です。
+
+  次の各種比較演算子がサポートされています：`=`（等しい）、`!=`（等しくない）、`<`（より小さい）、`>`（より大きい）、`<=`（以下）、`>=`（以上）。
+
+  ポート範囲を指定するには、2つのポート番号を `<>`（より小さい、またはより大きい＝範囲外）、`><`（より大きく、かつより小さい＝範囲内）、または `:`（以上、かつ以下＝両端を含む範囲内）で挟みます。
+
+* **DST_ADDR**: `to` キーワードは必須であり、後ろにパケットの宛先を表すキーワードを続けます。`SRC_ADDR` と同様に、ホスト名、後ろに CIDR マスクを付けた IP アドレス、アドレスプール、または `all` キーワードを指定できます。
+
+* **DST_PORT**: `SRC_PORT` と同様に、宛先のポート番号は省略可能です。ただし、使用する場合はルール内で先に `PROTO_TYPE` が定義されている必要があります。また、ポート番号の前には `proto` キーワードが必要です。
+
+* **TCP_FLAG|ICMP_TYPE**: `PROTO_TYPE` として `tcp` を指定した場合、接続状態を判定するために使われる TCP フラグを表す文字を指定できます。指定できる値は `S`（SYN）、`A`（ACK）、`P`（PSH）、`F`（FIN）、`U`（URG）、`R`（RST）、`C`（CWN）、`E`（ECN）です。
+
+  `PROTO_TYPE` として `icmp` を指定した場合、一致させる ICMP 種別を指定できます。指定可能な種別については `ipf(5)` を参照してください。
+
+* **STATE**: `pass` ルールに `keep state` が含まれていると、IPF は動的ステートテーブルにエントリを追加し、その接続に一致する後続のパケットを許可します。IPF は TCP、UDP、ICMP の各セッションの状態を追跡できます。別のプロトコルであっても、アクティブなセッションの一部であると IPF が確実に判断できるパケットはすべて許可されます。
+
+  IPF では、パブリックインターネットに接続されたインタフェースから出ていくパケットは、まず動的ステートテーブルと照合されます。アクティブなセッション通信を構成する次の期待パケットに一致した場合、そのパケットはファイアウォールを通過し、動的ステートテーブル内のセッション通信フローの状態が更新されます。すでにアクティブなセッションに属していないパケットは、アウトバウンドルールセットと照合されます。パブリックインターネットに接続されたインタフェースから入ってくるパケットも、まず動的ステートテーブルと照合されます。アクティブなセッションを構成する次の期待パケットに一致した場合、そのパケットはファイアウォールを通過し、動的ステートテーブル内のセッション通信フローの状態が更新されます。すでにアクティブなセッションに属していないパケットは、インバウンドルールセットと照合されます。
+
+  `keep state` の後ろにはいくつかのキーワードを追加できます。これらを使うと、接続数上限や接続の生存期間の設定など、ステートフルフィルタリングを制御するさまざまなオプションを設定できます。利用可能なオプションの一覧と解説は `ipf(5)` を参照してください。
+
+<a id="chapter-34-heading-32"></a>
+### ルールセットの例
+
+ここでは、`pass` ルールに一致するサービスだけを許可し、それ以外をすべて遮断するルールセットの例を作成する方法を示します。
+
+FreeBSD は内部通信にループバックインタフェース（`lo0`）と IP アドレス `127.0.0.1` を使います。
+ファイアウォールルールセットには、これらの内部用パケットの自由なやり取りを許可するルールを含める必要があります。
+
+```
+# no restrictions on loopback interface
+pass in quick on lo0 all
+pass out quick on lo0 all
+```
+
+インターネットに接続されたパブリックインタフェースは、すべてのアウトバウンド接続およびインバウンド接続のアクセスを認可・制御するために使われます。
+1つ以上のインタフェースがプライベートネットワークに接続されている場合、LAN から発信されたパケットが内部ネットワーク間やインターネット接続インタフェースへ流れるように、それらの内部インタフェースにもルールが必要になることがあります。
+ルールセットは大きく分けて、信頼された内部インタフェース、パブリックインタフェース経由のアウトバウンド接続、パブリックインタフェース経由のインバウンド接続の3つのセクションに整理するとよいでしょう。
+
+次の2つのルールは、`xl0` という名前の信頼された LAN インタフェースを通過するすべてのトラフィックを許可します。
+
+```
+# no restrictions on inside LAN interface for private network
+pass out quick on xl0 all
+pass in quick on xl0 all
+```
+
+パブリックインタフェースのアウトバウンドおよびインバウンドセクションのルールでは、頻繁に一致するルールをあまり一致しないルールより前に配置し、セクションの最後のルールでそのインタフェースと方向のすべてのパケットを遮断してログに記録するようにします。
+
+次のルール群は、`dc0` という名前のパブリックインタフェースのアウトバウンドセクションを定義します。
+これらのルールはステートを保持し、内部システムがパブリックインターネットへのアクセスを許可されている特定のサービスを識別します。
+すべてのルールで `quick` を使い、適切なポート番号と、該当する場合は宛先アドレスを指定しています。
+
+```
+# interface facing Internet (outbound)
+# Matches session start requests originating from or behind the
+# firewall, destined for the Internet.
+
+# Allow outbound access to public DNS servers.
+# Replace x.x.x.x with address listed in /etc/resolv.conf.
+# Repeat for each DNS server.
+pass out quick on dc0 proto tcp from any to x.x.x.x port = 53 flags S keep state
+pass out quick on dc0 proto udp from any to x.x.x.x port = 53 keep state
+
+# Allow access to ISP's specified DHCP server for cable or DSL networks.
+# Use the first rule, then check log for the IP address of DHCP server.
+# Then, uncomment the second rule, replace z.z.z.z with the IP address,
+# and comment out the first rule
+pass out log quick on dc0 proto udp from any to any port = 67 keep state
+#pass out quick on dc0 proto udp from any to z.z.z.z port = 67 keep state
+
+# Allow HTTP and HTTPS
+pass out quick on dc0 proto tcp from any to any port = 80 flags S keep state
+pass out quick on dc0 proto tcp from any to any port = 443 flags S keep state
+
+# Allow email
+pass out quick on dc0 proto tcp from any to any port = 110 flags S keep state
+pass out quick on dc0 proto tcp from any to any port = 25 flags S keep state
+
+# Allow NTP
+pass out quick on dc0 proto tcp from any to any port = 37 flags S keep state
+
+# Allow FTP
+pass out quick on dc0 proto tcp from any to any port = 21 flags S keep state
+
+# Allow SSH
+pass out quick on dc0 proto tcp from any to any port = 22 flags S keep state
+
+# Allow ping
+pass out quick on dc0 proto icmp from any to any icmp-type 8 keep state
+
+# Block and log everything else
+block out log first quick on dc0 all
+```
+
+次のパブリックインタフェースのインバウンドセクションのルール例では、望ましくないパケットを最初にすべて遮断します。
+これにより、最後のルールでログに記録されるパケットの数を減らせます。
+
+```
+# interface facing Internet (inbound)
+# Block all inbound traffic from non-routable or reserved address spaces
+block in quick on dc0 from 192.168.0.0/16 to any    #RFC 1918 private IP
+block in quick on dc0 from 172.16.0.0/12 to any     #RFC 1918 private IP
+block in quick on dc0 from 10.0.0.0/8 to any        #RFC 1918 private IP
+block in quick on dc0 from 127.0.0.0/8 to any       #loopback
+block in quick on dc0 from 0.0.0.0/8 to any         #loopback
+block in quick on dc0 from 169.254.0.0/16 to any    #DHCP auto-config
+block in quick on dc0 from 192.0.2.0/24 to any      #reserved for docs
+block in quick on dc0 from 204.152.64.0/23 to any   #Sun cluster interconnect
+block in quick on dc0 from 224.0.0.0/3 to any       #Class D & E multicast
+
+# Block fragments and too short tcp packets
+block in quick on dc0 all with frags
+block in quick on dc0 proto tcp all with short
+
+# block source routed packets
+block in quick on dc0 all with opt lsrr
+block in quick on dc0 all with opt ssrr
+
+# Block OS fingerprint attempts and log first occurrence
+block in log first quick on dc0 proto tcp from any to any flags FUP
+
+# Block anything with special options
+block in quick on dc0 all with ipopts
+
+# Block public pings and ident
+block in quick on dc0 proto icmp all icmp-type 8
+block in quick on dc0 proto tcp from any to any port = 113
+
+# Block incoming Netbios services
+block in log first quick on dc0 proto tcp/udp from any to any port = 137
+block in log first quick on dc0 proto tcp/udp from any to any port = 138
+block in log first quick on dc0 proto tcp/udp from any to any port = 139
+block in log first quick on dc0 proto tcp/udp from any to any port = 81
+```
+
+`log first` オプション付きのルールでメッセージが記録されたときは、`ipfstat -hio` を実行してそのルールが何回一致したかを確認してください。
+一致回数が非常に多い場合は、システムが攻撃を受けている可能性があります。
+
+インバウンドセクションの残りのルールでは、インターネットから開始することが許可される接続を定義します。
+最後のルールは、このセクションの前のルールで明示的に許可されなかったすべての接続を拒否します。
+
+```
+# Allow traffic in from ISP's DHCP server. Replace z.z.z.z with
+# the same IP address used in the outbound section.
+pass in quick on dc0 proto udp from z.z.z.z to any port = 68 keep state
+
+# Allow public connections to specified internal web server
+pass in quick on dc0 proto tcp from any to x.x.x.x port = 80 flags S keep state
+
+# Block and log only first occurrence of all remaining traffic.
+block in log first quick on dc0 all
+```
+
+<a id="chapter-34-heading-33"></a>
+### NAT の設定
+
+NAT を有効にするには、`/etc/rc.conf` に次の記述を追加し、NAT ルールを収めたファイル名を指定します。
+
+```
+gateway_enable="YES"
+ipnat_enable="YES"
+ipnat_rules="/etc/ipnat.rules"
+```
+
+NAT ルールは柔軟で、企業ユーザーと家庭ユーザーのどちらのニーズにも合わせて多様な処理を実現できます。
+ここで紹介するルール構文は、一般的な使い方を示すために簡略化したものです。
+ルール構文の完全な解説は `ipnat(5)` を参照してください。
+
+NAT ルールの基本構文は次のとおりです。ルールは `map` で始まり、*IF* は外部インタフェース名に置き換えます。
+
+```
+map IF LAN_IP_RANGE -> PUBLIC_ADDRESS
+```
+
+*LAN_IP_RANGE* は内部クライアントが使う IP アドレスの範囲です。
+通常は `192.168.1.0/24` のようなプライベートアドレス範囲を指定します。
+*PUBLIC_ADDRESS* には、静的な外部 IP アドレス、または *IF* に割り当てられた IP アドレスを表すキーワード `0/32` のいずれかを指定できます。
+
+IPF では、パブリック宛先のパケットが LAN からファイアウォールに到着すると、まずファイアウォールルールセットのアウトバウンドルールを通過します。
+次に、パケットは NAT ルールセットへ渡されます。NAT ルールセットは上から下へ読み込まれ、最初に一致したルールが適用されます。
+IPF は各 NAT ルールをパケットのインタフェース名および送信元 IP アドレスと照合します。
+パケットのインタフェース名が NAT ルールに一致すると、プライベート LAN 内の送信元 IP アドレスが *LAN_IP_RANGE* で指定された IP アドレス範囲に含まれるかどうかが調べられます。
+一致した場合、パケットの送信元 IP アドレスは *PUBLIC_ADDRESS* で指定されたパブリック IP アドレスに書き換えられます。
+IPF は内部の NAT テーブルにエントリを登録し、インターネットからパケットが戻ってきたときに、ファイアウォールルールへ渡してさらに処理する前に元のプライベート IP アドレスへ戻せるようにします。
+
+多数の内部システムや複数のサブネットを持つネットワークでは、すべてのプライベート IP アドレスを単一のパブリック IP アドレスへ集約する処理がリソース上の問題になることがあります。
+この問題を緩和するには2つの方法があります。
+
+1つ目の方法は、送信元ポートとして使うポート範囲を割り当てることです。
+`portmap` キーワードを追加すると、指定した範囲内の送信元ポートだけを使うように NAT に指示できます。
+
+```
+map dc0 192.168.1.0/24 -> 0/32 portmap tcp/udp 20000:60000
+```
+
+あるいは、`auto` キーワードを使うと、利用可能なポートを NAT に自動決定させられます。
+
+```
+map dc0 192.168.1.0/24 -> 0/32 portmap tcp/udp auto
+```
+
+2つ目の方法は、パブリックアドレスのプールを使うことです。
+これは、単一のパブリックアドレスに収まりきらないほど多くの LAN アドレスがあり、かつパブリック IP アドレスのブロックが利用できる場合に便利です。
+パケットのアドレスが外向きに変換される際、NAT が IP アドレスを選ぶためのプールとしてこれらのパブリックアドレスを使えます。
+
+パブリック IP アドレスの範囲はネットマスクまたは CIDR 表記で指定できます。
+次の2つのルールは同等です。
+
+```
+map dc0 192.168.1.0/24 -> 204.134.75.0/255.255.255.0
+map dc0 192.168.1.0/24 -> 204.134.75.0/24
+```
+
+よく行われる構成として、外部からアクセス可能な Web サーバーやメールサーバーを内部ネットワークセグメントに隔離して配置する方法があります。
+これらのサーバーからのトラフィックも NAT を受ける必要がありますが、インバウンドトラフィックを正しいサーバーへ導くにはポートリダイレクトが必要です。
+たとえば、内部アドレス `10.0.10.25` を使う Web サーバーをパブリック IP アドレス `20.20.20.5` に対応付けるには、次のルールを使います。
+
+```
+rdr dc0 20.20.20.5/32 port 80 -> 10.0.10.25 port 80
+```
+
+それが唯一の Web サーバーである場合は、外部からのすべての HTTP リクエストを `10.0.10.25` へリダイレクトする次のルールでも動作します。
+
+```
+rdr dc0 0.0.0.0/0 port 80 -> 10.0.10.25 port 80
+```
+
+IPF には NAT と組み合わせて使える組み込みの FTP プロキシがあります。
+これは、アクティブまたはパッシブ FTP 接続要求のアウトバウンドトラフィックをすべて監視し、FTP データチャネルで使われるポート番号を含む一時的なフィルタールールを動的に作成します。
+これにより、FTP 接続のために高位ポートの広い範囲を開けておく必要がなくなります。
+
+次の例では、最初のルールが内部 LAN からのアウトバウンド FTP トラフィックに対してプロキシを呼び出します。
+2つ目のルールはファイアウォールからインターネットへの FTP トラフィックを通過させ、3つ目のルールは内部 LAN からの FTP 以外のすべてのトラフィックを処理します。
+
+```
+map dc0 10.0.10.0/29 -> 0/32 proxy port 21 ftp/tcp
+map dc0 0.0.0.0/0 -> 0/32 proxy port 21 ftp/tcp
+map dc0 10.0.10.0/29 -> 0/32
+```
+
+FTP の `map` ルールは NAT ルールより前に置きます。そうすることで、パケットが FTP ルールに一致したとき、FTP プロキシが一時的なフィルタールールを作成し、FTP セッションのパケットを通過させて NAT を行えるようになります。
+FTP ではないすべての LAN パケットは FTP ルールには一致しませんが、3つ目のルールに一致して NAT を受けます。
+
+FTP プロキシを使わない場合は、代わりに次のようなファイアウォールルールが必要になります。
+プロキシを使わない場合は `1024` より大きいすべてのポートを許可する必要がある点に注意してください。
+
+```
+# Allow out LAN PC client FTP to public Internet
+# Active and passive modes
+pass out quick on rl0 proto tcp from any to any port = 21 flags S keep state
+
+# Allow out passive mode data channel high order port numbers
+pass out quick on rl0 proto tcp from any to any port > 1024 flags S keep state
+
+# Active mode let data channel in from FTP server
+pass in quick on rl0 proto tcp from any to any port = 20 flags S keep state
+```
+
+NAT ルールを含むファイルを編集したときは、必ず `-CF` を付けて `ipnat` を実行し、現在の NAT ルールを削除して動的変換テーブルの内容を消去（flush）してください。
+あわせて `-f` を付け、読み込む NAT ルールセットの名前を指定します。
+
+```shell
+# ipnat -CF -f /etc/ipnat.rules
+```
+
+NAT の統計情報を表示するには次のようにします。
+
+```shell
+# ipnat -s
+```
+
+NAT テーブルの現在のマッピング一覧を表示するには次のようにします。
+
+```shell
+# ipnat -l
+```
+
+詳細モード（verbose mode）を有効にして、ルール処理やアクティブなルール、テーブルエントリに関する情報を表示するには次のようにします。
+
+```shell
+# ipnat -v
+```
+
+<a id="chapter-34-heading-34"></a>
+### IPF 統計情報の表示
+
+IPF には `ipfstat(8)` が含まれており、パケットがファイアウォールを通過してルールに一致する際に収集された統計情報を取得・表示できます。
+統計情報は、最後にファイアウォールを起動した時点、または最後に `ipf -Z` でゼロリセットした時点から累積されます。
+
+`ipfstat` の既定の出力は次のようになります。
+
+```shell
+input packets: blocked 99286 passed 1255609 nomatch 14686 counted 0
+ output packets: blocked 4200 passed 1284345 nomatch 14687 counted 0
+ input packets logged: blocked 99286 passed 0
+ output packets logged: blocked 0 passed 0
+ packets logged: input 0 output 0
+ log failures: input 3898 output 0
+ fragment state(in): kept 0 lost 0
+ fragment state(out): kept 0 lost 0
+ packet state(in): kept 169364 lost 0
+ packet state(out): kept 431395 lost 0
+ ICMP replies: 0 TCP RSTs sent: 0
+ Result cache hits(in): 1215208 (out): 1098963
+ IN Pullups succeeded: 2 failed: 0
+ OUT Pullups succeeded: 0 failed: 0
+ Fastroute successes: 0 failures: 0
+ TCP cksum fails(in): 0 (out): 0
+ Packet log flags set: (0)
+```
+
+いくつかのオプションが用意されています。
+インバウンド用の `-i` またはアウトバウンド用の `-o` を指定すると、現在カーネルに組み込まれて使用されている該当方向のフィルタールール一覧を取得して表示します。
+ルール番号もあわせて表示するには `-n` を付けます。
+たとえば、`ipfstat -on` はアウトバウンドのルールテーブルをルール番号付きで表示します。
+
+```shell
+@1 pass out on xl0 from any to any
+@2 block out on dc0 from any to any
+@3 pass out quick on dc0 proto tcp/udp from any to any keep state
+```
+
+各ルールの先頭に一致回数を表示するには `-h` を付けます。
+たとえば、`ipfstat -oh` はアウトバウンドの内部ルールテーブルを、各ルールの先頭に利用回数を付けて表示します。
+
+```shell
+2451423 pass out on xl0 from any to any
+354727 block out on dc0 from any to any
+430918 pass out quick on dc0 proto tcp/udp from any to any keep state
+```
+
+ステートテーブルを `top(1)` に似た形式で表示するには、`ipfstat -t` を使います。
+ファイアウォールが攻撃を受けているとき、このオプションを使うと攻撃元のパケットを特定して確認できます。
+追加のサブフラグを使うと、リアルタイムで監視する宛先・送信元の IP、ポート、プロトコルを選択できます。
+詳しくは `ipfstat(8)` を参照してください。
+
+<a id="chapter-34-heading-35"></a>
+### IPF のログ記録
+
+IPF には `ipmon` が用意されており、ファイアウォールのログ情報を人間が読める形式で書き出すことができます。
+これを使うには、あらかじめ [FreeBSD カーネルの設定](09-kernelconfig.md#kernelconfig) の手順に従ってカスタムカーネルへ `options IPFILTER_LOG` を追加しておく必要があります。
+
+過去のイベントのログを後から確認できるよう継続的なシステムログファイルを提供するため、このコマンドは通常デーモンモードで実行します。
+FreeBSD にはシステムログを自動的にローテーションする `syslogd(8)` 機能が組み込まれているため、`/etc/rc.conf` の既定の `ipmon_flags` 指定では `-Ds` を使います。
+
+```
+ipmon_flags="-Ds" # D = start as daemon
+                  # s = log to syslog
+                  # v = log tcp window, ack, seq
+                  # n = map IP & port to names
+```
+
+ログを記録しておくと、どのパケットが破棄されたのか、どのアドレスから来たのか、どこへ向かっていたのかといった情報を事後に確認できます。
+この情報は攻撃者の追跡に役立ちます。
+
+`/etc/rc.conf` でログ機能を有効にして `service ipmon start` で起動した後は、IPF は `log` キーワードを含むルールだけを記録します。
+ルールセット内のどのルールを記録すべきかはファイアウォール管理者が決め、通常は拒否ルールのみを記録します。
+ルールセットの最後のルールに `log` キーワードを含めるのが慣例です。
+これにより、ルールセットのどのルールにも一致しなかったすべてのパケットを確認できます。
+
+既定では、`ipmon -Ds` モードはログファシリティとして `local0` を使います。
+記録データをさらに分類するために、次のログレベルが使えます。
+
+```shell
+LOG_INFO - packets logged using the "log" keyword as the action rather than pass or block.
+LOG_NOTICE - packets logged which are also passed
+LOG_WARNING - packets logged which are also blocked
+LOG_ERR - packets which have been logged and which can be considered short due to an incomplete header
+```
+
+IPF のすべてのデータを `/var/log/ipfilter.log` へ記録するよう設定するには、まず空ファイルを作成します。
+
+```shell
+# touch /var/log/ipfilter.log
+```
+
+次に、ログに記録されたすべてのメッセージを指定ファイルへ書き出すため、`/etc/syslog.conf` に次の行を追加します。
+
+```
+local0.* /var/log/ipfilter.log
+```
+
+変更を有効にし、修正された `/etc/syslog.conf` を `syslogd(8)` に読み込ませるには、`service syslogd reload` を実行します。
+
+新しいログファイルをローテーションするよう `/etc/newsyslog.conf` を編集するのも忘れないでください。
+
+`ipmon` が生成するメッセージは、空白文字で区切られたデータフィールドで構成されます。
+すべてのメッセージに共通するフィールドは次のとおりです。
+
+1. パケットを受信した日付。
+2. パケットを受信した時刻。時・分・秒・秒の端数を表す `HH:MM:SS.F` 形式。
+3. パケットを処理したインタフェースの名前。
+4. `@0:17` 形式でのルールのグループ番号とルール番号。
+5. アクション：`p` は通過（passed）、`b` は遮断（blocked）、`S` は短いパケット（short packet）、`n` はどのルールにも一致せず、`L` はログ（log）ルール。
+6. 3つのフィールドとして書かれたアドレス：コンマで区切った送信元アドレスとポート、`->` 記号、および宛先アドレスとポート（例：`209.53.17.22,80 -> 198.73.220.17,1722`）。
+7. `PR` に続けてプロトコル名または番号（例：`PR tcp`）。
+8. `len` に続けてパケットのヘッダ長と全長（例：`len 20 40`）。
+
+パケットが TCP パケットの場合は、さらにハイフンで始まり、設定されている各フラグに対応する文字を並べたフィールドが追加されます。
+文字とフラグの一覧については `ipf(5)` を参照してください。
+
+パケットが ICMP パケットの場合は、末尾に2つのフィールドが付きます。1つ目は常に `icmp`、2つ目は ICMP メッセージとサブメッセージ種別をスラッシュで区切ったものです。
+たとえば、ポート到達不能（port unreachable）メッセージの場合は `icmp 3/3` となります。
