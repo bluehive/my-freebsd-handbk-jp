@@ -13,7 +13,7 @@ FreeBSD ユーザーコミュニティは充実した技術サポートを提供
 以下に、特に重要な連絡先や情報源をまとめます。
 より最新の情報は、[コミュニティ Wiki（Community wiki area）](https://wiki.freebsd.org/Community)に掲載されている場合があります。
 
-不要になった情報源や、まだ以下に掲載されていない情報源がある場合は、[FreeBSD ドキュメンテーションプロジェクト・メーリングリスト（freebsd-doc）](https://lists.FreeBSD.org/subscription/freebsd-doc)までお知らせください。
+重複している情報源や、まだ以下に掲載されていない情報源がある場合は、[FreeBSD ドキュメンテーションプロジェクト・メーリングリスト（freebsd-doc）](https://lists.FreeBSD.org/subscription/freebsd-doc)までお知らせください。
 
 <a id="eresources-www"></a>
 ## Web サイト（Websites）
