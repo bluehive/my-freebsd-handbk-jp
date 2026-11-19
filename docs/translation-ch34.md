@@ -20,18 +20,24 @@
 - 表：1
 - 画像：0
 
-## 進捗状況（ドラフト）
+## 進捗状況（自己校正済）
 
 - [x] 01–03: 冒頭・Introduction・Firewall Concepts
 - [x] 04–16: PF（Packet Filter）
 - [x] 17–28: IPFW
 - [x] 29–35: IPFILTER (IPF)
-- [ ] 36–43: Blacklistd
+- [x] 36–43: Blacklistd
+
+## 訳注で区別した原文の仕様・注意点
+
+- **AsciiDoc ヘッダ・共有 `include::` の除外**：フロントマターや文書属性、共有ファイルの `include::` は翻訳対象外とし、本文の節のみを意訳しました。
+- **ルールスクリプトのシェル構文**：`Building a Rule Script` 節で原文が `sh(1)`・`csh(1)`・`tcsh(1)` 互換と説明している箇所について、掲載スクリプトが `#!/bin/sh` の `VAR="value"` 代入構文を用いている点を訳注で補足しました。
 
 ## 検証
 
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch34_translation.py`
-- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_ch34_translation.py --require-complete`
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/check_handbook_translations.py --require-complete`
+- `pandoc --from=gfm --to=json handbook/ja/34-firewalls.md` による GFM 構文解析（43見出し・152コードブロック・1表）
 - `git diff --check`
 
-FreeBSD 実機での動作確認、第三者による専門校閲、および取得後の上流変更への追随は未実施です。
+FreeBSD 実機での動作確認（`pfctl`・`ipfw`・`ipf`・`blocklistd` 等のコマンド実行）、第三者による専門校閲、および取得後の上流変更への追随は未実施です。

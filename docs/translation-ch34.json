@@ -13,9 +13,9 @@
       "source_path": "handbook/en/ch34/34-firewalls.adoc.txt",
       "translation_path": "handbook/ja/34-firewalls.md",
       "source_sha256": "59d166966e604c5564548036577be575aa27922f9a8a516761e16aa83cd5229a",
-      "status": "pending",
-      "reviewed_at": null,
-      "review": "Draft in progress; pinned source retrieved and verified (2691 lines, 123801 bytes)",
+      "status": "translated",
+      "reviewed_at": "2026-11-19",
+      "review": "Interpretive translation self-checked against all 43 headings, 43 anchors, 152 code blocks, 1 table, and all cross-references in the pinned source; sh/csh/tcsh syntax note added for ipfw.rules; runtime and third-party review not performed",
       "counts": {
         "headings": 43,
         "anchors": 43,

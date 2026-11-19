@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-19 — 公式Chapter 34 Firewalls を意訳
+
+- [Firewalls](handbook/ja/34-firewalls.md)（公式 Chapter 34 / 既存 TOC ID 33）を追加し、`handbook/TOC.md` と `SOURCE.md` を更新しました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全43見出し・43アンカー・152コード例・1表・全相互参照を意訳・自己校正しました。
+- 原文のコマンド・設定例・ルールセットはそのまま保持し、`ipfw.rules` のシェル構文に関する補足を訳注で明記しています。
+- [作業・検証記録](docs/translation-ch34.md) / [原文ハッシュと状態](docs/translation-ch34.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-19 — 公式Chapter 33 Network Servers を意訳
 
 - 公式の章番号に従い、[Network Servers](handbook/ja/33-network-servers.md)を追加し、`handbook/TOC.md`（既存ID 32）を更新しました。
