@@ -22,7 +22,7 @@
 
 ## 進捗状況（ドラフト）
 
-- [ ] 01–03: 冒頭・Introduction・Firewall Concepts
+- [x] 01–03: 冒頭・Introduction・Firewall Concepts
 - [ ] 04–16: PF（Packet Filter）
 - [ ] 17–28: IPFW
 - [ ] 29–35: IPFILTER (IPF)
