@@ -24,7 +24,7 @@
 
 - [x] 01–03: 冒頭・Introduction・Firewall Concepts
 - [x] 04–16: PF（Packet Filter）
-- [ ] 17–28: IPFW
+- [x] 17–28: IPFW
 - [ ] 29–35: IPFILTER (IPF)
 - [ ] 36–43: Blacklistd
 
