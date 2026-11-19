@@ -36,6 +36,13 @@ handbook/
 
 ## 進捗ログ（新しいものが上）
 
+### 2026-11-19 — 公式Chapter 25 Virtualization（仮想化）を意訳
+
+- [仮想化（Virtualization）](handbook/ja/25-virtualization.md)を追加し、`handbook/TOC.md` の既存 TOC ID 24 へ対応付けました。
+- 上流コミット `a39743a3b0535f4498735119317889ea2bdfeb28` に固定し、全58見出し・76アンカー・126コード例・38画像・1表を意訳・自己校正しました。
+- 原文のコード例や表記（`ums_load` の全角引用符、`/boot.loader.conf`、`WITH_BHYVE_SNAPHOT=yes`、`nmdbbhyve0A/B`、Xen `freebsd.cfg` の `tank` vs `zroot`）は保持したまま訳注で区別しています。
+- [作業・検証記録](docs/translation-ch25.md) / [原文ハッシュと状態](docs/translation-ch25.json)。FreeBSD実機検証と第三者専門校閲は未実施。
+
 ### 2026-11-19 — 公式Chapter 35 Advanced Networking（既存TOC ID 34）を意訳
 
 - 公式の章番号に従い、[Advanced Networking](handbook/ja/35-advanced-networking.md) を追加し、`handbook/TOC.md` の既存 TOC ID 34 へ対応付けました。

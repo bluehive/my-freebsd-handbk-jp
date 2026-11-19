@@ -83,18 +83,18 @@ macOS® X 上の Parallels に FreeBSD を正常にインストールできた�
    最も重要な手順は、Parallels 環境下での FreeBSD の CPU 使用率を下げるために調整可能変数 `kern.hz` の値を小さくすることです。
    これを行うには、`/boot/loader.conf` に次の行を追加します。
 
-   ```
-   kern.hz=100
-   ```
+```
+kern.hz=100
+```
 
    この設定を行わない場合、アイドル状態の FreeBSD Parallels ゲストはシングルプロセッサ iMac® の CPU をおよそ 15% 消費します。
    この変更により、使用率は 5% 近くに下がります。
 
    FreeBSD 14.0 以降をインストールしていて、それでも CPU 使用率が高い場合は、`/boot/loader.conf` に次の行も追加してください。
 
-   ```
-   debug.acpi.disabled="ged"
-   ```
+```
+debug.acpi.disabled="ged"
+```
 
 2. 新しいカーネルコンフィグレーションファイルの作成
 
@@ -192,9 +192,9 @@ macOS® X 上の VMware Fusion に FreeBSD を正常にインストールでき�
    最も重要な手順は、VMware Fusion 環境下での FreeBSD の CPU 使用率を下げるために調整可能変数 `kern.hz` の値を小さくすることです。
    これを行うには、`/boot/loader.conf` に次の行を追加します。
 
-   ```
-   kern.hz=100
-   ```
+```
+kern.hz=100
+```
 
    この設定を行わない場合、アイドル状態の FreeBSD VMware Fusion ゲストはシングルプロセッサ iMac® の CPU をおよそ 15% 消費します。
    この変更により、使用率は 5% 近くに下がります。
@@ -214,9 +214,9 @@ macOS® X 上の VMware Fusion に FreeBSD を正常にインストールでき�
 
    VMware 上で FreeBSD を快適に動作させるため、ドライバをインストールします。
 
-   ```shell
-   # pkg install xf86-video-vmware xf86-input-vmmouse open-vm-tools
-   ```
+```shell
+# pkg install xf86-video-vmware xf86-input-vmmouse open-vm-tools
+```
 
 > **注記**: `xf86` パッケージは x86 系 FreeBSD ゲストでのみ利用できます。
 
@@ -225,9 +225,9 @@ macOS® X 上の VMware Fusion に FreeBSD を正常にインストールでき�
    仮想マシン内でマウスの使用に問題が報告されることがあります。
    `/boot/loader.conf` に次を追記するとマウスを有効にできる場合があります。
 
-   ```
-   # ums_load=“YES”
-   ```
+```
+# ums_load=“YES”
+```
 
 > **訳注**: 原文のコード例には行頭の `#` と全角引用符（`“` `”`）が含まれているため原文どおり保持しています。実際に設定を有効にする際は、`#` を外し半角の二重引用符を使って `ums_load="YES"` としてください。
 
@@ -508,9 +508,9 @@ QEMU は FreeBSD のパッケージまたは port として `emulators/qemu` に
 
 1. QEMU 作業用のテスト環境を作成します。
 
-   ```shell
-   % mkdir -p ~/QEMU  ~/QEMU/SCRIPTS  ~/QEMU/ISO  ~/QEMU/VM
-   ```
+```shell
+% mkdir -p ~/QEMU  ~/QEMU/SCRIPTS  ~/QEMU/ISO  ~/QEMU/VM
+```
 
    `SCRIPTS` ディレクトリは起動スクリプトやユーティリティ用です。
    `ISO` ディレクトリはゲストのブート用 ISO イメージ用です。
@@ -518,25 +518,25 @@ QEMU は FreeBSD のパッケージまたは port として `emulators/qemu` に
 
 2. FreeBSD の最近の版を `~/QEMU/ISO` にダウンロードします。
 
-   ```shell
-   % cd ~/QEMU/ISO
-   % fetch https://download.freebsd.org/releases/ISO-IMAGES/14.1/FreeBSD-14.1-RELEASE-amd64-bootonly.iso
-   ```
+```shell
+% cd ~/QEMU/ISO
+% fetch https://download.freebsd.org/releases/ISO-IMAGES/14.1/FreeBSD-14.1-RELEASE-amd64-bootonly.iso
+```
 
    ダウンロードが完了したら、短縮用のシンボリックリンクを作成します。
    このリンクは後述の起動スクリプトで使用します。
 
-   ```shell
-   % ln -s FreeBSD-14.1-RELEASE-amd64-bootonly.iso  fbsd.iso
-   ```
+```shell
+% ln -s FreeBSD-14.1-RELEASE-amd64-bootonly.iso  fbsd.iso
+```
 
 3. 仮想マシンを配置するディレクトリ（`~/QEMU/VM`）へ移動します。
    `qemu-img(1)` を実行して、"left" 仮想マシン用のディスクイメージを作成します。
 
-   ```shell
-   % cd ~/QEMU/VM
-   % qemu-img create -f raw  left.img   15G
-   ```
+```shell
+% cd ~/QEMU/VM
+% qemu-img create -f raw  left.img   15G
+```
 
    QEMU の `raw` 形式は性能重視で設計されています。
    形式が単純でオーバーヘッドがないため高速であり、特に高性能・高スループットが求められる場面に適しています。
@@ -552,32 +552,32 @@ QEMU は FreeBSD のパッケージまたは port として `emulators/qemu` に
 
    再び `qemu-img(1)` を実行し、`qcow2` を用いて "right" 仮想マシン用のディスクイメージを作成します。
 
-   ```shell
-   % qemu-img create -f qcow2 -o preallocation=full,cluster_size=512K,lazy_refcounts=on right.qcow2 20G
-   ```
+```shell
+% qemu-img create -f qcow2 -o preallocation=full,cluster_size=512K,lazy_refcounts=on right.qcow2 20G
+```
 
    ファイルの実際のサイズを確認するには次のように実行します。
 
-   ```shell
-   % du -Ah right.qcow2
-   ```
+```shell
+% du -Ah right.qcow2
+```
 
 4. 次のコマンドで両方の仮想マシン向けにネットワークを設定します。
    この例ではホストのネットワークインターフェースは `em0` です。
    必要に応じて、ホストシステムのインターフェースに合わせて変更してください。
    QEMU ゲスト仮想マシンが通信できるようにするため、ホストマシンを再起動するたびにこの設定を行う必要があります。
 
-   ```shell
-   # ifconfig tap0 create
-   # ifconfig tap1 create
-   # sysctl net.link.tap.up_on_open=1
-   net.link.tap.up_on_open: 0 -> 1
-   # sysctl net.link.tap.user_open=1
-   net.link.tap.user_open: 0 -> 1
-   # ifconfig bridge0 create
-   # ifconfig bridge0 addm tap0 addm tap1 addm em0
-   # ifconfig bridge0 up
-   ```
+```shell
+# ifconfig tap0 create
+# ifconfig tap1 create
+# sysctl net.link.tap.up_on_open=1
+net.link.tap.up_on_open: 0 -> 1
+# sysctl net.link.tap.user_open=1
+net.link.tap.user_open: 0 -> 1
+# ifconfig bridge0 create
+# ifconfig bridge0 addm tap0 addm tap1 addm em0
+# ifconfig bridge0 up
+```
 
    上記のコマンドは 2 つの `tap(4)` デバイス（`tap0`、`tap1`）と 1 つの `if_bridge(4)` デバイス（`bridge0`）を作成します。
    次に、`tap` デバイスとローカルホストのインターフェース（`em0`）を `bridge` に追加し、一般ユーザーが tap デバイスを開けるように 2 つの `sysctl(8)` エントリを設定します。
@@ -586,21 +586,21 @@ QEMU は FreeBSD のパッケージまたは port として `emulators/qemu` に
 5. `~/QEMU/SCRIPTS` へ移動し、次のスクリプトを使って最初の仮想マシン "left" を起動します。
    このスクリプトは QEMU の raw ディスク形式を使用します。
 
-   ```
-   /usr/local/bin/qemu-system-x86_64  -monitor none \
-     -cpu qemu64 \
-     -vga std \
-     -m 4096 \
-     -smp 4   \
-     -cdrom ../ISO/fbsd.iso \
-     -boot order=cd,menu=on \
-     -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.img \
-     -blockdev driver=raw,node-name=drive0,file=imgleft \
-     -device virtio-blk-pci,drive=drive0,bootindex=1  \
-     -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
-     -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
-     -name \"left\"
-   ```
+```
+/usr/local/bin/qemu-system-x86_64  -monitor none \
+  -cpu qemu64 \
+  -vga std \
+  -m 4096 \
+  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.img \
+  -blockdev driver=raw,node-name=drive0,file=imgleft \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
+  -name \"left\"
+```
 
 > **ヒント**: 上記の内容をファイル（たとえば `left.sh`）に保存し、`% /bin/sh left.sh` と実行するだけで起動できます。
 
@@ -845,43 +845,43 @@ QEMU は、ホスト CPU とは異なるアーキテクチャ向けにコンパ�
    OpenBSD のダウンロードサイトでは最新バージョンのみが維持されています。
    過去のリリースを入手するにはアーカイブを検索する必要があります。
 
-   ```shell
-   % cd ~/QEMU/ISO
-   % fetch https://mirror.planetunix.net/pub/OpenBSD-archive/6.8/sparc64/install68.iso
-   ```
+```shell
+% cd ~/QEMU/ISO
+% fetch https://mirror.planetunix.net/pub/OpenBSD-archive/6.8/sparc64/install68.iso
+```
 
 2. Sparc64 仮想マシン用の新しいディスクイメージの作成は、前述の "right" 仮想マシンと同様です。
    この例ではディスクに QEMU の qcow2 形式を使用します。
 
-   ```shell
-   % cd ~/QEMU/VM
-   qemu-img create -f qcow2 -o preallocation=full,lazy_refcounts=on sparc64.qcow2 16G
-   ```
+```shell
+% cd ~/QEMU/VM
+qemu-img create -f qcow2 -o preallocation=full,lazy_refcounts=on sparc64.qcow2 16G
+```
 
 3. 新しい Sparc64 アーキテクチャ向けに以下のスクリプトを使用します。
    前述の例と同様にスクリプトを実行し、別のセッションを開いて指定されたポートで localhost に `telnet` 接続します。
 
-   ```
-   echo
-   echo "NOTE: telnet startup server running on guest VM!"
-   echo "To start QEMU, start another session and telnet to localhost port 4410"
-   echo
+```
+echo
+echo "NOTE: telnet startup server running on guest VM!"
+echo "To start QEMU, start another session and telnet to localhost port 4410"
+echo
 
-   /usr/local/bin/qemu-system-sparc64 \
-     -serial telnet:localhost:4410,server=on,wait=on \
-     -machine sun4u,usb=off \
-     -smp 1,sockets=1,cores=1,threads=1 \
-     -rtc base=utc \
-     -m 1024 \
-     -boot d \
-     -drive file=../VM/sparc64.qcow2,if=none,id=drive-ide0-0-1,format=qcow2,cache=none \
-     -cdrom ../ISO/install68.iso \
-     -device ide-hd,bus=ide.0,unit=0,drive=drive-ide0-0-1,id=ide0-0-1 \
-     -msg timestamp=on \
-     -net nic,model=sunhme -net user \
-     -nographic \
-     -name \"sparc64\"
-   ```
+/usr/local/bin/qemu-system-sparc64 \
+  -serial telnet:localhost:4410,server=on,wait=on \
+  -machine sun4u,usb=off \
+  -smp 1,sockets=1,cores=1,threads=1 \
+  -rtc base=utc \
+  -m 1024 \
+  -boot d \
+  -drive file=../VM/sparc64.qcow2,if=none,id=drive-ide0-0-1,format=qcow2,cache=none \
+  -cdrom ../ISO/install68.iso \
+  -device ide-hd,bus=ide.0,unit=0,drive=drive-ide0-0-1,id=ide0-0-1 \
+  -msg timestamp=on \
+  -net nic,model=sunhme -net user \
+  -nographic \
+  -name \"sparc64\"
+```
 
 次の点に注意してください。
 
@@ -1985,9 +1985,9 @@ bhyve 仮想マシンの構築や管理を簡単にするため、Ports には�
 
    ネットワークバックエンドとして `tap` インターフェースを使用する場合、使用する各 `tap` インターフェースを手動で UP にするか、単に次の sysctl を設定します。
 
-   ```
-   net.link.tap.up_on_open=1
-   ```
+```
+net.link.tap.up_on_open=1
+```
 
 2. `/etc/rc.conf`
 
@@ -1995,12 +1995,12 @@ bhyve 仮想マシンの構築や管理を簡単にするため、Ports には�
    さらに、`kld_list` 設定変数を通じて、bhyve に必要な `vmm` カーネルモジュールと `nmdm` デバイス用の `nmdm` カーネルモジュールを読み込みます。
    `ifconfig_bridge0` を設定する際は、`<ipaddr>/<netmask>` を物理インターフェース（この例では `igb0`）の実際の IP アドレスに置き換え、物理デバイスからは IP 設定を削除してください。
 
-   ```shell
-   # sysrc cloned_interfaces+="bridge0 tap0"
-   # sysrc ifconfig_bridge0="inet <ipaddr>/<netmask> addm igb0 addm tap0"
-   # sysrc kld_list+="nmdm vmm"
-   # sysrc ifconfig_igb0="up"
-   ```
+```shell
+# sysrc cloned_interfaces+="bridge0 tap0"
+# sysrc ifconfig_bridge0="inet <ipaddr>/<netmask> addm igb0 addm tap0"
+# sysrc kld_list+="nmdm vmm"
+# sysrc ifconfig_igb0="up"
+```
 
 <a id="virtualization-bhyve-onboot-bridgenet"></a>
 **例: ブリッジデバイスへの IP 設定**
