@@ -439,3 +439,752 @@ perm pass* 0660
 ```shell
 # service devfs restart
 ```
+
+<a id="qemu-virtualization-host-guest"></a>
+## FreeBSD 上での QEMU による仮想化
+
+[QEMU](https://www.qemu.org) は、完全にオープンソースソフトウェアとして開発されている汎用マシンエミュレータ兼仮想化ソフトウェアです。
+大きく活発なコミュニティによって開発されており、FreeBSD、OpenBSD、NetBSD をはじめとする多くのオペレーティングシステムに対応しています。
+
+[QEMU ドキュメント](https://www.qemu.org/docs/master/)より:
+
+* QEMU はいくつかの異なる方法で使用できます。
+  最も一般的なのはシステムエミュレーション（System Emulation）で、ゲスト OS を実行するためにマシン全体（CPU、メモリ、エミュレートされたデバイス）の仮想モデルを提供します。
+  このモードでは CPU を完全にエミュレートすることもできますし、`KVM`、`Xen`、`Hypervisor.Framework` などのハイパーバイザと連携してゲストをホスト CPU 上で直接実行することもできます。
+
+* QEMU の 2 つ目の利用方法はユーザーモードエミュレーション（User Mode Emulation）で、ある CPU 向けにコンパイルされたプロセスを別の CPU 上で起動できます。
+  このモードでは CPU は常にエミュレートされます。
+
+* QEMU はさらに、`qemu-img(1)` ディスクイメージユーティリティのようなスタンドアロンのコマンドラインユーティリティも多数提供しており、ディスクイメージの作成・変換・変更を行えます。
+
+QEMU は `Arm™`、`i386`、`x86_64`、`MIPS™`、`s390X`、`SPARC™`（Sparc™ および Sparc64™）など幅広いアーキテクチャをエミュレートできます。
+[QEMU System Emulator Targets](https://www.qemu.org/docs/master/system/targets.html#system-targets-ref) の一覧は定期的に更新されています。
+
+この節では、FreeBSD 上でシステムエミュレーションおよびユーザーモードエミュレーションの両方に QEMU を使用する方法を説明し、QEMU コマンドおよびコマンドラインユーティリティの使用例を示します。
+
+<a id="qemu-installing-qemu-software"></a>
+### QEMU ソフトウェアのインストール
+
+QEMU は FreeBSD のパッケージまたは port として `emulators/qemu` に用意されています。
+パッケージビルドにはほとんどのユーザーにとって妥当なオプションと既定値が含まれており、推奨されるインストール方法です。
+
+```shell
+# pkg install qemu
+```
+
+パッケージのインストールにはいくつかの依存パッケージが含まれます。
+インストールが完了したら、最もよく使用するホスト版の QEMU へのシンボリックリンクを作成します。
+ホストが Intel™ または AMD™ の 64 ビットシステムであれば、次のようになります。
+
+```shell
+# ln -s /usr/local/bin/qemu-system-x86_64 /usr/local/bin/qemu
+```
+
+一般ユーザーとして次のコマンドを実行し、インストールをテストします。
+
+```shell
+% qemu
+```
+
+これにより QEMU のウィンドウが開き、ハードディスク、フロッピーディスク、DVD/CD、PXE からの起動が試みられます。
+まだ何も設定していないためいくつかエラーが出力され、[図 1](#qemu-nullboot) のように「No bootable device」と表示されて止まります。
+しかし、これによって QEMU ソフトウェアが正しくインストールされていることを確認できます。
+
+<a id="qemu-nullboot"></a>
+**図 1. 起動可能なイメージがない状態の QEMU**
+
+![起動可能なイメージがない状態の QEMU](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd01.png)
+
+<a id="qemu-virtual-machine-install"></a>
+### 仮想マシンのインストール
+
+> **注記**: QEMU は非常に活発に開発されています。
+> バージョンによって機能やコマンドオプションが変更されることがあります。
+> この節では、QEMU バージョン 9.0.1（2024 年夏）で作成した例を示しています。
+> 不明な点がある場合は、常に [QEMU Documentation](https://www.qemu.org/docs/master/)、特にサポートされるビルドプラットフォーム・エミュレーション・非推奨機能・削除された機能へのリンクがある [About QEMU](https://www.qemu.org/docs/master/about/index.html) ページを参照してください。
+
+以下の手順に従って、"**left**" と "**right**" という名前の 2 つの仮想マシンを作成します。
+ほとんどのコマンドは root 権限なしで実行できます。
+
+1. QEMU 作業用のテスト環境を作成します。
+
+   ```shell
+   % mkdir -p ~/QEMU  ~/QEMU/SCRIPTS  ~/QEMU/ISO  ~/QEMU/VM
+   ```
+
+   `SCRIPTS` ディレクトリは起動スクリプトやユーティリティ用です。
+   `ISO` ディレクトリはゲストのブート用 ISO イメージ用です。
+   `VM` ディレクトリには仮想マシンイメージ（`VM`）を配置します。
+
+2. FreeBSD の最近の版を `~/QEMU/ISO` にダウンロードします。
+
+   ```shell
+   % cd ~/QEMU/ISO
+   % fetch https://download.freebsd.org/releases/ISO-IMAGES/14.1/FreeBSD-14.1-RELEASE-amd64-bootonly.iso
+   ```
+
+   ダウンロードが完了したら、短縮用のシンボリックリンクを作成します。
+   このリンクは後述の起動スクリプトで使用します。
+
+   ```shell
+   % ln -s FreeBSD-14.1-RELEASE-amd64-bootonly.iso  fbsd.iso
+   ```
+
+3. 仮想マシンを配置するディレクトリ（`~/QEMU/VM`）へ移動します。
+   `qemu-img(1)` を実行して、"left" 仮想マシン用のディスクイメージを作成します。
+
+   ```shell
+   % cd ~/QEMU/VM
+   % qemu-img create -f raw  left.img   15G
+   ```
+
+   QEMU の `raw` 形式は性能重視で設計されています。
+   形式が単純でオーバーヘッドがないため高速であり、特に高性能・高スループットが求められる場面に適しています。
+   スナップショットなどの追加機能が不要で最大性能を引き出したい場合に使用します。
+   この形式は後述の "left" 仮想マシン用スクリプトで使用します。
+
+   もう 1 つの形式は `qcow2` で、ディスク領域の管理に QEMU の「コピーオンライト（copy on write）」技術を使用します。
+   この方式では最初から 15G 全体を確保する必要はなく、仮想マシンが直接管理するスタブ版だけを作成します。
+   仮想マシンが書き込むにつれてディスクは動的に拡張されます。
+   この形式はスナップショット、圧縮、暗号化に対応しています。
+   開発やテストなど、これらの高度な機能が必要な場面で使用します。
+   この形式は後述の "right" 仮想マシン用スクリプトで使用します。
+
+   再び `qemu-img(1)` を実行し、`qcow2` を用いて "right" 仮想マシン用のディスクイメージを作成します。
+
+   ```shell
+   % qemu-img create -f qcow2 -o preallocation=full,cluster_size=512K,lazy_refcounts=on right.qcow2 20G
+   ```
+
+   ファイルの実際のサイズを確認するには次のように実行します。
+
+   ```shell
+   % du -Ah right.qcow2
+   ```
+
+4. 次のコマンドで両方の仮想マシン向けにネットワークを設定します。
+   この例ではホストのネットワークインターフェースは `em0` です。
+   必要に応じて、ホストシステムのインターフェースに合わせて変更してください。
+   QEMU ゲスト仮想マシンが通信できるようにするため、ホストマシンを再起動するたびにこの設定を行う必要があります。
+
+   ```shell
+   # ifconfig tap0 create
+   # ifconfig tap1 create
+   # sysctl net.link.tap.up_on_open=1
+   net.link.tap.up_on_open: 0 -> 1
+   # sysctl net.link.tap.user_open=1
+   net.link.tap.user_open: 0 -> 1
+   # ifconfig bridge0 create
+   # ifconfig bridge0 addm tap0 addm tap1 addm em0
+   # ifconfig bridge0 up
+   ```
+
+   上記のコマンドは 2 つの `tap(4)` デバイス（`tap0`、`tap1`）と 1 つの `if_bridge(4)` デバイス（`bridge0`）を作成します。
+   次に、`tap` デバイスとローカルホストのインターフェース（`em0`）を `bridge` に追加し、一般ユーザーが tap デバイスを開けるように 2 つの `sysctl(8)` エントリを設定します。
+   これらのコマンドにより、仮想マシンがホスト上のネットワークスタックと通信できるようになります。
+
+5. `~/QEMU/SCRIPTS` へ移動し、次のスクリプトを使って最初の仮想マシン "left" を起動します。
+   このスクリプトは QEMU の raw ディスク形式を使用します。
+
+   ```
+   /usr/local/bin/qemu-system-x86_64  -monitor none \
+     -cpu qemu64 \
+     -vga std \
+     -m 4096 \
+     -smp 4   \
+     -cdrom ../ISO/fbsd.iso \
+     -boot order=cd,menu=on \
+     -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.img \
+     -blockdev driver=raw,node-name=drive0,file=imgleft \
+     -device virtio-blk-pci,drive=drive0,bootindex=1  \
+     -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
+     -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
+     -name \"left\"
+   ```
+
+> **ヒント**: 上記の内容をファイル（たとえば `left.sh`）に保存し、`% /bin/sh left.sh` と実行するだけで起動できます。
+
+QEMU は別ウィンドウで仮想マシンを起動し、[図 2](#qemu-newboot-loader-menu) のように FreeBSD の ISO を起動します。
+`-cpu` や `-boot` などのすべてのコマンドオプションの詳細は、QEMU の man ページ `qemu(1)` に記載されています。
+
+<a id="qemu-newboot-loader-menu"></a>
+**図 2. FreeBSD ブートローダメニュー**
+
+![FreeBSD ローダメニュー](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd02.png)
+
+> **ヒント**: QEMU コンソールウィンドウ内でマウスをクリックすると、[図 3](#qemu-grab) のように QEMU がマウスを「捕捉（grab）」します。
+> マウスを解放するには `Ctl`+`Alt`+`G` を押してください。
+
+<a id="qemu-grab"></a>
+**図 3. QEMU がマウスを捕捉した状態**
+
+![QEMU がマウスを捕捉した状態](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd03.png)
+
+> **注記**: FreeBSD 上では、QEMU の初回インストールがやや遅く感じられることがあります。
+> これはエミュレータがディスクの初回使用時にファイルシステムのフォーマットやメタデータの書き込みを行うためです。
+> 以降の操作は一般にずっと高速になります。
+
+インストール中には次の点に注意してください。
+
+* ファイルシステムには UFS を選択してください。
+  ZFS はメモリ容量が小さい環境では十分な性能が出ません。
+* ネットワークには DHCP を使用してください。
+  ローカル LAN が対応している場合は、必要に応じて IPv6 も設定してください。
+* 既定のユーザーを追加する際は、**wheel** グループのメンバーに含めてください。
+
+インストールが完了すると、仮想マシンは新しくインストールされた FreeBSD イメージで再起動します。
+
+`root` としてログインし、次のようにシステムを更新します。
+
+```shell
+# freebsd-update fetch
+# freebsd-update install
+# shutdown -r now
+```
+
+> **注記**: インストールが成功した後は、QEMU はインストーラではなくディスクにインストールされたオペレーティングシステムを起動します。
+
+> **注記**: QEMU は `-runas` オプションに対応しています。
+> セキュリティを高めるため、上記のスクリプト例に `"-runas user_name"` オプションを含めることができます。
+> 詳細は `qemu(1)` を参照してください。
+
+再び `root` としてログインし、必要なパッケージを追加します。
+ゲスト内で X Window System を利用するには、後述の「X Window System の使用」節を参照してください。
+
+これで "left" 仮想マシンのセットアップは完了です。
+
+"right" 仮想マシンをインストールするには、次のスクリプトを実行します。
+このスクリプトには、`tap1`、`format=qcow2`、イメージファイル名、MAC アドレス、端末ウィンドウ名に関する変更が反映されています。
+必要に応じて、上記の注記で説明した `-runas` パラメータを含めてください。
+
+```
+
+/usr/local/bin/qemu-system-x86_64  -monitor none \
+  -cpu qemu64 \
+  -vga cirrus \
+  -m 4096  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -drive if=none,id=drive0,cache=writeback,aio=threads,format=qcow2,discard=unmap,file=../VM/right.qcow2 \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap1,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:72:69:67:68:74 \
+  -name \"right\"
+```
+
+インストールが完了すると、"left" と "right" のマシンは相互に、またホストとも通信できるようになります。
+ホスト上に厳しいファイアウォールルールが設定されている場合は、bridge デバイスと tap デバイスが相互に通信できるようルールを追加または修正することを検討してください。
+
+<a id="qemu-usage-tips"></a>
+### 利用のヒント
+
+ここでは、QEMU を利用するうえでの実用的なヒントを紹介します。
+
+<a id="qemu-setting-up-x-windows"></a>
+#### X Window System の使用
+
+`X Window` システムの設定方法は [Xorg のインストール](05-x11.md#x-install)で説明されています。
+初期の `X Window` 設定についてはそのガイドを参照し、完全なデスクトップ環境の構築方法については[デスクトップ環境](07-desktop.md#desktop)を参照してください。
+
+この節では XFCE デスクトップの使用例を示します。
+
+インストールが完了したら、一般ユーザーとしてログインし、次のように入力します。
+
+```shell
+% startx
+```
+
+XFCE4 ウィンドウマネージャが起動し、[図 4](#qemu-two-qemu) のように動作するグラフィカルデスクトップが表示されます。
+初回起動時はデスクトップが表示されるまで最大 1 分ほどかかる場合があります。
+使い方の詳細は [XFCE Web サイト](https://www.xfce.org)のドキュメントを参照してください。
+
+<a id="qemu-two-qemu"></a>
+**図 4. 両方の QEMU 仮想マシン**
+
+![両方の QEMU 仮想マシン](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd04.png)
+
+> **ヒント**: ゲストシステムに割り当てるメモリを増やすと、グラフィカルユーザーインターフェースの動作が速くなる場合があります。
+
+この例では、"left" 仮想マシンには `X Window` システムがインストールされており、"right" 仮想マシンはまだテキストモードのままです。
+
+<a id="qemu-using-qemu-window"></a>
+#### QEMU ウィンドウの使い方
+
+QEMU ウィンドウは完全な FreeBSD コンソールとして機能し、ベアメタルシステムと同じように複数の仮想端末を実行できます。
+
+別の仮想コンソールへ切り替えるには、QEMU ウィンドウ内をクリックして `Alt+F2` または `Alt+F3` を押します。
+すると FreeBSD が別の仮想コンソールへ切り替わります。
+[図 5](#qemu-console-ttyv3) は、`ttyv3` 上の仮想コンソールを表示している "left" 仮想マシンを示しています。
+
+<a id="qemu-console-ttyv3"></a>
+**図 5. QEMU ウィンドウでの別の仮想コンソールへの切り替え**
+
+![QEMU ウィンドウでの別の仮想コンソールへの切り替え](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd05.png)
+
+> **ヒント**: ホスト側の現在のデスクトップマネージャやウィンドウマネージャが、`Alt+F1` や `Alt+F2` のキーシーケンスを別の機能に割り当てている場合があります。
+> その場合は、`Ctl+Alt+F1`、`Ctl+Alt+F2`、または類似のキーの組み合わせを試してください。
+> 詳細はウィンドウマネージャまたはデスクトップマネージャのドキュメントを確認してください。
+
+<a id="qemu-using-qemu-window-menus"></a>
+#### QEMU ウィンドウメニューの使い方
+
+QEMU ウィンドウのもう 1 つの機能として、`View` メニューとズーム制御があります。
+最も便利なのは `Zoom to Fit` です。
+このメニュー項目をクリックすると、ウィンドウの角のコントロールをドラッグして QEMU ウィンドウのサイズを変更できるようになります。
+[図 6](#qemu-zoom-to-fit) は、グラフィックスモード中に "left" ウィンドウのサイズを変更した様子を示しています。
+
+<a id="qemu-zoom-to-fit"></a>
+**図 6. View メニューの `Zoom to Fit` オプションの使用**
+
+![View メニューの Zoom to Fit オプションの使用](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd06.png)
+
+<a id="qemu-other-qemu-window-menu-options"></a>
+#### その他の QEMU ウィンドウメニューオプション
+
+`View` メニューには次の項目も表示されます。
+
+* `cirrus-vga`、`serial0`、`parallel0` オプション。
+  これらにより、選択したデバイスへ入出力を切り替えることができます。
+
+QEMU ウィンドウの `Machine` メニューでは、ゲスト仮想マシンに対して 4 種類の制御を行えます。
+
+* `Pause` は QEMU 仮想マシンを一時停止します。
+  高速にスクロールする画面を止めて確認したい場合に便利です。
+* `Reset` は仮想マシンを即座にコールドな「電源投入」状態へリセットします。
+  実機と同様、どうしても必要な場合を除き推奨されません。
+* `Power Down` は ACPI シャットダウン信号をシミュレートし、オペレーティングシステムを正常にシャットダウンさせます。
+* `Quit` は仮想マシンの電源を即座に切ります。これも必要な場合を除き推奨されません。
+
+<a id="qemu-adding-serial-port-to-guest-vm"></a>
+### ゲスト仮想マシンへのシリアルポートインターフェースの追加
+
+シリアルコンソールを実装するには、FreeBSD を実行しているゲスト仮想マシンの `/boot/loader.conf` に
+
+```
+console="comconsole"
+```
+
+を挿入し、FreeBSD シリアルコンソールを使用できるようにする必要があります。
+
+以下の更新された設定例は、ゲスト仮想マシンでシリアルコンソールを実装する方法を示しています。
+スクリプトを実行して仮想マシンを起動します。
+
+```
+# left+serial.sh
+echo
+echo "NOTE: telnet startup server running on guest VM!"
+echo "To start QEMU, start another session and telnet to localhost port 4410"
+echo
+
+/usr/local/bin/qemu-system-x86_64  -monitor none \
+  -serial telnet:localhost:4410,server=on,wait=on\
+  -cpu qemu64 \
+  -vga std \
+  -m 4096 \
+  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.img \
+  -blockdev driver=raw,node-name=drive0,file=imgleft \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
+  -name \"left\"
+```
+
+<a id="qemu-left-serial-port"></a>
+**図 7. TCP 経由でのシリアルポートの有効化**
+
+![TCP 経由でのシリアルポートの有効化](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd07.png)
+
+[図 7](#qemu-notes-on-serial-console) では、仮想マシンの起動時にシリアルポートがホストシステム上の TCP ポートへリダイレクトされ、QEMU モニタは指定された localhost ポートへ `telnet(1)` 接続が行われるまでゲスト仮想マシンの起動を待機（`wait=on`）します。
+別セッションからの接続を受け取ると、FreeBSD システムが起動を開始し、`/boot/loader.conf` 内のコンソール指定を参照します。
+`"console=comconsole"` の指定により、FreeBSD はシリアルポート上でコンソールセッションを開始します。
+QEMU モニタはこれを検知し、そのシリアルポート上の必要な文字 I/O をホスト上の telnet セッションへ振り向けます。
+システムが起動を完了すると、シリアルポート（`ttyu0`）とコンソール（`ttyv0`）の両方でログインプロンプトが有効になります。
+
+この TCP 経由のシリアルリダイレクトは仮想マシンの外側で行われる点に注意してください。
+仮想マシン上のどのネットワークともやり取りしないため、ファイアウォールルールの影響を受けません。
+実機の RS-232 ポートや USB ポートに接続されたダム端末のようなものだと考えてください。
+
+<a id="qemu-notes-on-serial-console"></a>
+#### シリアルコンソールの使用に関する注意
+
+シリアルコンソールでウィンドウサイズを変更した場合は、`resizewin(1)` を実行して端末サイズを更新してください。
+
+syslog メッセージがコンソール（QEMU コンソールとシリアルポートの両方）へ送られないようにすることが望ましい（あるいは必要な）場合があります。
+コンソールメッセージのリダイレクト方法の詳細は `syslog.conf(5)` を参照してください。
+
+> **注記**: `/boot/loader.conf`（原文表記 `/boot.loader.conf`）を更新してシリアルコンソールを許可すると、それ以降ゲスト仮想マシンは毎回シリアルポートからの起動を試みるようになります。
+> 上記の例のようにシリアルポートを有効にしておくか、シリアルコンソールを要求しないように `/boot/loader.conf` ファイルを更新してください。
+
+<a id="qemu-user-mode-emulation"></a>
+### QEMU ユーザーモードエミュレーション
+
+QEMU は、ホスト CPU とは異なるアーキテクチャ向けにコンパイル済みのアプリケーションの実行もサポートしています。
+たとえば、x86_64 ホスト上で Sparc64 アーキテクチャのオペレーティングシステムを実行することが可能です。
+次の節でその手順を示します。
+
+<a id="qemu-sparc64-user-mode-emulation"></a>
+#### x86_64 ホスト上への SPARC64 ゲスト仮想マシンの構築
+
+ホストとは異なるアーキテクチャの新しい仮想マシンを構築するには、いくつかの手順が必要です。
+
+* ゲスト仮想マシン上で実行するソフトウェアの入手
+* ゲスト仮想マシン用の新しいディスクイメージの作成
+* 新しいアーキテクチャ向けの QEMU スクリプトの作成
+* インストールの実行
+
+以下の手順では、この QEMU ユーザーモードエミュレーションの演習として OpenBSD 6.8 SPARC64 版のソフトウェアを使用します。
+
+> **注記**: OpenBSD Sparc64 のすべてのバージョンが QEMU 上で動作するわけではありません。
+> OpenBSD バージョン 6.8 は動作が確認されているため、この節の例として採用しています。
+
+1. OpenBSD アーカイブから OpenBSD 6.8 Sparc64 をダウンロードします。
+
+   OpenBSD のダウンロードサイトでは最新バージョンのみが維持されています。
+   過去のリリースを入手するにはアーカイブを検索する必要があります。
+
+   ```shell
+   % cd ~/QEMU/ISO
+   % fetch https://mirror.planetunix.net/pub/OpenBSD-archive/6.8/sparc64/install68.iso
+   ```
+
+2. Sparc64 仮想マシン用の新しいディスクイメージの作成は、前述の "right" 仮想マシンと同様です。
+   この例ではディスクに QEMU の qcow2 形式を使用します。
+
+   ```shell
+   % cd ~/QEMU/VM
+   qemu-img create -f qcow2 -o preallocation=full,lazy_refcounts=on sparc64.qcow2 16G
+   ```
+
+3. 新しい Sparc64 アーキテクチャ向けに以下のスクリプトを使用します。
+   前述の例と同様にスクリプトを実行し、別のセッションを開いて指定されたポートで localhost に `telnet` 接続します。
+
+   ```
+   echo
+   echo "NOTE: telnet startup server running on guest VM!"
+   echo "To start QEMU, start another session and telnet to localhost port 4410"
+   echo
+
+   /usr/local/bin/qemu-system-sparc64 \
+     -serial telnet:localhost:4410,server=on,wait=on \
+     -machine sun4u,usb=off \
+     -smp 1,sockets=1,cores=1,threads=1 \
+     -rtc base=utc \
+     -m 1024 \
+     -boot d \
+     -drive file=../VM/sparc64.qcow2,if=none,id=drive-ide0-0-1,format=qcow2,cache=none \
+     -cdrom ../ISO/install68.iso \
+     -device ide-hd,bus=ide.0,unit=0,drive=drive-ide0-0-1,id=ide0-0-1 \
+     -msg timestamp=on \
+     -net nic,model=sunhme -net user \
+     -nographic \
+     -name \"sparc64\"
+   ```
+
+次の点に注意してください。
+
+* `-boot d` オプションは、`-cdrom ../ISO/install68.iso` として指定された QEMU CDROM デバイスから起動します。
+* 先ほどと同様に、`telnet` サーバオプションはポート 4410 での別接続を待機するよう設定されています。
+  別のセッションを起動し、`telnet(1)` を使って localhost のポート 4410 に接続してください。
+* スクリプトは `-nographic` オプションを指定しているため、シリアルポート I/O のみが使用されます。
+  グラフィカルインターフェースはありません。
+* ネットワークは `tap(4)` / `if_bridge(4)` の組み合わせでは設定されません。
+  この例では、「Serial Line Internet Protocol」（SLIRP）として知られる別の QEMU ネットワーク方式（「User Mode Networking」とも呼ばれます）を使用しています。
+  この方式およびその他の QEMU ネットワーク方式に関するドキュメントは、[QEMU Networking Documentation](https://wiki.qemu.org/Documentation/Networking) にあります。
+
+すべて正しく設定されていれば、[図 8](#qemu-sparc64-boot-cdrom-installation) のようにシステムが起動します。
+
+<a id="qemu-sparc64-boot-cdrom-installation"></a>
+**図 8. ユーザーモードエミュレーション中に CDROM から OpenBSD 6.8 Sparc64 を起動する QEMU**
+
+![ユーザーモードエミュレーション中に CDROM から OpenBSD 6.8 Sparc64 を起動する QEMU](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd08.png)
+
+システムのインストールが完了したら、スクリプトを修正してブートパラメータを `-boot c` に変更します。
+これにより QEMU は CDROM ではなく指定されたハードディスクから起動するようになります。
+
+インストールされたシステムは、他のゲスト仮想マシンとまったく同じように使用できます。
+ただし、ゲストの基盤となるアーキテクチャは x86_64 ではなく Sparc64 です。
+
+> **ヒント**: OpenBios コンソールプロンプト `0 >` でシステムが停止した場合は、`power-off` と入力してシステムを終了してください。
+
+[図 9](#qemu-sparc64-login-to-installed-system) は、インストール済みシステムへ root ログインして `uname(1)` を実行した様子を示しています。
+
+<a id="qemu-sparc64-login-to-installed-system"></a>
+**図 9. ユーザーモードエミュレーション中に CDROM から起動する QEMU**
+
+![ユーザーモードエミュレーション中に CDROM から起動する QEMU](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd09.png)
+
+<a id="qemu-using-qemu-monitor"></a>
+### QEMU モニタの使用
+
+[QEMU モニタ](https://www.qemu.org/docs/master/system/monitor.html)は、実行中の QEMU エミュレータ（ゲスト仮想マシン）を制御します。
+
+モニタを使うと、次の操作などが可能です。
+
+* ディスク、ネットワークインターフェース、CD-ROM、フロッピーなどのデバイスを動的に取り外し、または挿入する
+* ゲスト仮想マシンの凍結（freeze）／凍結解除（unfreeze）、およびディスクファイルへの状態の保存・復元を行う
+* 仮想マシンおよびデバイスの状態に関する情報を収集する
+* 実行中にデバイスの設定を変更する
+
+モニタの最も一般的な用途は、仮想マシンの状態を調べること、およびデバイスの追加・削除・変更を行うことです。
+マイグレーションなどの一部の操作は KVM や Xen などのハイパーバイザアクセラレータ下でのみ利用可能であり、FreeBSD ホストではサポートされていません。
+
+グラフィカルデスクトップ環境を使用している場合、QEMU モニタを使う最も簡単な方法は、端末セッションから QEMU を起動する際に `-monitor stdio` オプションを指定することです。
+
+```
+# /usr/local/bin/qemu-system-x86_64  -monitor stdio \
+  -cpu qemu64 \
+  -vga cirrus \
+  -m 4096  -smp 4   \
+  ...
+```
+
+これにより、[図 10](#qemu-monitor-operation) のように端末ウィンドウに新しいプロンプト `(qemu)` が表示されます。
+
+<a id="qemu-monitor-operation"></a>
+**図 10. QEMU モニタプロンプトと "stop" コマンド**
+
+![QEMU モニタプロンプトと stop コマンド](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd13.png)
+
+この図には、FreeBSD のブートシーケンス中に `stop` コマンドでシステムを凍結した様子も示されています。
+モニタで `cont` コマンドを入力するまで、システムは凍結されたままになります。
+
+<a id="qemu-adding-new-disk"></a>
+#### 仮想マシンへの新しいディスクの追加
+
+実行中の仮想マシンに新しいディスクを追加するには、前述と同じようにディスクを準備する必要があります。
+
+```shell
+% cd ~/QEMU/VM
+% qemu-img create -f raw  new10G.img  10G
+```
+
+[図 11](#qemu-add-new-disk-figure) は、仮想マシンに新しいディスクを追加するために必要なモニタコマンドの手順を示しています。
+モニタで `device_add` コマンドを使ってデバイスを追加すると、図の下部に示されている FreeBSD システムコンソール上にデバイスが現れます。
+あとは必要に応じてディスクを設定できます。
+
+仮想マシンの再起動後も新しいディスクを使用したい場合は、起動スクリプトにそのディスクを追加する必要がある点に注意してください。
+
+<a id="qemu-add-new-disk-figure"></a>
+**図 11. 新しいディスクを追加するための QEMU モニタコマンド**
+
+![新しいディスクを追加するための QEMU モニタコマンド](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd14.png)
+
+<a id="qemu-using-monitor-manage-snapshots"></a>
+#### QEMU モニタを使ったスナップショットの管理
+
+QEMU のドキュメントでは、**スナップショット（snapshot）** という用語でいくつかの似た概念が説明されています。
+コマンドラインの `-snapshot` オプションは、ドライブまたはドライブの一部を使ってデバイスのコピーを保持することを指します。
+また、モニタコマンドの `snapshot_blkdev` と `snapshot_blkdev_internal` は、blockdev デバイスを実際にコピーする操作を指します。
+最後に、モニタコマンドの `savevm`、`loadvm`、`delvm` は、仮想マシン全体のコピーを作成して保存・読み込み・削除する操作を指します。
+これと合わせて、モニタの `info snapshots` コマンドは最近のスナップショットの詳細を一覧表示します。
+
+この節では仮想マシン全体のイメージの作成・保存・読み込みに焦点を当て、この意味で **スナップショット** という用語を使用します。
+
+まず、今回は `qcow2` 形式を使って "left" 仮想マシンを最初から作り直します。
+
+```shell
+% cd ~/QEMU/VM
+% rm left.img
+% qemu-img create -f qcow2 left.qcow2 16G  # Clean file for a new FreeBSD installation.
+% cd ../SCRIPTS
+# /bin/sh left.sh                     # See the below program listing.
+```
+
+インストールが完了したら、今度はモニタを使用できるように `-monitor stdio` オプションを指定して再起動します。
+
+```
+# left VM script.
+/usr/local/bin/qemu-system-x86_64  -monitor stdio \
+  -cpu qemu64 \
+  -vga std \
+  -m 4096 \
+  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -blockdev driver=file,aio=threads,node-name=imgleft,filename=../VM/left.qcow2 \
+  -blockdev driver=qcow2,node-name=drive0,file=imgleft \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap0,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:20:6c:65:66:74 \
+  -name \"left\"
+```
+
+スナップショットの動作を確認するため、次の手順を実行できます。
+
+1. FreeBSD を最初からインストールする
+2. 環境を準備し、`savevm` モニタコマンドでスナップショットを取得する
+3. いくつかのパッケージをインストールする
+4. システムをシャットダウンする
+5. 素の QEMU インスタンスを再起動し、モニタコマンド `loadvm` を使って仮想マシンを復元する
+6. 復元された仮想マシンにパッケージが一切入っていないことを確認する
+
+「環境を準備する」ステップでは、ユーザー操作を模擬するため、別の仮想コンソール（ttyv1）で `vi(1)` による編集セッションを開始しています。
+必要に応じて他のプログラムを起動しても構いません。
+スナップショットには、取得時点で実行中のすべてのアプリケーションの状態が記録されます。
+
+[図 12](#qemu-using-monitor-snapshots) は、パッケージがまだ入っていない新規インストール直後の FreeBSD システムと、それとは別の ttyv1 上での編集セッションを示しています。
+`vi(1)` エディタは現在 `insert` モードになっており、入力者が「broadcast」という単語を入力している状態です。
+
+<a id="qemu-using-monitor-snapshots"></a>
+**図 12. 最初のスナップショット取得前の QEMU 仮想マシン**
+
+![最初のスナップショット取得前の QEMU 仮想マシン](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd15.png)
+
+スナップショットを生成するには、モニタで `savevm` を入力します。
+その際、必ずタグ（たとえば `original_install`）を指定してください。
+
+```shell
+QEMU 9.0.1 monitor - type 'help' for more information
+(qemu)
+(qemu) savevm original_install
+```
+
+次に、メインのコンソールウィンドウで、依存関係のない `zip(1)` などのパッケージをインストールします。
+インストールが完了したら、再びモニタに戻って別のスナップショット（`snap1_pkg+zip`）を作成します。
+
+[図 13](#qemu-after-monitor-snapshots) は、上記コマンドの結果と `info snapshots` コマンドの出力を示しています。
+
+<a id="qemu-after-monitor-snapshots"></a>
+**図 13. スナップショット用の QEMU モニタコマンドの使用**
+
+![スナップショット用の QEMU モニタコマンドの使用](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd16.png)
+
+システムを再起動し、FreeBSD が起動する前にモニタへ切り替えて `stop` を入力します。
+すると仮想マシンが停止します。
+
+先ほど使用したタグ（ここでは `original_install`）を指定して `loadvm` を入力します。
+
+```shell
+QEMU 9.0.1 monitor - type 'help' for more information
+(qemu) stop
+(qemu) loadvm original_install
+(qemu) cont
+```
+
+すると即座に、仮想マシンの画面が先ほど `savevm` コマンドを入力したまさにその瞬間へ切り替わります。
+この時点ではまだ仮想マシンが停止している点に注意してください。
+
+`cont` を入力して仮想マシンを再開し、`ttyv1` の編集セッションへ切り替えてキーボードで 1 文字入力してみてください。
+挿入モードのままになっていたエディタが、そのまま入力に反応するはずです。
+スナップショット取得時に実行中だった他のプログラムも影響を受けずに動作します。
+
+以上の手順により、スナップショットを取得し、システムを変更した後、以前のスナップショットを復元して「ロールバック」する方法がわかります。
+
+既定では、QEMU はスナップショットデータをイメージと同じファイルに保存します。
+[図 14](#qemu-examine-monitor-snapshots) に示すように、`qemu-img(1)` でスナップショットの一覧を確認できます。
+
+<a id="qemu-examine-monitor-snapshots"></a>
+**図 14. `qemu-img(1)` を使ったスナップショットの確認**
+
+![qemu-img を使ったスナップショットの確認](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd17.png)
+
+<a id="qemu-using-qemu-usb-devices"></a>
+### QEMU USB デバイスの使用
+
+QEMU はイメージファイルをバックエンドとする仮想 USB デバイスの作成に対応しています。
+これらは実際の USB デバイスとまったく同じように、パーティション分割、フォーマット、マウント、利用が可能な仮想 USB デバイスです。
+
+```
+/usr/local/bin/qemu-system-x86_64  -monitor stdio \
+  -cpu qemu64 \
+  -vga cirrus \
+  -m 4096  -smp 4   \
+  -cdrom ../ISO/fbsd.iso \
+  -boot order=cd,menu=on \
+  -drive if=none,id=usbstick,format=raw,file=../VM/foo.img \
+  -usb \
+  -device usb-ehci,id=ehci \
+  -device usb-storage,bus=ehci.0,drive=usbstick \
+  -device usb-mouse \
+  -blockdev driver=file,node-name=img1,filename=../VM/right.qcow2 \
+  -blockdev driver=qcow2,node-name=drive0,file=img1 \
+  -device virtio-blk-pci,drive=drive0,bootindex=1  \
+  -netdev tap,id=nd0,ifname=tap1,script=no,downscript=no,br=bridge0 \
+  -device e1000,netdev=nd0,mac=02:72:69:67:68:74 \
+  -name \"right\"
+```
+
+この設定には、`id=usbstick`、raw 形式、イメージファイル（`qemu-img(1)` で事前に作成しておく必要があります）を指定した `-drive` 指定が含まれています。
+次の行には、`id=ehci` を持つ USB EHCI コントローラ用の `-device usb-ehci` 指定があります。
+最後に、`-device usb-storage` 指定によって上記のドライブを EHCI USB バスに結び付けています。
+
+システムが起動すると、[図 15](#qemu-usb-internal-storage) に示すように FreeBSD が USB ハブを認識し、接続された USB デバイスを追加して `da0` として割り当てます。
+
+<a id="qemu-usb-internal-storage"></a>
+**図 15. QEMU が作成した USB ハブとマスストレージデバイス**
+
+![QEMU が作成した USB ハブとマスストレージデバイス](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd12.png)
+
+このデバイスは `gpart(8)` でパーティション分割し、`newfs(8)` でフォーマットできる状態になっています。
+USB デバイスは `qemu-img(1)` で作成したファイルをバックエンドとしているため、デバイスに書き込まれたデータは再起動後も永続的に保持されます。
+
+<a id="qemu-using-host-usb-devices"></a>
+### パススルーによるホスト USB デバイスの使用
+
+QEMU の USB パススルーサポートは、バージョン 9.0.1（2024 年夏）では実験的（experimental）とされています。
+とはいえ、以下の手順ではホストにマウントされた USB メモリをゲスト仮想マシンから使用する方法を示します。
+
+詳細や例については次を参照してください。
+
+* [https://www.qemu.org/docs/master/system/devices/usb.html](https://www.qemu.org/docs/master/system/devices/usb.html)
+
+[図 16](#qemu-usb-passthrough) の上部は QEMU モニタコマンドを示しています。
+
+* `info usbhost` はホストシステム上のすべての USB デバイスに関する情報を表示します。
+  ホストシステム上で目的の USB デバイスを探し、その行にある 2 つの 16 進数値を控えます。
+  （以下の例では、ホストの USB デバイスは Memorex Mini で、vendorid は 0718、productid は 0619 です。）
+  `info usbhost` コマンドで表示された 2 つの値を、以下の `device_add` の手順で使用します。
+* `device_add` はゲスト仮想マシンに USB デバイスを追加します。
+
+<a id="qemu-usb-passthrough"></a>
+**図 16. ホスト上の USB デバイスへアクセスするための QEMU モニタコマンド**
+
+![ホスト上の USB デバイスへアクセスするための QEMU モニタコマンド](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd18.png)
+
+先ほどと同様に、`device_add` が完了すると、図の下半分に示されているように FreeBSD カーネルが新しい USB デバイスを認識します。
+
+新しいデバイスの使用例を[図 17](#qemu-usb-passthrough2) に示します。
+
+<a id="qemu-usb-passthrough2"></a>
+**図 17. パススルー経由でのホスト USB デバイスの使用**
+
+![パススルー経由でのホスト USB デバイスの使用](https://raw.githubusercontent.com/freebsd/freebsd-doc/a39743a3b0535f4498735119317889ea2bdfeb28/documentation/static/images/books/handbook/virtualization/qemu-freebsd19.png)
+
+USB デバイスが FAT16 または FAT32 ファイルシステムでフォーマットされている場合は、例に示されているように `mount_msdosfs(8)` を使って MS-DOS™ ファイルシステムとしてマウントできます。
+`/etc/hosts` ファイルが新しくマウントされたドライブへコピーされ、USB デバイス上のファイルの整合性を確認するためにチェックサムが計算されています。
+その後、`umount(8)` でデバイスがアンマウントされます。
+
+USB デバイスが NTFS でフォーマットされている場合は、`fusefs-ntfs` パッケージをインストールし、`ntfs-3g(8)` を使用してデバイスにアクセスする必要があります。
+
+```shell
+# pkg install fusefs-ntfs
+# kldload fusefs
+# gpart show da1
+# ntfs-3g /dev/da1s1 /mnt
+
+Access the drive as needed.  When finished:
+
+# umount /mnt
+```
+
+上記のデバイス識別子は、接続されているハードウェアに合わせて変更してください。
+NTFS ファイルシステムの扱いに関する追加情報は `ntfs-3g(8)` を参照してください。
+
+<a id="qemu-summary"></a>
+### FreeBSD 上の QEMU のまとめ
+
+前述のとおり、QEMU はいくつかの異なるハイパーバイザアクセラレータと連携して動作します。
+
+QEMU がサポートする [Virtualization Accelerators](https://www.qemu.org/docs/master/system/introduction.html#virtualisation-accelerators) の一覧には次のものが含まれます。
+
+* Linux 上の `KVM`: 64 ビット Arm、MIPS、PPC、RISC-V、s390x、および x86 をサポート
+* Linux 上の dom0 としての `Xen`: Arm、x86 をサポート
+* MacOS 上の `Hypervisor Framework (hvf)`: x86 および Arm（いずれも 64 ビットのみ）をサポート
+* Windows 上の `Windows Hypervisor Platform (whpx)`: x86 をサポート
+* NetBSD 上の `NetBSD Virtual Machine Monitor (nvmm)`: x86 をサポート
+* Linux およびその他の POSIX、Windows、MacOS 上の `Tiny Code Generator (tcg)`: Arm、x86、Loongarch64、MIPS、PPC、s390x、および Sparc64 をサポート
+
+この節のすべての例では、現時点で FreeBSD 上でサポートされている唯一のアクセラレータである `Tiny Code Generator (tcg)` アクセラレータを使用しました。
