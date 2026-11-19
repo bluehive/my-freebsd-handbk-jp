@@ -40,3 +40,93 @@
 
 **ドメインネームシステム（Domain Name System: DNS）**
 : ドメインネームシステム（DNS）とそのデーモンである `named(8)` は、メール配送において大きな役割を果たします。あるサイトから別のサイトへメールを配送する際、MTA は宛先サイトを DNS で問い合わせ、その宛先のメールを受け取るホストを特定します。リモートホストからこちらの MTA へメールが送られてくる際にも、同じ仕組みが働きます。
+
+<a id="dragonFly-mail-agent"></a>
+## DragonFly Mail Agent（DMA）
+
+DragonFly Mail Agent（DMA）は、FreeBSD 14.0 以降のデフォルト MTA です。`dma(8)` は家庭やオフィスでの利用を想定して設計された小型のメール転送エージェント（Mail Transport Agent: MTA）です。ローカルにインストールされたメールユーザーエージェント（MUA）からメールを受け取り、ローカルまたはリモート宛先へ配送します。リモート配送では、TLS/SSL サポートや SMTP 認証などの機能も備えています。
+
+`dma(8)` は、`sendmail(8)` や `postfix(1)` のような本格的な大型 MTA の代替を意図したものではありません。そのため、`dma(8)` は受信接続のためにポート 25 で待ち受けを行いません。
+
+<a id="configuring-dragonfly-mail-agent"></a>
+### DragonFly Mail Agent（DMA）の設定
+
+DMA には多くの環境でそのまま使えるデフォルト設定が用意されています。独自の設定は `/etc/dma/dma.conf` に記述し、SMTP 認証は `/etc/dma/auth.conf` で設定します。
+
+<a id="configuring-gmail-dma"></a>
+#### DMA を使って Gmail 経由で送信メールを中継する（STARTTLS:SMTP の例）
+
+次の `/etc/dma/dma.conf` の例を使うと、Google の SMTP サーバー経由でメールを送信できます。
+
+```
+SMARTHOST smtp.gmail.com
+PORT 587
+AUTHPATH /etc/dma/auth.conf
+SECURETRANSFER
+STARTTLS
+MASQUERADE username@gmail.com
+```
+
+認証情報は、`/etc/dma/auth.conf` に 1 行記述することで設定できます。
+
+```
+username@gmail.com|smtp.gmail.com:password
+```
+
+> **注**: 2 要素認証が有効になっている場合は、通常のログインパスワードでは拒否されるため、生成したアプリ固有のパスワードを使用する必要があります。詳細は Google の[アプリパスワード（app-specific passwords）](https://myaccount.google.com/apppasswords)のドキュメントを参照してください。
+
+次のコマンドを実行して設定をテストします。
+
+```shell
+% echo this is a test | mail -v -s testing-email username@gmail.com
+```
+
+<a id="configuring-fastmail-dma"></a>
+#### DMA を使って Fastmail 経由で送信メールを中継する（SSL/TLS の例）
+
+次の `/etc/dma/dma.conf` の例を使うと、Fastmail の SMTP サーバー経由でメールを送信できます。
+
+```
+SMARTHOST smtp.fastmail.com
+PORT 465
+AUTHPATH /etc/dma/auth.conf
+SECURETRANSFER
+MAILNAME example.server.com
+```
+
+認証情報は、`/etc/dma/auth.conf` に 1 行記述することで設定できます。
+
+```
+username@fastmail.com|smtp.fastmail.com:password
+```
+
+次のコマンドを実行して設定をテストします。
+
+```shell
+% echo this is a test | mail -v -s testing-email username@fastmail.com
+```
+
+<a id="configuring-custom-dma"></a>
+#### DMA を使って独自のメールホスト経由で送信メールを中継する
+
+次の `/etc/dma/dma.conf` の例を使うと、独自のメールホスト経由でメールを送信できます。
+
+```
+SMARTHOST mail.example.org
+PORT 587
+AUTHPATH /etc/dma/auth.conf
+SECURETRANSFER
+STARTTLS
+```
+
+認証情報は、`/etc/dma/auth.conf` に 1 行記述することで設定できます。
+
+```
+username@example.org|mail.example.org:password
+```
+
+次のコマンドを実行して設定をテストします。
+
+```shell
+% echo this is a test | mail -v -s testing-email username@example.org
+```
